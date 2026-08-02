@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
 
-/// Placeholder post-login — el resto de las pantallas (Venta, Inventario,
-/// etc.) se agregan acá como próximos features, cada una con su propia
-/// carpeta bajo lib/features/ siguiendo el mismo patrón que auth/.
+/// Menú principal post-login — el resto de las pantallas (Inventario,
+/// Catálogo, etc.) se agregan acá como nuevas tarjetas, cada una con su
+/// propia carpeta bajo lib/features/ siguiendo el mismo patrón que auth/
+/// y sales/.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -22,8 +24,22 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: const Center(
-        child: Text('Sesión iniciada — próximas pantallas van acá.'),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Card(
+              child: ListTile(
+                leading: const Icon(Icons.point_of_sale, size: 32),
+                title: const Text('Punto de Venta'),
+                subtitle: const Text('Buscar productos, armar el carrito y cobrar'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/pos'),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

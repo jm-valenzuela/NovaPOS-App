@@ -37,8 +37,20 @@ lib/
       presentation/
         providers/         # AuthController, RegistroEmpresaController (StateNotifier)
         screens/           # LoginScreen, RegistroEmpresaScreen, SplashScreen
+    catalog/
+      domain/              # CatalogRepository (contrato), ProductoVendible
+      data/                # CatalogoApi, CatalogRepositoryImpl
+    tenancy/
+      domain/              # TenancyRepository (contrato), CajaResumen
+      data/                # TenancyApi, TenancyRepositoryImpl
+    sales/
+      domain/              # SalesRepository (contrato), LineaCarrito, FormaPago/TipoEntrega
+      data/                # VentaApi, SalesRepositoryImpl
+      presentation/
+        providers/         # BusquedaProductosController (debounce), PosCartController (carrito + cobro)
+        screens/           # PosScreen — Punto de Venta
     home/
-      presentation/screens/  # Placeholder post-login — próximas features van acá
+      presentation/screens/  # Menú post-login — punto de entrada a los demás features
 ```
 
 - **Estado**: Riverpod (`flutter_riverpod`), patrón `StateNotifier` clásico — sin codegen, sin `build_runner`.
@@ -52,7 +64,8 @@ lib/
 - **Login**: RUT + correo + contraseña contra `POST /auth/login`. Si hay una sesión guardada y vigente, la app entra directo a Home sin mostrar Login.
 - **Registro de Empresa**: formulario completo (datos de la Empresa + cuenta del Administrador) contra `POST /empresas` — implementa UC-01 del backend. No deja sesión iniciada (mismo criterio que el backend: el JWT se emite recién en Login, no en el registro); al terminar, muestra un diálogo de confirmación y vuelve a Login.
 - **Refresh de token automático**: si el backend responde 401 en cualquier llamada, `AuthInterceptor` intenta refrescar una vez con el Refresh Token guardado y reintenta la request original — transparente para el resto de la app.
-- **Home**: placeholder — el resto de las pantallas (Venta, Inventario, etc.) se agregan como nuevos features siguiendo el mismo patrón que `auth/`.
+- **Punto de Venta (POS)**: búsqueda de productos con debounce (`GET /catalogo/productos`), selección de Caja (automática si la Empresa tiene una sola, selector si tiene varias — `GET /cajas`), carrito 100% local (el backend no soporta editar/quitar una línea de Venta ya agregada, así que armar el carrito contra la API línea a línea no es seguro), y al presionar "Cobrar" se ejecuta la secuencia `crearVenta → agregarLinea (por cada línea) → confirmarVenta`. Si la secuencia falla a mitad de camino, el error se muestra y el carrito local NO se vacía (para reintentar sin volver a tipear todo) — la Venta puede quedar en Borrador con líneas parciales en el servidor, limitación conocida y aceptada mientras no exista un endpoint para editar/cancelar una Venta en Borrador.
+- **Home**: menú con acceso a Punto de Venta — el resto de las pantallas (Inventario, Catálogo, etc.) se agregan como nuevos features siguiendo el mismo patrón que `auth/` y `sales/`.
 
 Verificado con la app real corriendo contra `NovaPOS.Api` real (LocalDB) sirviendo en Web (`flutter run -d web-server`, CORS habilitado): la pantalla de Login renderiza, la navegación a Registro de Empresa funciona, y la escritura en los campos de texto se confirmó real (no simulada) inspeccionando el estado real de los widgets. La interacción de tap final contra el botón de envío no se pudo verificar en vivo en el navegador por una limitación de la herramienta de automatización de esta sesión (el compositing de capturas de pantalla no funcionaba) — el flujo completo (llenar formulario → validar → llamar al repositorio con los datos exactos → mostrar el diálogo de éxito → volver a Login) quedó verificado en cambio con **widget tests reales** (`flutter test`) que ejercitan el árbol de widgets de producción completo (hit-testing real sobre el botón, `Form.validate()` real, `AuthController`/`RegistroEmpresaController` reales), con un `AuthRepository` fake reemplazando solo la capa de red — mismo criterio que los `*RepositorioFalso` del backend.
 
@@ -62,10 +75,11 @@ Verificado con la app real corriendo contra `NovaPOS.Api` real (LocalDB) sirvien
 flutter test
 ```
 
-21 tests: validación de RUT (unitarios), y widget tests de Login/Registro de Empresa que cubren el camino feliz, validación de formulario, manejo de errores del backend, e idempotencia de sesión — todos usando un `AuthRepository` fake, sin red real.
+Tests unitarios de validación de RUT, más widget tests de Login, Registro de Empresa y Punto de Venta que cubren el camino feliz, validación de formulario, manejo de errores del backend, idempotencia de sesión, búsqueda con debounce, armado del carrito y la secuencia completa de cobro — todos usando repositorios fake, sin red real ni `flutter_secure_storage` real (el canal de plataforma no existe bajo `flutter test`; ver `SecureStorage`/`InMemorySecureStorage`).
 
 ## Qué falta
 
-- El resto de las pantallas del POS (Venta, Inventario, Catálogo, etc.) — Login y Registro de Empresa son la base sobre la que se construye el resto.
+- El resto de las pantallas (Inventario, Catálogo, Compras, etc.) — Login, Registro de Empresa y Punto de Venta son la base sobre la que se construye el resto.
+- Editar/quitar una línea de una Venta ya agregada en el backend — hoy el carrito del POS es puramente local por esta razón (ver arriba).
 - Offline-first real: SQLite local + sincronización contra el Sync Engine del backend (`POST /sync/lotes`, ya construido del lado del servidor) — hoy la app requiere conexión.
 - Publicación real en Android (Play Store) y empaquetado del instalable de Windows (MSIX) — por ahora solo se corre en modo desarrollo.

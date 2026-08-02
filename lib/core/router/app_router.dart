@@ -6,6 +6,7 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/registro_empresa_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/sales/presentation/screens/pos_screen.dart';
 
 /// GoRouter reconstruido cada vez que cambia AuthState (watch, no read) —
 /// simple y suficiente para el tamaño actual de la app (4 rutas); si el
@@ -38,6 +39,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/registro-empresa', builder: (context, state) => const RegistroEmpresaScreen()),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+      GoRoute(path: '/pos', builder: (context, state) => const PosScreen()),
     ],
   );
 });

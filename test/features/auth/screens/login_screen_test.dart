@@ -34,7 +34,7 @@ void main() {
     expect(fakeRepository.ultimoRutLogin, '12345678-5', reason: 'se envía normalizado sin puntos, con guión');
     expect(fakeRepository.ultimoEmailLogin, 'admin@apptest.cl');
     expect(fakeRepository.ultimoPasswordLogin, 'TestPass123!');
-    expect(find.text('Sesión iniciada — próximas pantallas van acá.'), findsOneWidget);
+    expect(find.text('Punto de Venta'), findsOneWidget);
   });
 
   testWidgets('Credenciales rechazadas por el backend muestran el error y no navegan', (tester) async {
@@ -61,7 +61,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Sesión iniciada — próximas pantallas van acá.'), findsOneWidget);
+    expect(find.text('Punto de Venta'), findsOneWidget);
     expect(find.text('Iniciar sesión'), findsNothing);
   });
 }
