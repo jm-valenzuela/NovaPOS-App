@@ -4,18 +4,40 @@ Cliente Flutter de NovaPOS — Android, Windows Desktop y Web desde el mismo có
 
 ## Cómo levantarlo
 
-Requiere el backend `NovaPOS.Api` corriendo (ver el README de `NovaPOS-Code`) — por defecto apunta a `http://localhost:6453/api/v1` (o `http://10.0.2.2:6453/api/v1` automáticamente si corre en el emulador de Android, ver `lib/core/config/api_config.dart`). Para apuntar a otro servidor:
+**1. Backend** (`NovaPOS.Api`) — en `NovaPOS-Code`:
+
+```bash
+dotnet run --project src/NovaPOS.Api
+```
+
+Si el certificado de desarrollo HTTPS da problemas (`dotnet dev-certs` no confiado), forzar HTTP explícito:
+
+```bash
+ASPNETCORE_URLS="http://localhost:6453" ASPNETCORE_ENVIRONMENT="Development" dotnet run --project src/NovaPOS.Api --no-launch-profile
+```
+
+Por defecto la app apunta a `http://localhost:6453/api/v1` (o `http://10.0.2.2:6453/api/v1` automáticamente si corre en el emulador de Android, ver `lib/core/config/api_config.dart`). Para apuntar a otro servidor:
 
 ```bash
 flutter run --dart-define=API_BASE_URL=https://api.novapos.cl/api/v1
 ```
 
+En Development, `NovaPOS.Api` necesita CORS habilitado para aceptar llamadas desde el origen del servidor Flutter Web (puerto distinto al de la API) — ya viene configurado en el backend (`app.UseCors("DesarrolloFrontend")`, solo en Development).
+
+**2. App Flutter** — en este repo:
+
 ```bash
 flutter pub get
-flutter run -d windows   # o -d chrome, -d <id-del-emulador-android>
+flutter devices          # lista los destinos disponibles
 ```
 
-En Development, `NovaPOS.Api` necesita CORS habilitado para aceptar llamadas desde el origen del servidor Flutter Web (puerto distinto al de la API) — ya viene configurado en el backend (`app.UseCors("DesarrolloFrontend")`, solo en Development).
+| Destino | Comando |
+|---|---|
+| Navegador (Chrome) | `flutter run -d chrome` |
+| Windows Desktop | `flutter run -d windows` |
+| Android (emulador/dispositivo) | `flutter run -d <id-del-emulador>` |
+
+Para probar el Punto de Venta hace falta una Empresa ya registrada (pantalla Registro de Empresa) con al menos un producto y una Caja cargados — hoy eso solo se puede cargar por SQL directo o vía API, no hay pantalla de alta de productos todavía.
 
 ## Arquitectura
 
