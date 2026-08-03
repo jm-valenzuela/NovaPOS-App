@@ -1,5 +1,7 @@
 import 'package:novapos_app/features/catalog/domain/catalog_repository.dart';
 import 'package:novapos_app/features/catalog/domain/models/producto_vendible.dart';
+import 'package:novapos_app/features/customers/domain/customer_repository.dart';
+import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dart';
 import 'package:novapos_app/features/inventory/domain/inventory_repository.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
 import 'package:novapos_app/features/sales/domain/sales_repository.dart';
@@ -53,12 +55,14 @@ class FakeSalesRepository implements SalesRepository {
 
   int vecesCrearLlamado = 0;
   String? ultimoCajaId;
+  String? ultimoClienteId;
   final List<({String varianteProductoId, double cantidad})> lineasAgregadas = [];
 
   @override
   Future<String> crearVenta({required String cajaId, String? clienteId}) async {
     vecesCrearLlamado++;
     ultimoCajaId = cajaId;
+    ultimoClienteId = clienteId;
     if (errorAforzar != null) throw Exception(errorAforzar);
     return ventaIdARetornar;
   }
@@ -73,6 +77,17 @@ class FakeSalesRepository implements SalesRepository {
   Future<double> confirmarVenta(String ventaId) async {
     if (errorAforzar != null) throw Exception(errorAforzar);
     return totalARetornar;
+  }
+}
+
+class FakeCustomerRepository implements CustomerRepository {
+  List<ClienteResumen> resultadosARetornar = [];
+  String? ultimoTexto;
+
+  @override
+  Future<List<ClienteResumen>> buscarClientes({String? texto}) async {
+    ultimoTexto = texto;
+    return resultadosARetornar;
   }
 }
 
@@ -105,3 +120,5 @@ const cajaUnica = CajaResumen(
 );
 
 const bodegaVentaFixture = BodegaVenta(bodegaId: 'bodega-1', nombreBodega: 'Bodega Principal');
+
+const clienteJuan = ClienteResumen(id: 'cliente-juan', rut: '76.123.456-0', nombre: 'Juan Pérez', email: null, telefono: null);

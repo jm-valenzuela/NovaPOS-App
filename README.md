@@ -80,12 +80,16 @@ lib/
     inventory/
       domain/              # InventoryRepository (contrato), StockVariante
       data/                # InventarioApi, InventoryRepositoryImpl
+    customers/
+      domain/              # CustomerRepository (contrato), ClienteResumen
+      data/                # CustomerApi, CustomerRepositoryImpl
     sales/
       domain/              # SalesRepository (contrato), LineaCarrito, FormaPago/TipoEntrega
       data/                # VentaApi, SalesRepositoryImpl
       presentation/
-        providers/         # BusquedaProductosController (debounce + categoría + stock), PosCartController (carrito + cobro)
+        providers/         # BusquedaProductosController (debounce + categoría + stock), BusquedaClientesController, PosCartController (carrito + cobro)
         screens/           # PosScreen — Punto de Venta
+        widgets/           # SelectorClienteDialog
     home/
       presentation/screens/  # Menú post-login — punto de entrada a los demás features
 ```
@@ -103,6 +107,7 @@ lib/
 - **Refresh de token automático**: si el backend responde 401 en cualquier llamada, `AuthInterceptor` intenta refrescar una vez con el Refresh Token guardado y reintenta la request original — transparente para el resto de la app.
 - **Punto de Venta (POS)**: búsqueda de productos con debounce (`GET /catalogo/productos`), selección de Caja (automática si la Empresa tiene una sola, selector si tiene varias — `GET /cajas`), carrito 100% local (el backend no soporta editar/quitar una línea de Venta ya agregada, así que armar el carrito contra la API línea a línea no es seguro), y al presionar "Cobrar" se ejecuta la secuencia `crearVenta → agregarLinea (por cada línea) → confirmarVenta`. Si la secuencia falla a mitad de camino, el error se muestra y el carrito local NO se vacía (para reintentar sin volver a tipear todo) — la Venta puede quedar en Borrador con líneas parciales en el servidor, limitación conocida y aceptada mientras no exista un endpoint para editar/cancelar una Venta en Borrador.
 - **Categorías y stock en el POS**: tabs de filtro por Departamento arriba del buscador (`GET /catalogo/departamentos`, reutilizado del feature de administración de Catálogo) y badge de stock en cada tarjeta de resultado (`POST /inventario/bodegas/{id}/existencias/consultar`, en batch para todos los resultados de una búsqueda a la vez). La Bodega de venta se resuelve una sola vez por sesión de POS a partir de la Sucursal de la Caja seleccionada (`GET /bodegas/venta?sucursalId=`) — mientras no se resuelva, o si la consulta de stock falla, los resultados de búsqueda igual se muestran, solo sin el badge (el stock es puramente informativo, nunca bloquea la venta).
+- **Selector de Cliente en el POS**: fila arriba del buscador con el Cliente actual ("Cliente Genérico" por defecto) — tocarla abre `SelectorClienteDialog`, un buscador con debounce (`GET /clientes/buscar?texto=`) igual que el de productos. Elegir un Cliente, tocar "Usar Cliente Genérico" o cerrar el diálogo de cualquier forma deja seleccionado el Cliente Genérico salvo que se haya tocado explícitamente un resultado — simplificación a propósito, no hay un tercer estado "no cambiar nada". El `clienteId` elegido (o `null`) se pasa a `crearVenta`, y se limpia automáticamente después de cada cobro para no arrastrarlo a la siguiente Venta.
 - **Catálogo (administración)**: listado de Productos con sus Variantes anidadas (`GET /catalogo/productos/todos`, incluye inactivos), activar/desactivar cada uno con un `Switch` (recarga la lista completa tras cada cambio, sin mutación optimista — catálogo de tamaño de PyME, costo bajo), y alta de Producto + primera Variante (`CatalogFormScreen`) con los 5 combos de clasificación en cascada (Departamento→SubDepartamento→Clase→Subclase, y Marca) — cada combo tiene una opción "+ Nueva..." que crea el nivel al vuelo (`SelectorConAlta`), necesario porque una Empresa recién registrada no tiene ninguna Categoría cargada. Editar un Producto (nombre/descripción/clasificación) o una Variante (precio/unidad/código de barras/color/talla/ubicación) se hace con diálogos chicos desde el listado — el `Sku` nunca es editable, igual que en el backend. **Limitación conocida**: al editar un Producto, la clasificación actual se muestra solo como texto ("Manga Corta · Nike"); si se quiere cambiar, hay que recorrer la cascada completa desde Departamento — el backend no expone un endpoint para resolver la ascendencia completa de una Subclase directamente.
 - **Home**: menú con acceso a Punto de Venta y Catálogo — el resto de las pantallas (Inventario, Compras, etc.) se agregan como nuevos features siguiendo el mismo patrón que `auth/`, `sales/` y `catalog/`.
 
@@ -114,12 +119,13 @@ Verificado con la app real corriendo contra `NovaPOS.Api` real (LocalDB) sirvien
 flutter test
 ```
 
-Tests unitarios de validación de RUT y del controller de clasificación en cascada de Catálogo (`ProviderContainer`, sin pump de widgets), más widget tests de Login, Registro de Empresa, Punto de Venta y administración de Catálogo que cubren el camino feliz, validación de formulario, manejo de errores del backend, idempotencia de sesión, búsqueda con debounce, filtro por categoría, badge de stock, armado del carrito, la secuencia completa de cobro, y listado/activar/desactivar/navegación de Catálogo — todos usando repositorios fake, sin red real ni `flutter_secure_storage` real (el canal de plataforma no existe bajo `flutter test`; ver `SecureStorage`/`InMemorySecureStorage`). **No cubierto por widget tests** (documentado como limitación, no como pendiente silencioso): la interacción real con los `DropdownButtonFormField` de `CatalogFormScreen`/`ClasificacionCascade` ni los diálogos `EditarProductoDialog`/`EditarVarianteDialog` — la lógica que importa (`CatalogFormController`) sí está cubierta directamente.
+Tests unitarios de validación de RUT y del controller de clasificación en cascada de Catálogo (`ProviderContainer`, sin pump de widgets), más widget tests de Login, Registro de Empresa, Punto de Venta y administración de Catálogo que cubren el camino feliz, validación de formulario, manejo de errores del backend, idempotencia de sesión, búsqueda con debounce, filtro por categoría, badge de stock, selector de Cliente, armado del carrito, la secuencia completa de cobro, y listado/activar/desactivar/navegación de Catálogo — todos usando repositorios fake, sin red real ni `flutter_secure_storage` real (el canal de plataforma no existe bajo `flutter test`; ver `SecureStorage`/`InMemorySecureStorage`). **No cubierto por widget tests** (documentado como limitación, no como pendiente silencioso): la interacción real con los `DropdownButtonFormField` de `CatalogFormScreen`/`ClasificacionCascade` ni los diálogos `EditarProductoDialog`/`EditarVarianteDialog` — la lógica que importa (`CatalogFormController`) sí está cubierta directamente.
 
 ## Qué falta
 
 - El resto de las pantallas (Inventario, Compras, etc.) — Login, Registro de Empresa, Punto de Venta y Catálogo son la base sobre la que se construye el resto.
-- Del diseño objetivo del POS: selector de Cliente, descuentos por línea, desglose Subtotal/IVA/Total, "Cotización" (venta sin confirmar) y escaneo de código de barras por cámara — ninguno tiene soporte en el backend todavía.
+- Crear un Cliente nuevo desde el propio selector del POS (el backend ya soporta `POST /clientes`) — hoy solo se puede elegir entre Clientes ya existentes.
+- Del diseño objetivo del POS: descuentos por línea, desglose Subtotal/IVA/Total, "Cotización" (venta sin confirmar) y escaneo de código de barras por cámara — ninguno tiene soporte en el backend todavía.
 - Agregar una Variante adicional a un Producto ya existente desde la app (el backend ya soporta `POST /catalogo/variantes`) — hoy solo se crea la primera Variante junto con el Producto.
 - Editar/quitar una línea de una Venta ya agregada en el backend — hoy el carrito del POS es puramente local por esta razón (ver arriba).
 - Offline-first real: SQLite local + sincronización contra el Sync Engine del backend (`POST /sync/lotes`, ya construido del lado del servidor) — hoy la app requiere conexión.

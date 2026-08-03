@@ -9,6 +9,10 @@ import '../../../catalog/domain/catalog_repository.dart';
 import '../../../catalog/domain/models/clasificacion.dart';
 import '../../../catalog/domain/models/producto_vendible.dart';
 import '../../../catalog/presentation/providers/catalog_admin_providers.dart' show catalogAdminRepositoryProvider;
+import '../../../customers/data/customer_api.dart';
+import '../../../customers/data/customer_repository_impl.dart';
+import '../../../customers/domain/customer_repository.dart';
+import '../../../customers/domain/models/cliente_resumen.dart';
 import '../../../inventory/data/inventario_api.dart';
 import '../../../inventory/data/inventory_repository_impl.dart';
 import '../../../inventory/domain/inventory_repository.dart';
@@ -26,6 +30,7 @@ final catalogoApiProvider = Provider<CatalogoApi>((ref) => CatalogoApi(ref.watch
 final tenancyApiProvider = Provider<TenancyApi>((ref) => TenancyApi(ref.watch(apiClientProvider)));
 final ventaApiProvider = Provider<VentaApi>((ref) => VentaApi(ref.watch(apiClientProvider)));
 final inventarioApiProvider = Provider<InventarioApi>((ref) => InventarioApi(ref.watch(apiClientProvider)));
+final customerApiProvider = Provider<CustomerApi>((ref) => CustomerApi(ref.watch(apiClientProvider)));
 
 final catalogRepositoryProvider =
     Provider<CatalogRepository>((ref) => CatalogRepositoryImpl(ref.watch(catalogoApiProvider)));
@@ -34,6 +39,64 @@ final tenancyRepositoryProvider =
 final salesRepositoryProvider = Provider<SalesRepository>((ref) => SalesRepositoryImpl(ref.watch(ventaApiProvider)));
 final inventoryRepositoryProvider =
     Provider<InventoryRepository>((ref) => InventoryRepositoryImpl(ref.watch(inventarioApiProvider)));
+final customerRepositoryProvider =
+    Provider<CustomerRepository>((ref) => CustomerRepositoryImpl(ref.watch(customerApiProvider)));
+
+/// Cliente elegido para la Venta actual — null significa "Cliente
+/// Genérico" (el backend resuelve ese caso solo si ClienteId no viene en
+/// CrearVentaCommand, ver CrearVentaCommandHandler). Se limpia después de
+/// cada cobro para no arrastrar el Cliente de la Venta anterior a la siguiente.
+final clienteSeleccionadoProvider = StateProvider.autoDispose<ClienteResumen?>((ref) => null);
+
+class BusquedaClientesState {
+  const BusquedaClientesState({this.resultados = const [], this.buscando = false});
+
+  final List<ClienteResumen> resultados;
+  final bool buscando;
+
+  BusquedaClientesState copyWith({List<ClienteResumen>? resultados, bool? buscando}) {
+    return BusquedaClientesState(resultados: resultados ?? this.resultados, buscando: buscando ?? this.buscando);
+  }
+}
+
+/// Búsqueda con debounce para el diálogo de selección de Cliente — mismo
+/// patrón que BusquedaProductosController, sin el enriquecido de stock.
+class BusquedaClientesController extends StateNotifier<BusquedaClientesState> {
+  BusquedaClientesController(this._repository) : super(const BusquedaClientesState());
+
+  final CustomerRepository _repository;
+  Timer? _debounce;
+  int _peticionEnCurso = 0;
+
+  void buscar(String texto) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () => _ejecutarBusqueda(texto));
+  }
+
+  Future<void> _ejecutarBusqueda(String texto) async {
+    final idDeEstaPeticion = ++_peticionEnCurso;
+    state = state.copyWith(buscando: true);
+    try {
+      final resultados = await _repository.buscarClientes(texto: texto);
+      if (idDeEstaPeticion != _peticionEnCurso) return;
+      state = state.copyWith(resultados: resultados, buscando: false);
+    } catch (_) {
+      if (idDeEstaPeticion != _peticionEnCurso) return;
+      state = state.copyWith(buscando: false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+}
+
+final busquedaClientesProvider =
+    StateNotifierProvider.autoDispose<BusquedaClientesController, BusquedaClientesState>((ref) {
+  return BusquedaClientesController(ref.watch(customerRepositoryProvider));
+});
 
 /// Cajas de la Empresa del Usuario logueado — casi siempre una sola (la
 /// auto-provisionada en UC-01), pero una Empresa real puede tener varias

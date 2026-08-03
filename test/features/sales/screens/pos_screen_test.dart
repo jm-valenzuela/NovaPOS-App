@@ -18,6 +18,7 @@ void main() {
   late FakeSalesRepository fakeSales;
   late FakeInventoryRepository fakeInventory;
   late FakeCatalogAdminRepository fakeCatalogAdmin;
+  late FakeCustomerRepository fakeCustomer;
 
   Future<void> pumpPos(
     WidgetTester tester, {
@@ -31,6 +32,7 @@ void main() {
     fakeSales = FakeSalesRepository();
     fakeInventory = FakeInventoryRepository();
     fakeCatalogAdmin = FakeCatalogAdminRepository()..departamentos = departamentos ?? [];
+    fakeCustomer = FakeCustomerRepository();
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -39,6 +41,7 @@ void main() {
         salesRepositoryProvider.overrideWithValue(fakeSales),
         inventoryRepositoryProvider.overrideWithValue(fakeInventory),
         catalogAdminRepositoryProvider.overrideWithValue(fakeCatalogAdmin),
+        customerRepositoryProvider.overrideWithValue(fakeCustomer),
       ],
       child: const MaterialApp(home: PosScreen()),
     ));
@@ -197,5 +200,57 @@ void main() {
 
     expect(fakeInventory.ultimaBodegaId, 'bodega-1');
     expect(find.textContaining('Stock 24'), findsOneWidget);
+  });
+
+  testWidgets('Sin elegir Cliente, muestra "Cliente Genérico" por defecto', (tester) async {
+    await pumpPos(tester);
+
+    expect(find.text('Cliente Genérico'), findsOneWidget);
+  });
+
+  testWidgets('Elegir un Cliente en el selector lo muestra y lo pasa al cobrar', (tester) async {
+    await pumpPos(tester);
+    fakeCustomer.resultadosARetornar = [clienteJuan];
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    fakeSales.totalARetornar = 1500;
+
+    await tester.tap(find.byKey(const Key('posCliente')));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400)); // pasa el debounce de la carga inicial
+    await tester.pump(); // deja resolver el Future de buscarClientes
+
+    await tester.tap(find.byKey(const Key('selectorClienteResultado_cliente-juan')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Juan Pérez'), findsOneWidget);
+
+    await buscarYEsperar(tester, 'a');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('posCobrar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeSales.ultimoClienteId, 'cliente-juan');
+  });
+
+  testWidgets('"Usar Cliente Genérico" en el selector vuelve a dejar el Cliente en null', (tester) async {
+    await pumpPos(tester);
+    fakeCustomer.resultadosARetornar = [clienteJuan];
+
+    await tester.tap(find.byKey(const Key('posCliente')));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(); // deja resolver el Future de buscarClientes
+    await tester.tap(find.byKey(const Key('selectorClienteResultado_cliente-juan')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Juan Pérez'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('posCliente')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('selectorClienteGenerico')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cliente Genérico'), findsOneWidget);
   });
 }

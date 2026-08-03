@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../../catalog/domain/models/clasificacion.dart';
+import '../../../customers/domain/models/cliente_resumen.dart';
 import '../../../tenancy/domain/models/caja_resumen.dart';
 import '../providers/pos_providers.dart';
 import '../widgets/carrito_linea_tile.dart';
 import '../widgets/producto_resultado_tile.dart';
+import '../widgets/selector_cliente_dialog.dart';
 
 class PosScreen extends ConsumerStatefulWidget {
   const PosScreen({super.key});
@@ -38,6 +40,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     final carrito = ref.watch(posCartProvider);
     final departamentosAsync = ref.watch(departamentosProvider);
     final departamentoSeleccionado = ref.watch(departamentoSeleccionadoProvider);
+    final clienteSeleccionado = ref.watch(clienteSeleccionadoProvider);
 
     ref.listen(cajasProvider, (previo, actual) {
       actual.whenData((cajas) {
@@ -96,6 +99,19 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
           return Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: ListTile(
+                  key: const Key('posCliente'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.person_outline),
+                  title: Text(clienteSeleccionado?.nombre ?? 'Cliente Genérico'),
+                  subtitle: clienteSeleccionado?.rut != null ? Text(clienteSeleccionado!.rut!) : null,
+                  trailing: const Text('Cambiar'),
+                  onTap: () => _elegirCliente(context),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: TextField(
@@ -181,7 +197,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         key: const Key('posCobrar'),
                         onPressed: (carrito.lineas.isEmpty || carrito.cobrando)
                             ? null
-                            : () => ref.read(posCartProvider.notifier).cobrar(cajaId: cajaSeleccionada.cajaId),
+                            : () => ref.read(posCartProvider.notifier).cobrar(
+                                  cajaId: cajaSeleccionada.cajaId,
+                                  clienteId: ref.read(clienteSeleccionadoProvider)?.id,
+                                ),
                         child: carrito.cobrando
                             ? const SizedBox(
                                 height: 20,
@@ -201,7 +220,21 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     );
   }
 
+  Future<void> _elegirCliente(BuildContext context) async {
+    // El diálogo solo se cierra con una acción explícita (elegir un
+    // Cliente, "Usar Cliente Genérico", o "Cancelar") — las tres devuelven
+    // ClienteResumen? (null = Genérico), así que "Cancelar" también deja
+    // el Cliente Genérico seleccionado en vez de mantener el anterior.
+    // Simplifica el estado a propósito: no hay un tercer valor "no cambiar".
+    final elegido = await showDialog<ClienteResumen?>(
+      context: context,
+      builder: (_) => const SelectorClienteDialog(),
+    );
+    ref.read(clienteSeleccionadoProvider.notifier).state = elegido;
+  }
+
   void _mostrarVentaCobrada(double total) {
+    ref.read(clienteSeleccionadoProvider.notifier).state = null;
     _busquedaController.clear();
     _buscar('');
     showDialog<void>(
