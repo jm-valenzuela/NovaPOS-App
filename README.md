@@ -37,6 +37,14 @@ flutter devices          # lista los destinos disponibles
 | Windows Desktop | `flutter run -d windows` |
 | Android (emulador/dispositivo) | `flutter run -d <id-del-emulador>` |
 
+**Si en Chrome las llamadas al backend fallan con "No se pudo conectar con el servidor" pese a que el backend responde bien** (confirmable con `curl`/Swagger): el SDK de Flutter de este proyecto es de 2023 y su compilador de modo debug (DDC) depende de `Intl.v8BreakIterator`, una función que Chrome ya eliminó en versiones recientes. Corre en modo release en su lugar (pierde hot reload, pero evita el problema):
+
+```bash
+flutter run -d chrome --release
+```
+
+La solución definitiva es actualizar el SDK de Flutter, no hecho todavía en este repo.
+
 Para probar el Punto de Venta hace falta una Empresa ya registrada (pantalla Registro de Empresa) con al menos una Caja cargada (la que UC-01 auto-provisiona alcanza) y un Producto — este último ya se puede crear desde la propia app, en Home → Catálogo.
 
 ## Arquitectura
