@@ -5,6 +5,7 @@ import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/registro_empresa_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
+import '../../features/catalog/presentation/screens/productos_admin_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/sales/presentation/screens/pos_screen.dart';
 
@@ -40,6 +41,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/registro-empresa', builder: (context, state) => const RegistroEmpresaScreen()),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
       GoRoute(path: '/pos', builder: (context, state) => const PosScreen()),
+      GoRoute(path: '/catalogo', builder: (context, state) => const ProductosAdminScreen()),
     ],
   );
 });

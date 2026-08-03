@@ -37,7 +37,7 @@ flutter devices          # lista los destinos disponibles
 | Windows Desktop | `flutter run -d windows` |
 | Android (emulador/dispositivo) | `flutter run -d <id-del-emulador>` |
 
-Para probar el Punto de Venta hace falta una Empresa ya registrada (pantalla Registro de Empresa) con al menos un producto y una Caja cargados — hoy eso solo se puede cargar por SQL directo o vía API, no hay pantalla de alta de productos todavía.
+Para probar el Punto de Venta hace falta una Empresa ya registrada (pantalla Registro de Empresa) con al menos una Caja cargada (la que UC-01 auto-provisiona alcanza) y un Producto — este último ya se puede crear desde la propia app, en Home → Catálogo.
 
 ## Arquitectura
 
@@ -60,8 +60,12 @@ lib/
         providers/         # AuthController, RegistroEmpresaController (StateNotifier)
         screens/           # LoginScreen, RegistroEmpresaScreen, SplashScreen
     catalog/
-      domain/              # CatalogRepository (contrato), ProductoVendible
-      data/                # CatalogoApi, CatalogRepositoryImpl
+      domain/              # CatalogRepository/CatalogAdminRepository (contratos), ProductoVendible, ProductoAdmin, Departamento/SubDepartamento/Clase/Subclase/Marca
+      data/                # CatalogoApi (búsqueda POS), CatalogAdminApi (alta/edición/activar/desactivar)
+      presentation/
+        providers/         # ProductosAdminController (listado), CatalogFormController (cascada de clasificación + alta)
+        screens/           # ProductosAdminScreen (listado), CatalogFormScreen (alta de Producto)
+        widgets/           # SelectorConAlta, ClasificacionCascade, EditarProductoDialog, EditarVarianteDialog
     tenancy/
       domain/              # TenancyRepository (contrato), CajaResumen
       data/                # TenancyApi, TenancyRepositoryImpl
@@ -87,7 +91,8 @@ lib/
 - **Registro de Empresa**: formulario completo (datos de la Empresa + cuenta del Administrador) contra `POST /empresas` — implementa UC-01 del backend. No deja sesión iniciada (mismo criterio que el backend: el JWT se emite recién en Login, no en el registro); al terminar, muestra un diálogo de confirmación y vuelve a Login.
 - **Refresh de token automático**: si el backend responde 401 en cualquier llamada, `AuthInterceptor` intenta refrescar una vez con el Refresh Token guardado y reintenta la request original — transparente para el resto de la app.
 - **Punto de Venta (POS)**: búsqueda de productos con debounce (`GET /catalogo/productos`), selección de Caja (automática si la Empresa tiene una sola, selector si tiene varias — `GET /cajas`), carrito 100% local (el backend no soporta editar/quitar una línea de Venta ya agregada, así que armar el carrito contra la API línea a línea no es seguro), y al presionar "Cobrar" se ejecuta la secuencia `crearVenta → agregarLinea (por cada línea) → confirmarVenta`. Si la secuencia falla a mitad de camino, el error se muestra y el carrito local NO se vacía (para reintentar sin volver a tipear todo) — la Venta puede quedar en Borrador con líneas parciales en el servidor, limitación conocida y aceptada mientras no exista un endpoint para editar/cancelar una Venta en Borrador.
-- **Home**: menú con acceso a Punto de Venta — el resto de las pantallas (Inventario, Catálogo, etc.) se agregan como nuevos features siguiendo el mismo patrón que `auth/` y `sales/`.
+- **Catálogo (administración)**: listado de Productos con sus Variantes anidadas (`GET /catalogo/productos/todos`, incluye inactivos), activar/desactivar cada uno con un `Switch` (recarga la lista completa tras cada cambio, sin mutación optimista — catálogo de tamaño de PyME, costo bajo), y alta de Producto + primera Variante (`CatalogFormScreen`) con los 5 combos de clasificación en cascada (Departamento→SubDepartamento→Clase→Subclase, y Marca) — cada combo tiene una opción "+ Nueva..." que crea el nivel al vuelo (`SelectorConAlta`), necesario porque una Empresa recién registrada no tiene ninguna Categoría cargada. Editar un Producto (nombre/descripción/clasificación) o una Variante (precio/unidad/código de barras/color/talla/ubicación) se hace con diálogos chicos desde el listado — el `Sku` nunca es editable, igual que en el backend. **Limitación conocida**: al editar un Producto, la clasificación actual se muestra solo como texto ("Manga Corta · Nike"); si se quiere cambiar, hay que recorrer la cascada completa desde Departamento — el backend no expone un endpoint para resolver la ascendencia completa de una Subclase directamente.
+- **Home**: menú con acceso a Punto de Venta y Catálogo — el resto de las pantallas (Inventario, Compras, etc.) se agregan como nuevos features siguiendo el mismo patrón que `auth/`, `sales/` y `catalog/`.
 
 Verificado con la app real corriendo contra `NovaPOS.Api` real (LocalDB) sirviendo en Web (`flutter run -d web-server`, CORS habilitado): la pantalla de Login renderiza, la navegación a Registro de Empresa funciona, y la escritura en los campos de texto se confirmó real (no simulada) inspeccionando el estado real de los widgets. La interacción de tap final contra el botón de envío no se pudo verificar en vivo en el navegador por una limitación de la herramienta de automatización de esta sesión (el compositing de capturas de pantalla no funcionaba) — el flujo completo (llenar formulario → validar → llamar al repositorio con los datos exactos → mostrar el diálogo de éxito → volver a Login) quedó verificado en cambio con **widget tests reales** (`flutter test`) que ejercitan el árbol de widgets de producción completo (hit-testing real sobre el botón, `Form.validate()` real, `AuthController`/`RegistroEmpresaController` reales), con un `AuthRepository` fake reemplazando solo la capa de red — mismo criterio que los `*RepositorioFalso` del backend.
 
@@ -97,11 +102,12 @@ Verificado con la app real corriendo contra `NovaPOS.Api` real (LocalDB) sirvien
 flutter test
 ```
 
-Tests unitarios de validación de RUT, más widget tests de Login, Registro de Empresa y Punto de Venta que cubren el camino feliz, validación de formulario, manejo de errores del backend, idempotencia de sesión, búsqueda con debounce, armado del carrito y la secuencia completa de cobro — todos usando repositorios fake, sin red real ni `flutter_secure_storage` real (el canal de plataforma no existe bajo `flutter test`; ver `SecureStorage`/`InMemorySecureStorage`).
+Tests unitarios de validación de RUT y del controller de clasificación en cascada de Catálogo (`ProviderContainer`, sin pump de widgets), más widget tests de Login, Registro de Empresa, Punto de Venta y administración de Catálogo que cubren el camino feliz, validación de formulario, manejo de errores del backend, idempotencia de sesión, búsqueda con debounce, armado del carrito, la secuencia completa de cobro, y listado/activar/desactivar/navegación de Catálogo — todos usando repositorios fake, sin red real ni `flutter_secure_storage` real (el canal de plataforma no existe bajo `flutter test`; ver `SecureStorage`/`InMemorySecureStorage`). **No cubierto por widget tests** (documentado como limitación, no como pendiente silencioso): la interacción real con los `DropdownButtonFormField` de `CatalogFormScreen`/`ClasificacionCascade` ni los diálogos `EditarProductoDialog`/`EditarVarianteDialog` — la lógica que importa (`CatalogFormController`) sí está cubierta directamente.
 
 ## Qué falta
 
-- El resto de las pantallas (Inventario, Catálogo, Compras, etc.) — Login, Registro de Empresa y Punto de Venta son la base sobre la que se construye el resto.
+- El resto de las pantallas (Inventario, Compras, etc.) — Login, Registro de Empresa, Punto de Venta y Catálogo son la base sobre la que se construye el resto.
+- Agregar una Variante adicional a un Producto ya existente desde la app (el backend ya soporta `POST /catalogo/variantes`) — hoy solo se crea la primera Variante junto con el Producto.
 - Editar/quitar una línea de una Venta ya agregada en el backend — hoy el carrito del POS es puramente local por esta razón (ver arriba).
 - Offline-first real: SQLite local + sincronización contra el Sync Engine del backend (`POST /sync/lotes`, ya construido del lado del servidor) — hoy la app requiere conexión.
 - Publicación real en Android (Play Store) y empaquetado del instalable de Windows (MSIX) — por ahora solo se corre en modo desarrollo.

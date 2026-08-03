@@ -29,14 +29,29 @@ class HomeScreen extends ConsumerWidget {
           constraints: const BoxConstraints(maxWidth: 400),
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Card(
-              child: ListTile(
-                leading: const Icon(Icons.point_of_sale, size: 32),
-                title: const Text('Punto de Venta'),
-                subtitle: const Text('Buscar productos, armar el carrito y cobrar'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/pos'),
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.point_of_sale, size: 32),
+                    title: const Text('Punto de Venta'),
+                    subtitle: const Text('Buscar productos, armar el carrito y cobrar'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/pos'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.inventory_2, size: 32),
+                    title: const Text('Catálogo'),
+                    subtitle: const Text('Crear y editar Productos'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/catalogo'),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
