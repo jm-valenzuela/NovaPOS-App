@@ -8,5 +8,6 @@ class CatalogRepositoryImpl implements CatalogRepository {
   final CatalogoApi _api;
 
   @override
-  Future<List<ProductoVendible>> buscarProductos({String? texto}) => _api.buscarProductos(texto: texto);
+  Future<List<ProductoVendible>> buscarProductos({String? texto, String? departamentoId}) =>
+      _api.buscarProductos(texto: texto, departamentoId: departamentoId);
 }

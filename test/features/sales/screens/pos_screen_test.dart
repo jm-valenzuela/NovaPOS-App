@@ -2,27 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:novapos_app/features/catalog/domain/models/clasificacion.dart';
+import 'package:novapos_app/features/catalog/presentation/providers/catalog_admin_providers.dart';
+import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
 import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart';
 import 'package:novapos_app/features/sales/presentation/screens/pos_screen.dart';
 import 'package:novapos_app/features/tenancy/domain/models/caja_resumen.dart';
 
+import '../../catalog/fakes/catalog_admin_fakes.dart' show FakeCatalogAdminRepository;
 import '../fakes/pos_fakes.dart';
 
 void main() {
   late FakeCatalogRepository fakeCatalog;
   late FakeTenancyRepository fakeTenancy;
   late FakeSalesRepository fakeSales;
+  late FakeInventoryRepository fakeInventory;
+  late FakeCatalogAdminRepository fakeCatalogAdmin;
 
-  Future<void> pumpPos(WidgetTester tester, {List<CajaResumen>? cajas}) async {
+  Future<void> pumpPos(
+    WidgetTester tester, {
+    List<CajaResumen>? cajas,
+    List<Departamento>? departamentos,
+  }) async {
     fakeCatalog = FakeCatalogRepository();
-    fakeTenancy = FakeTenancyRepository()..cajasARetornar = cajas ?? [cajaUnica];
+    fakeTenancy = FakeTenancyRepository()
+      ..cajasARetornar = cajas ?? [cajaUnica]
+      ..bodegaVentaARetornar = bodegaVentaFixture;
     fakeSales = FakeSalesRepository();
+    fakeInventory = FakeInventoryRepository();
+    fakeCatalogAdmin = FakeCatalogAdminRepository()..departamentos = departamentos ?? [];
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
         catalogRepositoryProvider.overrideWithValue(fakeCatalog),
         tenancyRepositoryProvider.overrideWithValue(fakeTenancy),
         salesRepositoryProvider.overrideWithValue(fakeSales),
+        inventoryRepositoryProvider.overrideWithValue(fakeInventory),
+        catalogAdminRepositoryProvider.overrideWithValue(fakeCatalogAdmin),
       ],
       child: const MaterialApp(home: PosScreen()),
     ));
@@ -34,6 +50,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('posBusqueda')), texto);
     await tester.pump(const Duration(milliseconds: 400)); // pasa el debounce
     await tester.pump(); // deja resolver el Future de buscarProductos
+    await tester.pump(); // deja resolver el Future de listarStock (si hay Bodega resuelta)
   }
 
   testWidgets('Con una sola Caja, la selecciona automáticamente y muestra la búsqueda', (tester) async {
@@ -43,20 +60,8 @@ void main() {
   });
 
   testWidgets('Buscar muestra los resultados y agregarlos los suma al carrito', (tester) async {
-    fakeCatalog = FakeCatalogRepository()..resultadosARetornar = [productoCocaCola, productoPan];
-    fakeTenancy = FakeTenancyRepository()..cajasARetornar = [cajaUnica];
-    fakeSales = FakeSalesRepository();
-
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        catalogRepositoryProvider.overrideWithValue(fakeCatalog),
-        tenancyRepositoryProvider.overrideWithValue(fakeTenancy),
-        salesRepositoryProvider.overrideWithValue(fakeSales),
-      ],
-      child: const MaterialApp(home: PosScreen()),
-    ));
-    await tester.pump();
-    await tester.pump();
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola, productoPan];
 
     await buscarYEsperar(tester, 'coca');
 
@@ -71,20 +76,8 @@ void main() {
   });
 
   testWidgets('Agregar el mismo producto dos veces suma la cantidad, no duplica la línea', (tester) async {
-    fakeCatalog = FakeCatalogRepository()..resultadosARetornar = [productoCocaCola];
-    fakeTenancy = FakeTenancyRepository()..cajasARetornar = [cajaUnica];
-    fakeSales = FakeSalesRepository();
-
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        catalogRepositoryProvider.overrideWithValue(fakeCatalog),
-        tenancyRepositoryProvider.overrideWithValue(fakeTenancy),
-        salesRepositoryProvider.overrideWithValue(fakeSales),
-      ],
-      child: const MaterialApp(home: PosScreen()),
-    ));
-    await tester.pump();
-    await tester.pump();
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
 
     await buscarYEsperar(tester, 'coca');
     await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
@@ -98,20 +91,9 @@ void main() {
   });
 
   testWidgets('Cobrar crea la Venta, agrega cada línea y confirma — luego muestra el total', (tester) async {
-    fakeCatalog = FakeCatalogRepository()..resultadosARetornar = [productoCocaCola, productoPan];
-    fakeTenancy = FakeTenancyRepository()..cajasARetornar = [cajaUnica];
-    fakeSales = FakeSalesRepository()..totalARetornar = 2300;
-
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        catalogRepositoryProvider.overrideWithValue(fakeCatalog),
-        tenancyRepositoryProvider.overrideWithValue(fakeTenancy),
-        salesRepositoryProvider.overrideWithValue(fakeSales),
-      ],
-      child: const MaterialApp(home: PosScreen()),
-    ));
-    await tester.pump();
-    await tester.pump();
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola, productoPan];
+    fakeSales.totalARetornar = 2300;
 
     await buscarYEsperar(tester, 'a');
     await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
@@ -132,20 +114,9 @@ void main() {
   });
 
   testWidgets('Confirmar "Nueva Venta" vacía el carrito para la siguiente', (tester) async {
-    fakeCatalog = FakeCatalogRepository()..resultadosARetornar = [productoCocaCola];
-    fakeTenancy = FakeTenancyRepository()..cajasARetornar = [cajaUnica];
-    fakeSales = FakeSalesRepository()..totalARetornar = 1500;
-
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        catalogRepositoryProvider.overrideWithValue(fakeCatalog),
-        tenancyRepositoryProvider.overrideWithValue(fakeTenancy),
-        salesRepositoryProvider.overrideWithValue(fakeSales),
-      ],
-      child: const MaterialApp(home: PosScreen()),
-    ));
-    await tester.pump();
-    await tester.pump();
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    fakeSales.totalARetornar = 1500;
 
     await buscarYEsperar(tester, 'a');
     await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
@@ -161,20 +132,9 @@ void main() {
   });
 
   testWidgets('Si crear la Venta falla, el error se muestra y el carrito NO se vacía', (tester) async {
-    fakeCatalog = FakeCatalogRepository()..resultadosARetornar = [productoCocaCola];
-    fakeTenancy = FakeTenancyRepository()..cajasARetornar = [cajaUnica];
-    fakeSales = FakeSalesRepository()..errorAforzar = 'No se pudo conectar con el servidor.';
-
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        catalogRepositoryProvider.overrideWithValue(fakeCatalog),
-        tenancyRepositoryProvider.overrideWithValue(fakeTenancy),
-        salesRepositoryProvider.overrideWithValue(fakeSales),
-      ],
-      child: const MaterialApp(home: PosScreen()),
-    ));
-    await tester.pump();
-    await tester.pump();
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    fakeSales.errorAforzar = 'No se pudo conectar con el servidor.';
 
     await buscarYEsperar(tester, 'a');
     await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
@@ -187,20 +147,8 @@ void main() {
   });
 
   testWidgets('Quitar una línea del carrito la elimina', (tester) async {
-    fakeCatalog = FakeCatalogRepository()..resultadosARetornar = [productoCocaCola];
-    fakeTenancy = FakeTenancyRepository()..cajasARetornar = [cajaUnica];
-    fakeSales = FakeSalesRepository();
-
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        catalogRepositoryProvider.overrideWithValue(fakeCatalog),
-        tenancyRepositoryProvider.overrideWithValue(fakeTenancy),
-        salesRepositoryProvider.overrideWithValue(fakeSales),
-      ],
-      child: const MaterialApp(home: PosScreen()),
-    ));
-    await tester.pump();
-    await tester.pump();
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
 
     await buscarYEsperar(tester, 'a');
     await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
@@ -222,5 +170,32 @@ void main() {
 
     final boton = tester.widget<ElevatedButton>(find.byKey(const Key('posCobrar')));
     expect(boton.onPressed, isNull);
+  });
+
+  testWidgets('Muestra tabs de categoría y filtra la búsqueda por Departamento', (tester) async {
+    await pumpPos(tester, departamentos: [
+      const Departamento(id: 'depto-bebidas', nombre: 'Bebidas', activo: true),
+    ]);
+
+    expect(find.byKey(const Key('posCategoriaTodos')), findsOneWidget);
+    expect(find.byKey(const Key('posCategoria_depto-bebidas')), findsOneWidget);
+
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    await tester.tap(find.byKey(const Key('posCategoria_depto-bebidas')));
+    await tester.pump(const Duration(milliseconds: 400)); // pasa el debounce de la búsqueda
+    await tester.pump();
+
+    expect(fakeCatalog.ultimoDepartamentoId, 'depto-bebidas');
+  });
+
+  testWidgets('Muestra el stock de cada resultado cuando la Bodega ya se resolvió', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    fakeInventory.stockARetornar = [const StockVariante(varianteProductoId: 'variante-coca', cantidad: 24)];
+
+    await buscarYEsperar(tester, 'a');
+
+    expect(fakeInventory.ultimaBodegaId, 'bodega-1');
+    expect(find.textContaining('Stock 24'), findsOneWidget);
   });
 }

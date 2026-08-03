@@ -1,27 +1,49 @@
 import 'package:novapos_app/features/catalog/domain/catalog_repository.dart';
 import 'package:novapos_app/features/catalog/domain/models/producto_vendible.dart';
+import 'package:novapos_app/features/inventory/domain/inventory_repository.dart';
+import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
 import 'package:novapos_app/features/sales/domain/sales_repository.dart';
+import 'package:novapos_app/features/tenancy/domain/models/bodega_venta.dart';
 import 'package:novapos_app/features/tenancy/domain/models/caja_resumen.dart';
 import 'package:novapos_app/features/tenancy/domain/tenancy_repository.dart';
 
 class FakeCatalogRepository implements CatalogRepository {
   List<ProductoVendible> resultadosARetornar = [];
   String? ultimoTexto;
+  String? ultimoDepartamentoId;
   int vecesLlamado = 0;
 
   @override
-  Future<List<ProductoVendible>> buscarProductos({String? texto}) async {
+  Future<List<ProductoVendible>> buscarProductos({String? texto, String? departamentoId}) async {
     vecesLlamado++;
     ultimoTexto = texto;
+    ultimoDepartamentoId = departamentoId;
     return resultadosARetornar;
   }
 }
 
 class FakeTenancyRepository implements TenancyRepository {
   List<CajaResumen> cajasARetornar = [];
+  BodegaVenta? bodegaVentaARetornar;
 
   @override
   Future<List<CajaResumen>> listarCajas() async => cajasARetornar;
+
+  @override
+  Future<BodegaVenta?> obtenerBodegaVenta(String sucursalId) async => bodegaVentaARetornar;
+}
+
+class FakeInventoryRepository implements InventoryRepository {
+  List<StockVariante> stockARetornar = [];
+  String? ultimaBodegaId;
+  List<String>? ultimasVarianteProductoIds;
+
+  @override
+  Future<List<StockVariante>> listarStock({required String bodegaId, required List<String> varianteProductoIds}) async {
+    ultimaBodegaId = bodegaId;
+    ultimasVarianteProductoIds = varianteProductoIds;
+    return stockARetornar;
+  }
 }
 
 class FakeSalesRepository implements SalesRepository {
@@ -81,3 +103,5 @@ const cajaUnica = CajaResumen(
   sucursalId: 'sucursal-1',
   nombreSucursal: 'Casa Matriz',
 );
+
+const bodegaVentaFixture = BodegaVenta(bodegaId: 'bodega-1', nombreBodega: 'Bodega Principal');

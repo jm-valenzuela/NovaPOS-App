@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../../catalog/domain/models/clasificacion.dart';
 import '../../../tenancy/domain/models/caja_resumen.dart';
 import '../providers/pos_providers.dart';
 import '../widgets/carrito_linea_tile.dart';
@@ -23,17 +24,36 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     super.dispose();
   }
 
+  void _buscar(String texto) {
+    final departamentoId = ref.read(departamentoSeleccionadoProvider);
+    final bodegaId = ref.read(bodegaVentaProvider).valueOrNull?.bodegaId;
+    ref.read(busquedaProductosProvider.notifier).buscar(texto, departamentoId: departamentoId, bodegaId: bodegaId);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cajasAsync = ref.watch(cajasProvider);
     final cajaSeleccionada = ref.watch(cajaSeleccionadaProvider);
     final busqueda = ref.watch(busquedaProductosProvider);
     final carrito = ref.watch(posCartProvider);
+    final departamentosAsync = ref.watch(departamentosProvider);
+    final departamentoSeleccionado = ref.watch(departamentoSeleccionadoProvider);
 
     ref.listen(cajasProvider, (previo, actual) {
       actual.whenData((cajas) {
         if (cajaSeleccionada == null && cajas.length == 1) {
           ref.read(cajaSeleccionadaProvider.notifier).state = cajas.first;
+        }
+      });
+    });
+
+    // La Bodega de venta se resuelve async apenas se elige/auto-selecciona
+    // la Caja — si la búsqueda inicial ya corrió sin Bodega, se repite acá
+    // para agregar el stock que faltaba la primera vez.
+    ref.listen(bodegaVentaProvider, (previo, actual) {
+      actual.whenData((bodega) {
+        if (bodega != null && previo?.valueOrNull == null) {
+          _buscar(_busquedaController.text);
         }
       });
     });
@@ -91,8 +111,22 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           )
                         : null,
                   ),
-                  onChanged: (texto) => ref.read(busquedaProductosProvider.notifier).buscar(texto),
+                  onChanged: _buscar,
                 ),
+              ),
+              departamentosAsync.when(
+                data: (departamentos) => departamentos.isEmpty
+                    ? const SizedBox.shrink()
+                    : _TabsCategorias(
+                        departamentos: departamentos,
+                        seleccionado: departamentoSeleccionado,
+                        onSeleccionar: (departamentoId) {
+                          ref.read(departamentoSeleccionadoProvider.notifier).state = departamentoId;
+                          _buscar(_busquedaController.text);
+                        },
+                      ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
               ),
               Expanded(
                 flex: 3,
@@ -105,6 +139,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           return ProductoResultadoTile(
                             key: Key('posResultado_${producto.varianteProductoId}'),
                             producto: producto,
+                            stock: busqueda.stock[producto.varianteProductoId],
                             onAgregar: () => ref.read(posCartProvider.notifier).agregarProducto(producto),
                           );
                         },
@@ -168,7 +203,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
   void _mostrarVentaCobrada(double total) {
     _busquedaController.clear();
-    ref.read(busquedaProductosProvider.notifier).buscar('');
+    _buscar('');
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -183,6 +218,46 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             },
             child: const Text('Nueva Venta'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TabsCategorias extends StatelessWidget {
+  const _TabsCategorias({required this.departamentos, required this.seleccionado, required this.onSeleccionar});
+
+  final List<Departamento> departamentos;
+  final String? seleccionado;
+  final ValueChanged<String?> onSeleccionar;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: ChoiceChip(
+              key: const Key('posCategoriaTodos'),
+              label: const Text('Todos'),
+              selected: seleccionado == null,
+              onSelected: (_) => onSeleccionar(null),
+            ),
+          ),
+          for (final departamento in departamentos)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ChoiceChip(
+                key: Key('posCategoria_${departamento.id}'),
+                label: Text(departamento.nombre),
+                selected: seleccionado == departamento.id,
+                onSelected: (_) => onSeleccionar(departamento.id),
+              ),
+            ),
         ],
       ),
     );

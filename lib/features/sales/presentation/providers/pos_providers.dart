@@ -6,9 +6,15 @@ import '../../../../core/providers/core_providers.dart';
 import '../../../catalog/data/catalog_repository_impl.dart';
 import '../../../catalog/data/catalogo_api.dart';
 import '../../../catalog/domain/catalog_repository.dart';
+import '../../../catalog/domain/models/clasificacion.dart';
 import '../../../catalog/domain/models/producto_vendible.dart';
+import '../../../catalog/presentation/providers/catalog_admin_providers.dart' show catalogAdminRepositoryProvider;
+import '../../../inventory/data/inventario_api.dart';
+import '../../../inventory/data/inventory_repository_impl.dart';
+import '../../../inventory/domain/inventory_repository.dart';
 import '../../../tenancy/data/tenancy_api.dart';
 import '../../../tenancy/data/tenancy_repository_impl.dart';
+import '../../../tenancy/domain/models/bodega_venta.dart';
 import '../../../tenancy/domain/models/caja_resumen.dart';
 import '../../../tenancy/domain/tenancy_repository.dart';
 import '../../data/sales_repository_impl.dart';
@@ -19,12 +25,15 @@ import '../../domain/sales_repository.dart';
 final catalogoApiProvider = Provider<CatalogoApi>((ref) => CatalogoApi(ref.watch(apiClientProvider)));
 final tenancyApiProvider = Provider<TenancyApi>((ref) => TenancyApi(ref.watch(apiClientProvider)));
 final ventaApiProvider = Provider<VentaApi>((ref) => VentaApi(ref.watch(apiClientProvider)));
+final inventarioApiProvider = Provider<InventarioApi>((ref) => InventarioApi(ref.watch(apiClientProvider)));
 
 final catalogRepositoryProvider =
     Provider<CatalogRepository>((ref) => CatalogRepositoryImpl(ref.watch(catalogoApiProvider)));
 final tenancyRepositoryProvider =
     Provider<TenancyRepository>((ref) => TenancyRepositoryImpl(ref.watch(tenancyApiProvider)));
 final salesRepositoryProvider = Provider<SalesRepository>((ref) => SalesRepositoryImpl(ref.watch(ventaApiProvider)));
+final inventoryRepositoryProvider =
+    Provider<InventoryRepository>((ref) => InventoryRepositoryImpl(ref.watch(inventarioApiProvider)));
 
 /// Cajas de la Empresa del Usuario logueado — casi siempre una sola (la
 /// auto-provisionada en UC-01), pero una Empresa real puede tener varias
@@ -38,16 +47,48 @@ final cajasProvider = FutureProvider.autoDispose<List<CajaResumen>>((ref) async 
 /// varias.
 final cajaSeleccionadaProvider = StateProvider.autoDispose<CajaResumen?>((ref) => null);
 
+/// Bodega de venta de la Sucursal de la Caja seleccionada — resuelta una
+/// vez por sesión de POS (no cambia mientras no cambie la Caja). Null
+/// mientras no haya Caja elegida o la Sucursal no tenga Bodega de venta
+/// configurada; en ese caso simplemente no se muestra stock (no bloquea
+/// la venta, que es lo importante).
+final bodegaVentaProvider = FutureProvider.autoDispose<BodegaVenta?>((ref) async {
+  final caja = ref.watch(cajaSeleccionadaProvider);
+  if (caja == null) return null;
+  return ref.watch(tenancyRepositoryProvider).obtenerBodegaVenta(caja.sucursalId);
+});
+
+/// Categorías del POS = Departamentos de Catalog (el nivel más alto de
+/// la jerarquía) — se listan una vez al entrar al POS, para las tabs de filtro.
+final departamentosProvider = FutureProvider.autoDispose<List<Departamento>>((ref) async {
+  return ref.watch(catalogAdminRepositoryProvider).listarDepartamentos();
+});
+
+/// Tab de categoría seleccionada — null = "Todos" (sin filtro).
+final departamentoSeleccionadoProvider = StateProvider.autoDispose<String?>((ref) => null);
+
 class BusquedaProductosState {
-  const BusquedaProductosState({this.resultados = const [], this.buscando = false, this.error});
+  const BusquedaProductosState({this.resultados = const [], this.stock = const {}, this.buscando = false, this.error});
 
   final List<ProductoVendible> resultados;
+
+  /// Stock por VarianteProductoId — una Variante ausente de este mapa no
+  /// tiene Existencia registrada en la Bodega actual (no es lo mismo que
+  /// stock cero), o todavía no se resolvió la Bodega de venta.
+  final Map<String, double> stock;
   final bool buscando;
   final String? error;
 
-  BusquedaProductosState copyWith({List<ProductoVendible>? resultados, bool? buscando, String? error, bool limpiarError = false}) {
+  BusquedaProductosState copyWith({
+    List<ProductoVendible>? resultados,
+    Map<String, double>? stock,
+    bool? buscando,
+    String? error,
+    bool limpiarError = false,
+  }) {
     return BusquedaProductosState(
       resultados: resultados ?? this.resultados,
+      stock: stock ?? this.stock,
       buscando: buscando ?? this.buscando,
       error: limpiarError ? null : (error ?? this.error),
     );
@@ -55,32 +96,50 @@ class BusquedaProductosState {
 }
 
 /// Búsqueda con debounce — evita disparar una llamada HTTP por cada
-/// tecla mientras el Cajero escribe.
+/// tecla mientras el Cajero escribe. Enriquece los resultados con stock
+/// en una segunda llamada (si hay Bodega resuelta) — el stock nunca
+/// bloquea la búsqueda: si esa llamada falla, los resultados igual se
+/// muestran, solo sin el dato de stock.
 class BusquedaProductosController extends StateNotifier<BusquedaProductosState> {
-  BusquedaProductosController(this._repository) : super(const BusquedaProductosState());
+  BusquedaProductosController(this._repository, this._inventoryRepository) : super(const BusquedaProductosState());
 
   final CatalogRepository _repository;
+  final InventoryRepository _inventoryRepository;
   Timer? _debounce;
   int _peticionEnCurso = 0;
 
-  void buscar(String texto) {
+  void buscar(String texto, {String? departamentoId, String? bodegaId}) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () => _ejecutarBusqueda(texto));
+    _debounce = Timer(const Duration(milliseconds: 350), () => _ejecutarBusqueda(texto, departamentoId, bodegaId));
   }
 
-  Future<void> _ejecutarBusqueda(String texto) async {
+  Future<void> _ejecutarBusqueda(String texto, String? departamentoId, String? bodegaId) async {
     final idDeEstaPeticion = ++_peticionEnCurso;
     state = state.copyWith(buscando: true, limpiarError: true);
     try {
-      final resultados = await _repository.buscarProductos(texto: texto);
+      final resultados = await _repository.buscarProductos(texto: texto, departamentoId: departamentoId);
       // Descarta la respuesta si ya se disparó una búsqueda más nueva
       // mientras esta estaba en vuelo (evita que una respuesta lenta de
       // una búsqueda vieja pise el resultado de la más reciente).
       if (idDeEstaPeticion != _peticionEnCurso) return;
-      state = state.copyWith(resultados: resultados, buscando: false);
+      state = state.copyWith(resultados: resultados, stock: const {}, buscando: false);
+
+      if (bodegaId != null && resultados.isNotEmpty) {
+        await _cargarStock(idDeEstaPeticion, bodegaId, resultados.map((p) => p.varianteProductoId).toList());
+      }
     } catch (e) {
       if (idDeEstaPeticion != _peticionEnCurso) return;
       state = state.copyWith(buscando: false, error: e.toString());
+    }
+  }
+
+  Future<void> _cargarStock(int idDeEstaPeticion, String bodegaId, List<String> varianteProductoIds) async {
+    try {
+      final stock = await _inventoryRepository.listarStock(bodegaId: bodegaId, varianteProductoIds: varianteProductoIds);
+      if (idDeEstaPeticion != _peticionEnCurso) return;
+      state = state.copyWith(stock: {for (final s in stock) s.varianteProductoId: s.cantidad});
+    } catch (_) {
+      // El stock es informativo — si falla, los resultados de búsqueda ya mostrados no se tocan.
     }
   }
 
@@ -93,7 +152,7 @@ class BusquedaProductosController extends StateNotifier<BusquedaProductosState> 
 
 final busquedaProductosProvider =
     StateNotifierProvider.autoDispose<BusquedaProductosController, BusquedaProductosState>((ref) {
-  return BusquedaProductosController(ref.watch(catalogRepositoryProvider));
+  return BusquedaProductosController(ref.watch(catalogRepositoryProvider), ref.watch(inventoryRepositoryProvider));
 });
 
 class PosCartState {
