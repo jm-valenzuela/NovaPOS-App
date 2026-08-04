@@ -43,11 +43,11 @@ flutter devices          # lista los destinos disponibles
 flutter run -d chrome --release
 ```
 
-**Cuenta de prueba fija** (para no tener que registrar una Empresa nueva cada vez — ver detalle en el README de `NovaPOS-Code`, no eliminar de la LocalDB):
+**Cuenta de prueba fija** (para no tener que registrar una Empresa nueva cada vez — ver detalle en el README de `NovaPOS-Code`, no eliminar de la LocalDB). Ya tiene catálogo y Clientes de ejemplo cargados:
 
 | Campo | Valor |
 |---|---|
-| RUT | `76.123.456-0` |
+| RUT | `81.814.677-9` |
 | Correo | `admin@novapos-demo.cl` |
 | Contraseña | `Demo1234!` |
 
