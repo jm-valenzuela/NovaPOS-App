@@ -138,6 +138,8 @@ class CatalogAdminApi {
     String? ubicacionFisica,
     int? cantidadMinimaDescuentoVolumen,
     double? porcentajeDescuentoVolumen,
+    int? cantidadPorGrupoPromocion,
+    double? porcentajeDescuentoUnidadPromocion,
   }) async {
     try {
       final respuesta = await _client.dio.post('/catalogo/productos', data: {
@@ -154,6 +156,8 @@ class CatalogAdminApi {
         'ubicacionFisica': ubicacionFisica,
         'cantidadMinimaDescuentoVolumen': cantidadMinimaDescuentoVolumen,
         'porcentajeDescuentoVolumen': porcentajeDescuentoVolumen,
+        'cantidadPorGrupoPromocion': cantidadPorGrupoPromocion,
+        'porcentajeDescuentoUnidadPromocion': porcentajeDescuentoUnidadPromocion,
       });
       return CrearProductoResultado(
         productoId: respuesta.data['productoId'] as String,
@@ -209,6 +213,8 @@ class CatalogAdminApi {
     String? ubicacionFisica,
     int? cantidadMinimaDescuentoVolumen,
     double? porcentajeDescuentoVolumen,
+    int? cantidadPorGrupoPromocion,
+    double? porcentajeDescuentoUnidadPromocion,
   }) async {
     try {
       await _client.dio.put('/catalogo/variantes/$varianteProductoId', data: {
@@ -220,6 +226,8 @@ class CatalogAdminApi {
         'ubicacionFisica': ubicacionFisica,
         'cantidadMinimaDescuentoVolumen': cantidadMinimaDescuentoVolumen,
         'porcentajeDescuentoVolumen': porcentajeDescuentoVolumen,
+        'cantidadPorGrupoPromocion': cantidadPorGrupoPromocion,
+        'porcentajeDescuentoUnidadPromocion': porcentajeDescuentoUnidadPromocion,
       });
     } on DioException catch (e) {
       ApiClient.lanzarError(e);

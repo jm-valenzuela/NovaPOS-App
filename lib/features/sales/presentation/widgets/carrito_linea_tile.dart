@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../../catalog/domain/models/promocion_grupo.dart';
 import '../../domain/models/linea_carrito.dart';
 import '../theme/pos_colors.dart';
 
@@ -121,6 +122,14 @@ class CarritoLineaTile extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       '${_formatearPorcentaje(linea.producto.porcentajeDescuentoVolumen!)}% dto. por volumen aplicado',
+                      style: const TextStyle(color: PosColors.stockOk, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  )
+                else if (linea.aplicaPromocionGrupo)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '${PromocionGrupo.etiqueta(linea.producto.cantidadPorGrupoPromocion!, linea.producto.porcentajeDescuentoUnidadPromocion!)} aplicado',
                       style: const TextStyle(color: PosColors.stockOk, fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   ),

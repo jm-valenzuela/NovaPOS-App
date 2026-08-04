@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../../catalog/domain/models/producto_vendible.dart';
+import '../../../catalog/domain/models/promocion_grupo.dart';
 import '../theme/pos_colors.dart';
 
 class ProductoResultadoTile extends StatelessWidget {
@@ -56,6 +57,17 @@ class ProductoResultadoTile extends StatelessWidget {
                   child: Text(
                     'Desde ${producto.cantidadMinimaDescuentoVolumen} uds. '
                     '-${_formatearPorcentaje(producto.porcentajeDescuentoVolumen!)}%',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: PosColors.stockOk),
+                  ),
+                )
+              else if (producto.cantidadPorGrupoPromocion != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    PromocionGrupo.etiqueta(
+                      producto.cantidadPorGrupoPromocion!,
+                      producto.porcentajeDescuentoUnidadPromocion!,
+                    ),
                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: PosColors.stockOk),
                   ),
                 ),

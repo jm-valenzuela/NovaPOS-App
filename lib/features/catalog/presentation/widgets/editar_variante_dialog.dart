@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/producto_admin.dart';
 import '../../domain/models/unidad_medida.dart';
 import '../providers/catalog_admin_providers.dart';
+import 'promocion_grupo_field.dart';
 
 /// A diferencia de EditarProductoDialog, no depende de CatalogFormController
 /// — no hay cascada de clasificación que resolver, es un PUT directo.
@@ -26,6 +27,7 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
       TextEditingController(text: widget.variante.cantidadMinimaDescuentoVolumen?.toString() ?? '');
   late final _porcentajeDescuentoController =
       TextEditingController(text: widget.variante.porcentajeDescuentoVolumen?.toString() ?? '');
+  PromocionGrupoValor _promocionGrupo = const PromocionGrupoValor();
   late int _unidadMedida = widget.variante.unidadMedida;
   bool _guardando = false;
   String? _error;
@@ -106,6 +108,14 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
               decoration: const InputDecoration(labelText: '% de descuento'),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
             ),
+            const SizedBox(height: 12),
+            Text('Promoción por grupo (opcional)', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 4),
+            PromocionGrupoField(
+              cantidadPorGrupoInicial: widget.variante.cantidadPorGrupoPromocion,
+              porcentajeDescuentoUnidadInicial: widget.variante.porcentajeDescuentoUnidadPromocion,
+              onChanged: (valor) => _promocionGrupo = valor,
+            ),
           ],
         ),
       ),
@@ -136,6 +146,11 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
       return;
     }
 
+    if (cantidadMinimaTexto.isNotEmpty && _promocionGrupo.cantidadPorGrupo != null) {
+      setState(() => _error = 'No puedes combinar el descuento por volumen con una promoción por grupo — elige solo uno.');
+      return;
+    }
+
     setState(() {
       _guardando = true;
       _error = null;
@@ -152,6 +167,8 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
             ubicacionFisica: _ubicacionController.text.trim().isEmpty ? null : _ubicacionController.text.trim(),
             cantidadMinimaDescuentoVolumen: int.tryParse(cantidadMinimaTexto),
             porcentajeDescuentoVolumen: double.tryParse(porcentajeTexto),
+            cantidadPorGrupoPromocion: _promocionGrupo.cantidadPorGrupo,
+            porcentajeDescuentoUnidadPromocion: _promocionGrupo.porcentajeDescuentoUnidad,
           );
 
       if (!mounted) return;

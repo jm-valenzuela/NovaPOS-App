@@ -124,6 +124,18 @@ const productoTornillo = ProductoVendible(
   porcentajeDescuentoVolumen: 5,
 );
 
+const productoGaseosaPromo = ProductoVendible(
+  varianteProductoId: 'variante-gaseosa-promo',
+  productoId: 'producto-gaseosa-promo',
+  nombreProducto: 'Bebida Cola 1.5L (2x1)',
+  sku: 'PROMO-2X1',
+  codigoBarras: null,
+  precioVenta: 1000,
+  unidadMedida: 0,
+  cantidadPorGrupoPromocion: 2,
+  porcentajeDescuentoUnidadPromocion: 100,
+);
+
 const cajaUnica = CajaResumen(
   cajaId: 'caja-1',
   codigoCaja: 'CAJA-01',

@@ -5,6 +5,7 @@ import '../../domain/models/unidad_medida.dart';
 import '../providers/catalog_admin_providers.dart';
 import '../providers/catalog_form_providers.dart';
 import '../widgets/clasificacion_cascade.dart';
+import '../widgets/promocion_grupo_field.dart';
 
 /// Crea un Producto y su primera Variante juntos (mismo criterio que
 /// CrearProductoCommand en el backend) — editar Producto/Variantes
@@ -29,6 +30,7 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
   final _ubicacionController = TextEditingController();
   final _cantidadMinimaDescuentoController = TextEditingController();
   final _porcentajeDescuentoController = TextEditingController();
+  PromocionGrupoValor _promocionGrupo = const PromocionGrupoValor();
   int _unidadMedida = 0;
 
   @override
@@ -167,6 +169,15 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (v) => _validarDescuentoVolumen(porcentajeTexto: v),
               ),
+              const SizedBox(height: 20),
+              Text('Promoción por grupo (opcional)', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Ej. "2x1", "6x5", o "segundo producto con % dto." — no se combina con el descuento por volumen de arriba.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              PromocionGrupoField(onChanged: (valor) => _promocionGrupo = valor),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -206,6 +217,15 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
   void _enviar() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final cantidadVolumen = int.tryParse(_cantidadMinimaDescuentoController.text.trim());
+    final porcentajeVolumen = double.tryParse(_porcentajeDescuentoController.text.trim());
+    if ((cantidadVolumen != null || porcentajeVolumen != null) && _promocionGrupo.cantidadPorGrupo != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No puedes combinar el descuento por volumen con una promoción por grupo — elige solo uno.')),
+      );
+      return;
+    }
+
     ref.read(catalogFormProvider.notifier).crearProducto(
           nombre: _nombreController.text.trim(),
           descripcion: _descripcionController.text.trim().isEmpty ? null : _descripcionController.text.trim(),
@@ -216,8 +236,10 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
           color: _colorController.text.trim().isEmpty ? null : _colorController.text.trim(),
           talla: _tallaController.text.trim().isEmpty ? null : _tallaController.text.trim(),
           ubicacionFisica: _ubicacionController.text.trim().isEmpty ? null : _ubicacionController.text.trim(),
-          cantidadMinimaDescuentoVolumen: int.tryParse(_cantidadMinimaDescuentoController.text.trim()),
-          porcentajeDescuentoVolumen: double.tryParse(_porcentajeDescuentoController.text.trim()),
+          cantidadMinimaDescuentoVolumen: cantidadVolumen,
+          porcentajeDescuentoVolumen: porcentajeVolumen,
+          cantidadPorGrupoPromocion: _promocionGrupo.cantidadPorGrupo,
+          porcentajeDescuentoUnidadPromocion: _promocionGrupo.porcentajeDescuentoUnidad,
         );
   }
 }

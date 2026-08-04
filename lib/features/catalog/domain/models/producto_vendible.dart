@@ -12,6 +12,8 @@ class ProductoVendible {
     required this.unidadMedida,
     this.cantidadMinimaDescuentoVolumen,
     this.porcentajeDescuentoVolumen,
+    this.cantidadPorGrupoPromocion,
+    this.porcentajeDescuentoUnidadPromocion,
   });
 
   factory ProductoVendible.fromJson(Map<String, dynamic> json) => ProductoVendible(
@@ -24,6 +26,8 @@ class ProductoVendible {
         unidadMedida: json['unidadMedida'] as int,
         cantidadMinimaDescuentoVolumen: json['cantidadMinimaDescuentoVolumen'] as int?,
         porcentajeDescuentoVolumen: (json['porcentajeDescuentoVolumen'] as num?)?.toDouble(),
+        cantidadPorGrupoPromocion: json['cantidadPorGrupoPromocion'] as int?,
+        porcentajeDescuentoUnidadPromocion: (json['porcentajeDescuentoUnidadPromocion'] as num?)?.toDouble(),
       );
 
   final String varianteProductoId;
@@ -39,6 +43,12 @@ class ProductoVendible {
   /// en el backend).
   final int? cantidadMinimaDescuentoVolumen;
   final double? porcentajeDescuentoVolumen;
+
+  /// Promoción por grupo (2x1, 6x5, "segundo al 40%", etc.) — ambos null si
+  /// no aplica. Mutuamente excluyente con el descuento por volumen de
+  /// arriba (ver VarianteProducto.CantidadPorGrupoPromocion en el backend).
+  final int? cantidadPorGrupoPromocion;
+  final double? porcentajeDescuentoUnidadPromocion;
 
   UnidadMedida get unidad => UnidadMedida.desdeValor(unidadMedida);
 }

@@ -21,12 +21,32 @@ class LineaCarrito {
     return minima != null && cantidad >= minima;
   }
 
+  /// Cuántos grupos completos de la promoción (2x1, 6x5, etc.) entran en
+  /// la cantidad de esta línea — 0 si no hay promoción configurada o
+  /// todavía no se completa ni un grupo. Mismo cálculo que
+  /// LineaVenta.Crear en el backend.
+  int get gruposCompletosPromocion {
+    final cantidadPorGrupo = producto.cantidadPorGrupoPromocion;
+    if (cantidadPorGrupo == null) return 0;
+    return (cantidad / cantidadPorGrupo).floor();
+  }
+
+  bool get aplicaPromocionGrupo => gruposCompletosPromocion >= 1;
+
+  double get montoDescuentoPromocion {
+    final porcentaje = producto.porcentajeDescuentoUnidadPromocion;
+    if (!aplicaPromocionGrupo || porcentaje == null) return 0;
+    return gruposCompletosPromocion * producto.precioVenta * (porcentaje / 100);
+  }
+
   double get subtotalSinDescuento => producto.precioVenta * cantidad;
 
   double get subtotal {
-    final porcentaje = producto.porcentajeDescuentoVolumen;
-    if (!aplicaDescuentoVolumen || porcentaje == null) return subtotalSinDescuento;
-    return subtotalSinDescuento * (1 - porcentaje / 100);
+    final porcentajeVolumen = producto.porcentajeDescuentoVolumen;
+    final subtotalConDescuentoVolumen = (aplicaDescuentoVolumen && porcentajeVolumen != null)
+        ? subtotalSinDescuento * (1 - porcentajeVolumen / 100)
+        : subtotalSinDescuento;
+    return subtotalConDescuentoVolumen - montoDescuentoPromocion;
   }
 
   LineaCarrito copyWith({double? cantidad}) =>

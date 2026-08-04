@@ -53,6 +53,8 @@ class VarianteAdmin {
     required this.activa,
     this.cantidadMinimaDescuentoVolumen,
     this.porcentajeDescuentoVolumen,
+    this.cantidadPorGrupoPromocion,
+    this.porcentajeDescuentoUnidadPromocion,
   });
 
   factory VarianteAdmin.fromJson(Map<String, dynamic> json) => VarianteAdmin(
@@ -67,6 +69,8 @@ class VarianteAdmin {
         activa: json['activa'] as bool,
         cantidadMinimaDescuentoVolumen: json['cantidadMinimaDescuentoVolumen'] as int?,
         porcentajeDescuentoVolumen: (json['porcentajeDescuentoVolumen'] as num?)?.toDouble(),
+        cantidadPorGrupoPromocion: json['cantidadPorGrupoPromocion'] as int?,
+        porcentajeDescuentoUnidadPromocion: (json['porcentajeDescuentoUnidadPromocion'] as num?)?.toDouble(),
       );
 
   final String varianteProductoId;
@@ -80,4 +84,6 @@ class VarianteAdmin {
   final bool activa;
   final int? cantidadMinimaDescuentoVolumen;
   final double? porcentajeDescuentoVolumen;
+  final int? cantidadPorGrupoPromocion;
+  final double? porcentajeDescuentoUnidadPromocion;
 }

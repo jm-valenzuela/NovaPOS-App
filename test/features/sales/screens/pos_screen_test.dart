@@ -414,6 +414,36 @@ void main() {
     expect(find.text('Ingresa un número entero de unidades'), findsOneWidget);
   });
 
+  testWidgets('Un producto con promoción 2x1 muestra la etiqueta en la tarjeta', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoGaseosaPromo];
+
+    await buscarYEsperar(tester, 'gaseosa');
+
+    expect(find.text('2x1'), findsOneWidget);
+  });
+
+  testWidgets('Al alcanzar el grupo completo, la promoción 2x1 se aplica solo en el carrito', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoGaseosaPromo];
+
+    await buscarYEsperar(tester, 'gaseosa');
+
+    await tester.tap(find.byKey(const Key('posResultado_variante-gaseosa-promo')));
+    await tester.pump();
+
+    // 1 unidad, no alcanza el grupo de 2 — sin descuento.
+    expect(textoDe(tester, const Key('posTotal')), r'$1.000');
+    expect(find.textContaining('aplicado'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('posResultado_variante-gaseosa-promo')));
+    await tester.pump();
+
+    // 2 unidades completa el grupo: paga 1 de 2.
+    expect(textoDe(tester, const Key('posTotal')), r'$1.000');
+    expect(find.textContaining('2x1 aplicado'), findsOneWidget);
+  });
+
   testWidgets('Un producto con descuento por volumen muestra el aviso en la tarjeta', (tester) async {
     await pumpPos(tester);
     fakeCatalog.resultadosARetornar = [productoTornillo];
