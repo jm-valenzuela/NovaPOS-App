@@ -102,6 +102,14 @@ class CarritoLineaTile extends StatelessWidget {
                       ),
                     ],
                   ),
+                if (linea.aplicaDescuentoVolumen)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '${_formatearPorcentaje(linea.producto.porcentajeDescuentoVolumen!)}% dto. por volumen aplicado',
+                      style: const TextStyle(color: PosColors.stockOk, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -117,3 +125,6 @@ class CarritoLineaTile extends StatelessWidget {
     );
   }
 }
+
+String _formatearPorcentaje(double porcentaje) =>
+    porcentaje.truncateToDouble() == porcentaje ? porcentaje.toInt().toString() : porcentaje.toString();

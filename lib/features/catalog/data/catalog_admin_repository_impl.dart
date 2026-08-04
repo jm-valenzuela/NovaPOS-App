@@ -56,6 +56,8 @@ class CatalogAdminRepositoryImpl implements CatalogAdminRepository {
     String? color,
     String? talla,
     String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
   }) =>
       _api.crearProducto(
         subclaseId: subclaseId,
@@ -69,6 +71,8 @@ class CatalogAdminRepositoryImpl implements CatalogAdminRepository {
         color: color,
         talla: talla,
         ubicacionFisica: ubicacionFisica,
+        cantidadMinimaDescuentoVolumen: cantidadMinimaDescuentoVolumen,
+        porcentajeDescuentoVolumen: porcentajeDescuentoVolumen,
       );
 
   @override
@@ -97,6 +101,8 @@ class CatalogAdminRepositoryImpl implements CatalogAdminRepository {
     String? color,
     String? talla,
     String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
   }) =>
       _api.actualizarVariante(
         varianteProductoId: varianteProductoId,
@@ -106,6 +112,8 @@ class CatalogAdminRepositoryImpl implements CatalogAdminRepository {
         color: color,
         talla: talla,
         ubicacionFisica: ubicacionFisica,
+        cantidadMinimaDescuentoVolumen: cantidadMinimaDescuentoVolumen,
+        porcentajeDescuentoVolumen: porcentajeDescuentoVolumen,
       );
 
   @override

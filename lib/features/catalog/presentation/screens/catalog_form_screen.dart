@@ -27,6 +27,8 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
   final _colorController = TextEditingController();
   final _tallaController = TextEditingController();
   final _ubicacionController = TextEditingController();
+  final _cantidadMinimaDescuentoController = TextEditingController();
+  final _porcentajeDescuentoController = TextEditingController();
   int _unidadMedida = 0;
 
   @override
@@ -39,6 +41,8 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
     _colorController.dispose();
     _tallaController.dispose();
     _ubicacionController.dispose();
+    _cantidadMinimaDescuentoController.dispose();
+    _porcentajeDescuentoController.dispose();
     super.dispose();
   }
 
@@ -140,6 +144,29 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
                 controller: _ubicacionController,
                 decoration: const InputDecoration(labelText: 'Ubicación física (opcional)'),
               ),
+              const SizedBox(height: 20),
+              Text('Descuento por volumen (opcional)', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Ej. "Desde 15 unidades, 5% dto." — deja ambos campos vacíos si no aplica.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                key: const Key('cantidadMinimaDescuentoVariante'),
+                controller: _cantidadMinimaDescuentoController,
+                decoration: const InputDecoration(labelText: 'Cantidad mínima'),
+                keyboardType: TextInputType.number,
+                validator: (v) => _validarDescuentoVolumen(cantidadTexto: v),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                key: const Key('porcentajeDescuentoVariante'),
+                controller: _porcentajeDescuentoController,
+                decoration: const InputDecoration(labelText: '% de descuento'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) => _validarDescuentoVolumen(porcentajeTexto: v),
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -158,6 +185,24 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
     );
   }
 
+  /// Ambos campos van juntos: uno sin el otro no tiene sentido (mismo
+  /// criterio que VarianteProducto.ValidarDescuentoVolumen en el backend).
+  String? _validarDescuentoVolumen({String? cantidadTexto, String? porcentajeTexto}) {
+    final cantidad = (cantidadTexto ?? _cantidadMinimaDescuentoController.text).trim();
+    final porcentaje = (porcentajeTexto ?? _porcentajeDescuentoController.text).trim();
+
+    if (cantidad.isEmpty && porcentaje.isEmpty) return null;
+    if (cantidad.isEmpty || porcentaje.isEmpty) return 'Completa ambos campos o deja los dos vacíos';
+
+    final cantidadNum = int.tryParse(cantidad);
+    if (cantidadNum == null || cantidadNum < 2) return 'Debe ser al menos 2';
+
+    final porcentajeNum = double.tryParse(porcentaje);
+    if (porcentajeNum == null || porcentajeNum <= 0 || porcentajeNum > 100) return 'Debe estar entre 1 y 100';
+
+    return null;
+  }
+
   void _enviar() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -171,6 +216,8 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
           color: _colorController.text.trim().isEmpty ? null : _colorController.text.trim(),
           talla: _tallaController.text.trim().isEmpty ? null : _tallaController.text.trim(),
           ubicacionFisica: _ubicacionController.text.trim().isEmpty ? null : _ubicacionController.text.trim(),
+          cantidadMinimaDescuentoVolumen: int.tryParse(_cantidadMinimaDescuentoController.text.trim()),
+          porcentajeDescuentoVolumen: double.tryParse(_porcentajeDescuentoController.text.trim()),
         );
   }
 }

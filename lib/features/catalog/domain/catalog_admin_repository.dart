@@ -34,6 +34,8 @@ abstract class CatalogAdminRepository {
     String? color,
     String? talla,
     String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
   });
 
   Future<void> actualizarProducto({
@@ -55,6 +57,8 @@ abstract class CatalogAdminRepository {
     String? color,
     String? talla,
     String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
   });
 
   Future<void> activarVariante(String varianteProductoId);

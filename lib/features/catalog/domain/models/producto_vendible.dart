@@ -10,6 +10,8 @@ class ProductoVendible {
     required this.codigoBarras,
     required this.precioVenta,
     required this.unidadMedida,
+    this.cantidadMinimaDescuentoVolumen,
+    this.porcentajeDescuentoVolumen,
   });
 
   factory ProductoVendible.fromJson(Map<String, dynamic> json) => ProductoVendible(
@@ -20,6 +22,8 @@ class ProductoVendible {
         codigoBarras: json['codigoBarras'] as String?,
         precioVenta: (json['precioVenta'] as num).toDouble(),
         unidadMedida: json['unidadMedida'] as int,
+        cantidadMinimaDescuentoVolumen: json['cantidadMinimaDescuentoVolumen'] as int?,
+        porcentajeDescuentoVolumen: (json['porcentajeDescuentoVolumen'] as num?)?.toDouble(),
       );
 
   final String varianteProductoId;
@@ -29,6 +33,12 @@ class ProductoVendible {
   final String? codigoBarras;
   final double precioVenta;
   final int unidadMedida;
+
+  /// "Desde N unidades, X% dto." — ambos null si la Variante no tiene esta
+  /// promoción configurada (ver VarianteProducto.CantidadMinimaDescuentoVolumen
+  /// en el backend).
+  final int? cantidadMinimaDescuentoVolumen;
+  final double? porcentajeDescuentoVolumen;
 
   UnidadMedida get unidad => UnidadMedida.desdeValor(unidadMedida);
 }

@@ -117,6 +117,8 @@ class FakeCatalogAdminRepository implements CatalogAdminRepository {
     String? color,
     String? talla,
     String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
   }) async {
     _fallarSiCorresponde();
     return resultadoCrear;
@@ -161,6 +163,8 @@ class FakeCatalogAdminRepository implements CatalogAdminRepository {
     String? color,
     String? talla,
     String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
   }) async {
     _fallarSiCorresponde();
     ultimaActualizacionVariante = {

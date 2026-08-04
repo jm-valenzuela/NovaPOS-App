@@ -22,6 +22,10 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
   late final _colorController = TextEditingController(text: widget.variante.color ?? '');
   late final _tallaController = TextEditingController(text: widget.variante.talla ?? '');
   late final _ubicacionController = TextEditingController(text: widget.variante.ubicacionFisica ?? '');
+  late final _cantidadMinimaDescuentoController =
+      TextEditingController(text: widget.variante.cantidadMinimaDescuentoVolumen?.toString() ?? '');
+  late final _porcentajeDescuentoController =
+      TextEditingController(text: widget.variante.porcentajeDescuentoVolumen?.toString() ?? '');
   late int _unidadMedida = widget.variante.unidadMedida;
   bool _guardando = false;
   String? _error;
@@ -33,6 +37,8 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
     _colorController.dispose();
     _tallaController.dispose();
     _ubicacionController.dispose();
+    _cantidadMinimaDescuentoController.dispose();
+    _porcentajeDescuentoController.dispose();
     super.dispose();
   }
 
@@ -84,6 +90,22 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
               controller: _ubicacionController,
               decoration: const InputDecoration(labelText: 'Ubicación física (opcional)'),
             ),
+            const SizedBox(height: 12),
+            Text('Descuento por volumen (opcional)', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 4),
+            TextField(
+              key: const Key('editarCantidadMinimaDescuentoVariante'),
+              controller: _cantidadMinimaDescuentoController,
+              decoration: const InputDecoration(labelText: 'Cantidad mínima'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('editarPorcentajeDescuentoVariante'),
+              controller: _porcentajeDescuentoController,
+              decoration: const InputDecoration(labelText: '% de descuento'),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
           ],
         ),
       ),
@@ -107,6 +129,13 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
       return;
     }
 
+    final cantidadMinimaTexto = _cantidadMinimaDescuentoController.text.trim();
+    final porcentajeTexto = _porcentajeDescuentoController.text.trim();
+    if (cantidadMinimaTexto.isEmpty != porcentajeTexto.isEmpty) {
+      setState(() => _error = 'Completa ambos campos del descuento por volumen, o deja los dos vacíos');
+      return;
+    }
+
     setState(() {
       _guardando = true;
       _error = null;
@@ -121,6 +150,8 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
             color: _colorController.text.trim().isEmpty ? null : _colorController.text.trim(),
             talla: _tallaController.text.trim().isEmpty ? null : _tallaController.text.trim(),
             ubicacionFisica: _ubicacionController.text.trim().isEmpty ? null : _ubicacionController.text.trim(),
+            cantidadMinimaDescuentoVolumen: int.tryParse(cantidadMinimaTexto),
+            porcentajeDescuentoVolumen: double.tryParse(porcentajeTexto),
           );
 
       if (!mounted) return;

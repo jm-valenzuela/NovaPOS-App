@@ -233,7 +233,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 maxCrossAxisExtent: 260,
                                 mainAxisSpacing: 12,
                                 crossAxisSpacing: 12,
-                                mainAxisExtent: 140,
+                                mainAxisExtent: 156,
                               ),
                               itemCount: busqueda.resultados.length,
                               itemBuilder: (context, index) {

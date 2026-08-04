@@ -376,4 +376,36 @@ void main() {
 
     expect(find.text('0.5 kg'), findsOneWidget);
   });
+
+  testWidgets('Un producto con descuento por volumen muestra el aviso en la tarjeta', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoTornillo];
+
+    await buscarYEsperar(tester, 'tornillo');
+
+    expect(find.textContaining('Desde 15 uds. -5%'), findsOneWidget);
+  });
+
+  testWidgets('Al alcanzar la cantidad mínima, el descuento por volumen se aplica solo en el carrito', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoTornillo];
+
+    await buscarYEsperar(tester, 'tornillo');
+
+    for (var i = 0; i < 14; i++) {
+      await tester.tap(find.byKey(const Key('posResultado_variante-tornillo')));
+      await tester.pump();
+    }
+
+    // 14 unidades, bajo el umbral de 15 — todavía sin descuento.
+    expect(textoDe(tester, const Key('posTotal')), r'$1.400');
+    expect(find.textContaining('dto. por volumen aplicado'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('posResultado_variante-tornillo')));
+    await tester.pump();
+
+    // 15 unidades alcanza el umbral: 15 * 100 = 1500, con 5% de descuento = 1425.
+    expect(textoDe(tester, const Key('posTotal')), r'$1.425');
+    expect(find.textContaining('5% dto. por volumen aplicado'), findsOneWidget);
+  });
 }

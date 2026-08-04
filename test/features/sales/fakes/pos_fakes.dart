@@ -112,6 +112,18 @@ const productoPan = ProductoVendible(
   unidadMedida: 1,
 );
 
+const productoTornillo = ProductoVendible(
+  varianteProductoId: 'variante-tornillo',
+  productoId: 'producto-tornillo',
+  nombreProducto: 'Tornillo Autoperforante 1"',
+  sku: 'FER-TORN-1',
+  codigoBarras: null,
+  precioVenta: 100,
+  unidadMedida: 0,
+  cantidadMinimaDescuentoVolumen: 15,
+  porcentajeDescuentoVolumen: 5,
+);
+
 const cajaUnica = CajaResumen(
   cajaId: 'caja-1',
   codigoCaja: 'CAJA-01',

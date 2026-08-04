@@ -12,7 +12,22 @@ class LineaCarrito {
   final ProductoVendible producto;
   final double cantidad;
 
-  double get subtotal => producto.precioVenta * cantidad;
+  /// true si esta línea alcanza el umbral del descuento por volumen del
+  /// Producto — mismo criterio que Venta.AgregarLinea en el backend
+  /// (LineaVenta.Crear), calculado acá porque el carrito es local hasta
+  /// el Cobrar (ver LineaCarrito, comentario de clase).
+  bool get aplicaDescuentoVolumen {
+    final minima = producto.cantidadMinimaDescuentoVolumen;
+    return minima != null && cantidad >= minima;
+  }
+
+  double get subtotalSinDescuento => producto.precioVenta * cantidad;
+
+  double get subtotal {
+    final porcentaje = producto.porcentajeDescuentoVolumen;
+    if (!aplicaDescuentoVolumen || porcentaje == null) return subtotalSinDescuento;
+    return subtotalSinDescuento * (1 - porcentaje / 100);
+  }
 
   LineaCarrito copyWith({double? cantidad}) =>
       LineaCarrito(producto: producto, cantidad: cantidad ?? this.cantidad);

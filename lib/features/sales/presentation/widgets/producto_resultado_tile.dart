@@ -50,6 +50,15 @@ class ProductoResultadoTile extends StatelessWidget {
                     : MonedaFormatter.formatear(producto.precioVenta),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
+              if (producto.cantidadMinimaDescuentoVolumen != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    'Desde ${producto.cantidadMinimaDescuentoVolumen} uds. '
+                    '-${_formatearPorcentaje(producto.porcentajeDescuentoVolumen!)}%',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: PosColors.stockOk),
+                  ),
+                ),
             ],
           ),
         ),
@@ -57,6 +66,9 @@ class ProductoResultadoTile extends StatelessWidget {
     );
   }
 }
+
+String _formatearPorcentaje(double porcentaje) =>
+    porcentaje.truncateToDouble() == porcentaje ? porcentaje.toInt().toString() : porcentaje.toString();
 
 class _BadgeStock extends StatelessWidget {
   const _BadgeStock({required this.cantidad});
