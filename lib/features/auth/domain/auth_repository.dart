@@ -1,10 +1,16 @@
 import 'models/registrar_empresa_result.dart';
+import 'models/sesion_usuario.dart';
 
 /// Contrato de la capa de dominio para autenticación/registro — la
 /// presentación depende de esto, no de AuthApi/Dio directamente (mismo
 /// principio de inversión de dependencias que IVentaRepository en el backend).
 abstract class AuthRepository {
-  Future<void> login({required String rut, required String email, required String password});
+  Future<SesionUsuario> login({required String rut, required String email, required String password});
+
+  /// Con qué Usuario/Empresa hay sesión activa ahora mismo — leído de lo
+  /// guardado en el último login (ver TokenStorage), sin llamar al
+  /// backend. Null si no hay datos de sesión guardados.
+  Future<SesionUsuario?> obtenerSesionActual();
 
   Future<RegistrarEmpresaResult> registrarEmpresa({
     required String razonSocial,

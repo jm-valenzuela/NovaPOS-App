@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../../catalog/domain/models/clasificacion.dart';
@@ -104,11 +105,17 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         backgroundColor: PosColors.navy,
         foregroundColor: Colors.white,
         titleSpacing: 16,
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.point_of_sale, color: PosColors.accent),
-            SizedBox(width: 8),
-            Text('NovaPOS', style: TextStyle(fontWeight: FontWeight.bold)),
+            // El ícono es un cuadrado navy — sin este fondo claro detrás,
+            // se pierde contra el AppBar (también navy) y queda "flotando".
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(color: const Color(0xFFEFEBE1), borderRadius: BorderRadius.circular(8)),
+              child: SvgPicture.asset('assets/branding/novapos_icon.svg', width: 22, height: 22),
+            ),
+            const SizedBox(width: 10),
+            const Text('NovaPOS', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [

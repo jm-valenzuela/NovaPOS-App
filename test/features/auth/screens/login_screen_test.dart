@@ -35,6 +35,7 @@ void main() {
     expect(fakeRepository.ultimoEmailLogin, 'admin@apptest.cl');
     expect(fakeRepository.ultimoPasswordLogin, 'TestPass123!');
     expect(find.text('Punto de Venta'), findsOneWidget);
+    expect(find.text('Ana Pérez · Minimarket Don José SpA'), findsOneWidget, reason: 'Home muestra con qué Usuario y Empresa se inició sesión');
   });
 
   testWidgets('Credenciales rechazadas por el backend muestran el error y no navegan', (tester) async {
@@ -63,5 +64,10 @@ void main() {
 
     expect(find.text('Punto de Venta'), findsOneWidget);
     expect(find.text('Iniciar sesión'), findsNothing);
+    expect(
+      find.text('Ana Pérez · Minimarket Don José SpA'),
+      findsOneWidget,
+      reason: 'la sesión restaurada también trae quién es el Usuario y la Empresa, no solo el login fresco',
+    );
   });
 }

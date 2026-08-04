@@ -5,6 +5,7 @@ import '../../data/auth_api.dart';
 import '../../data/auth_repository_impl.dart';
 import '../../domain/auth_repository.dart';
 import '../../domain/models/registrar_empresa_result.dart';
+import '../../domain/models/sesion_usuario.dart';
 
 final authApiProvider = Provider<AuthApi>((ref) {
   return AuthApi(ref.watch(apiClientProvider));
@@ -17,17 +18,30 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 enum AuthStatus { desconocido, autenticado, noAutenticado }
 
 class AuthState {
-  const AuthState({this.status = AuthStatus.desconocido, this.cargando = false, this.error});
+  const AuthState({this.status = AuthStatus.desconocido, this.cargando = false, this.error, this.sesion});
 
   final AuthStatus status;
   final bool cargando;
   final String? error;
 
-  AuthState copyWith({AuthStatus? status, bool? cargando, String? error, bool limpiarError = false}) {
+  /// Con qué Usuario/Empresa hay sesión — null mientras status no sea
+  /// autenticado, o si la sesión se restauró desde un login previo a
+  /// que este campo existiera (nunca se guardó localmente).
+  final SesionUsuario? sesion;
+
+  AuthState copyWith({
+    AuthStatus? status,
+    bool? cargando,
+    String? error,
+    SesionUsuario? sesion,
+    bool limpiarError = false,
+    bool limpiarSesion = false,
+  }) {
     return AuthState(
       status: status ?? this.status,
       cargando: cargando ?? this.cargando,
       error: limpiarError ? null : (error ?? this.error),
+      sesion: limpiarSesion ? null : (sesion ?? this.sesion),
     );
   }
 }
@@ -44,7 +58,8 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> _verificarSesionAlIniciar() async {
     try {
       final activa = await _repository.haySesionActiva();
-      state = state.copyWith(status: activa ? AuthStatus.autenticado : AuthStatus.noAutenticado);
+      final sesion = activa ? await _repository.obtenerSesionActual() : null;
+      state = state.copyWith(status: activa ? AuthStatus.autenticado : AuthStatus.noAutenticado, sesion: sesion);
     } catch (_) {
       // Si el almacenamiento seguro no está disponible (o falla por
       // cualquier motivo), fail-closed hacia Login — nunca dejar la app
@@ -56,8 +71,8 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> login({required String rut, required String email, required String password}) async {
     state = state.copyWith(cargando: true, limpiarError: true);
     try {
-      await _repository.login(rut: rut, email: email, password: password);
-      state = state.copyWith(cargando: false, status: AuthStatus.autenticado);
+      final sesion = await _repository.login(rut: rut, email: email, password: password);
+      state = state.copyWith(cargando: false, status: AuthStatus.autenticado, sesion: sesion);
     } catch (e) {
       state = state.copyWith(cargando: false, error: e.toString());
     }
@@ -65,7 +80,7 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     await _repository.logout();
-    state = state.copyWith(status: AuthStatus.noAutenticado);
+    state = state.copyWith(status: AuthStatus.noAutenticado, limpiarSesion: true);
   }
 
   void limpiarError() => state = state.copyWith(limpiarError: true);

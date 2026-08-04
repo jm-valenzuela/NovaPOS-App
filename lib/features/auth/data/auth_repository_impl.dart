@@ -1,6 +1,7 @@
 import '../../../core/storage/token_storage.dart';
 import '../domain/auth_repository.dart';
 import '../domain/models/registrar_empresa_result.dart';
+import '../domain/models/sesion_usuario.dart';
 import 'auth_api.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -10,13 +11,30 @@ class AuthRepositoryImpl implements AuthRepository {
   final TokenStorage _tokenStorage;
 
   @override
-  Future<void> login({required String rut, required String email, required String password}) async {
+  Future<SesionUsuario> login({required String rut, required String email, required String password}) async {
     final resultado = await _api.login(rut: rut, email: email, password: password);
     await _tokenStorage.guardar(
       accessToken: resultado.accessToken,
       accessTokenExpira: resultado.accessTokenExpira,
       refreshToken: resultado.refreshToken,
+      nombreCompleto: resultado.nombreCompleto,
+      email: resultado.email,
+      empresaRazonSocial: resultado.empresaRazonSocial,
     );
+    return SesionUsuario(
+      nombreCompleto: resultado.nombreCompleto ?? resultado.email ?? email,
+      email: resultado.email ?? email,
+      empresaRazonSocial: resultado.empresaRazonSocial ?? '',
+    );
+  }
+
+  @override
+  Future<SesionUsuario?> obtenerSesionActual() async {
+    final nombreCompleto = await _tokenStorage.obtenerNombreCompleto();
+    final email = await _tokenStorage.obtenerEmail();
+    final empresaRazonSocial = await _tokenStorage.obtenerEmpresaRazonSocial();
+    if (nombreCompleto == null || email == null || empresaRazonSocial == null) return null;
+    return SesionUsuario(nombreCompleto: nombreCompleto, email: email, empresaRazonSocial: empresaRazonSocial);
   }
 
   @override

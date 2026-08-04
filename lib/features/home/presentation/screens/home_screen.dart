@@ -14,6 +14,8 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final sesion = ref.watch(authControllerProvider).sesion;
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -24,6 +26,21 @@ class HomeScreen extends ConsumerWidget {
             const Text('NovaPOS'),
           ],
         ),
+        bottom: sesion == null
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(28),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    '${sesion.nombreCompleto} · ${sesion.empresaRazonSocial}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ),
+              ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),

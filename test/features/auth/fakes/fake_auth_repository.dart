@@ -1,5 +1,6 @@
 import 'package:novapos_app/features/auth/domain/auth_repository.dart';
 import 'package:novapos_app/features/auth/domain/models/registrar_empresa_result.dart';
+import 'package:novapos_app/features/auth/domain/models/sesion_usuario.dart';
 
 /// Fake de AuthRepository — deja registrado exactamente con qué
 /// argumentos se llamó cada método, sin tocar Dio/HTTP real. Mismo
@@ -31,16 +32,26 @@ class FakeAuthRepository implements AuthRepository {
     usuarioAdministradorId: 'usuario-fake-id',
   );
 
+  SesionUsuario sesionARetornar = const SesionUsuario(
+    nombreCompleto: 'Ana Pérez',
+    email: 'admin@novapos-demo.cl',
+    empresaRazonSocial: 'Minimarket Don José SpA',
+  );
+
   @override
   Future<bool> haySesionActiva() async => sesionActiva;
 
   @override
-  Future<void> login({required String rut, required String email, required String password}) async {
+  Future<SesionUsuario?> obtenerSesionActual() async => sesionActiva ? sesionARetornar : null;
+
+  @override
+  Future<SesionUsuario> login({required String rut, required String email, required String password}) async {
     vecesLoginLlamado++;
     ultimoRutLogin = rut;
     ultimoEmailLogin = email;
     ultimoPasswordLogin = password;
     if (errorAforzar != null) throw Exception(errorAforzar);
+    return sesionARetornar;
   }
 
   @override
