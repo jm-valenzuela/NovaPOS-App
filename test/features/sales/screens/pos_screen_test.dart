@@ -76,6 +76,8 @@ void main() {
 
     expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget);
     expect(find.text(r'Total: $1.500'), findsOneWidget);
+    expect(find.text(r'Neto: $1.261'), findsOneWidget);
+    expect(find.text(r'IVA (19%): $239'), findsOneWidget);
   });
 
   testWidgets('Agregar el mismo producto dos veces suma la cantidad, no duplica la línea', (tester) async {
@@ -91,6 +93,8 @@ void main() {
     expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
     expect(find.text(r'Total: $3.000'), findsOneWidget);
+    expect(find.text(r'Neto: $2.521'), findsOneWidget);
+    expect(find.text(r'IVA (19%): $479'), findsOneWidget);
   });
 
   testWidgets('Cobrar crea la Venta, agrega cada línea y confirma — luego muestra el total', (tester) async {
@@ -114,6 +118,8 @@ void main() {
 
     expect(find.text('Venta confirmada'), findsOneWidget);
     expect(find.text(r'Total cobrado: $2.300'), findsOneWidget);
+    expect(find.text(r'Neto: $1.933'), findsOneWidget);
+    expect(find.text(r'IVA (19%): $367'), findsOneWidget);
   });
 
   testWidgets('Confirmar "Nueva Venta" vacía el carrito para la siguiente', (tester) async {

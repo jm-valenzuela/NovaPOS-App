@@ -4,6 +4,7 @@ import 'package:novapos_app/features/customers/domain/customer_repository.dart';
 import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dart';
 import 'package:novapos_app/features/inventory/domain/inventory_repository.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
+import 'package:novapos_app/features/sales/domain/models/resumen_venta.dart';
 import 'package:novapos_app/features/sales/domain/sales_repository.dart';
 import 'package:novapos_app/features/tenancy/domain/models/bodega_venta.dart';
 import 'package:novapos_app/features/tenancy/domain/models/caja_resumen.dart';
@@ -74,9 +75,9 @@ class FakeSalesRepository implements SalesRepository {
   }
 
   @override
-  Future<double> confirmarVenta(String ventaId) async {
+  Future<ResumenVenta> confirmarVenta(String ventaId) async {
     if (errorAforzar != null) throw Exception(errorAforzar);
-    return totalARetornar;
+    return ResumenVenta.calcular(totalARetornar);
   }
 }
 

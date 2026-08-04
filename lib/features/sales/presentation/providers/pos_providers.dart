@@ -24,6 +24,7 @@ import '../../../tenancy/domain/tenancy_repository.dart';
 import '../../data/sales_repository_impl.dart';
 import '../../data/venta_api.dart';
 import '../../domain/models/linea_carrito.dart';
+import '../../domain/models/resumen_venta.dart';
 import '../../domain/sales_repository.dart';
 
 final catalogoApiProvider = Provider<CatalogoApi>((ref) => CatalogoApi(ref.watch(apiClientProvider)));
@@ -219,27 +220,34 @@ final busquedaProductosProvider =
 });
 
 class PosCartState {
-  const PosCartState({this.lineas = const [], this.cobrando = false, this.error, this.totalCobrado});
+  const PosCartState({this.lineas = const [], this.cobrando = false, this.error, this.resumenCobrado});
 
   final List<LineaCarrito> lineas;
   final bool cobrando;
   final String? error;
-  final double? totalCobrado;
+
+  /// Desglose real devuelto por el backend al confirmar — solo se llena
+  /// tras un cobro exitoso, para el diálogo de venta cobrada.
+  final ResumenVenta? resumenCobrado;
 
   double get total => lineas.fold(0, (suma, linea) => suma + linea.subtotal);
+
+  /// Desglose en vivo mientras se arma el carrito (antes de que exista una
+  /// Venta real en el servidor) — mismo cálculo que el backend, ver ResumenVenta.calcular.
+  ResumenVenta get resumen => ResumenVenta.calcular(total);
 
   PosCartState copyWith({
     List<LineaCarrito>? lineas,
     bool? cobrando,
     String? error,
     bool limpiarError = false,
-    bool limpiarTotalCobrado = false,
+    bool limpiarResumenCobrado = false,
   }) {
     return PosCartState(
       lineas: lineas ?? this.lineas,
       cobrando: cobrando ?? this.cobrando,
       error: limpiarError ? null : (error ?? this.error),
-      totalCobrado: limpiarTotalCobrado ? null : totalCobrado,
+      resumenCobrado: limpiarResumenCobrado ? null : resumenCobrado,
     );
   }
 }
@@ -289,7 +297,7 @@ class PosCartController extends StateNotifier<PosCartState> {
   Future<void> cobrar({required String cajaId, String? clienteId}) async {
     if (state.lineas.isEmpty) return;
 
-    state = state.copyWith(cobrando: true, limpiarError: true, limpiarTotalCobrado: true);
+    state = state.copyWith(cobrando: true, limpiarError: true, limpiarResumenCobrado: true);
     try {
       final ventaId = await _salesRepository.crearVenta(cajaId: cajaId, clienteId: clienteId);
 
@@ -301,16 +309,16 @@ class PosCartController extends StateNotifier<PosCartState> {
         );
       }
 
-      final total = await _salesRepository.confirmarVenta(ventaId);
+      final resumen = await _salesRepository.confirmarVenta(ventaId);
 
-      state = PosCartState(totalCobrado: total);
+      state = PosCartState(resumenCobrado: resumen);
     } catch (e) {
       state = state.copyWith(cobrando: false, error: e.toString());
     }
   }
 
   void limpiarVentaCobrada() {
-    state = state.copyWith(limpiarTotalCobrado: true);
+    state = state.copyWith(limpiarResumenCobrado: true);
   }
 }
 

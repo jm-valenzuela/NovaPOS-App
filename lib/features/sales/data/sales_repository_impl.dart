@@ -1,3 +1,4 @@
+import '../domain/models/resumen_venta.dart';
 import '../domain/models/venta_enums.dart';
 import '../domain/sales_repository.dart';
 import 'venta_api.dart';
@@ -20,5 +21,5 @@ class SalesRepositoryImpl implements SalesRepository {
       _api.agregarLinea(ventaId: ventaId, varianteProductoId: varianteProductoId, cantidad: cantidad);
 
   @override
-  Future<double> confirmarVenta(String ventaId) => _api.confirmar(ventaId);
+  Future<ResumenVenta> confirmarVenta(String ventaId) => _api.confirmar(ventaId);
 }

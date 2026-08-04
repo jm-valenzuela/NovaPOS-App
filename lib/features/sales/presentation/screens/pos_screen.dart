@@ -5,6 +5,7 @@ import '../../../../core/utils/moneda_formatter.dart';
 import '../../../catalog/domain/models/clasificacion.dart';
 import '../../../customers/domain/models/cliente_resumen.dart';
 import '../../../tenancy/domain/models/caja_resumen.dart';
+import '../../domain/models/resumen_venta.dart';
 import '../providers/pos_providers.dart';
 import '../widgets/carrito_linea_tile.dart';
 import '../widgets/producto_resultado_tile.dart';
@@ -67,8 +68,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           SnackBar(content: Text(actual.error!), backgroundColor: Theme.of(context).colorScheme.error),
         );
       }
-      if (actual.totalCobrado != null && previo?.totalCobrado == null) {
-        _mostrarVentaCobrada(actual.totalCobrado!);
+      if (actual.resumenCobrado != null && previo?.resumenCobrado == null) {
+        _mostrarVentaCobrada(actual.resumenCobrado!);
       }
     });
 
@@ -188,9 +189,23 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          'Total: ${MonedaFormatter.formatear(carrito.total)}',
-                          style: Theme.of(context).textTheme.titleLarge,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Neto: ${MonedaFormatter.formatear(carrito.resumen.neto)}',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            Text(
+                              'IVA (19%): ${MonedaFormatter.formatear(carrito.resumen.iva)}',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            Text(
+                              'Total: ${MonedaFormatter.formatear(carrito.total)}',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ],
                         ),
                       ),
                       ElevatedButton(
@@ -233,7 +248,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     ref.read(clienteSeleccionadoProvider.notifier).state = elegido;
   }
 
-  void _mostrarVentaCobrada(double total) {
+  void _mostrarVentaCobrada(ResumenVenta resumen) {
     ref.read(clienteSeleccionadoProvider.notifier).state = null;
     _busquedaController.clear();
     _buscar('');
@@ -242,7 +257,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Venta confirmada'),
-        content: Text('Total cobrado: ${MonedaFormatter.formatear(total)}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Neto: ${MonedaFormatter.formatear(resumen.neto)}'),
+            Text('IVA (19%): ${MonedaFormatter.formatear(resumen.iva)}'),
+            Text('Total cobrado: ${MonedaFormatter.formatear(resumen.total)}'),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () {

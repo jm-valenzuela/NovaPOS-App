@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
+import '../domain/models/resumen_venta.dart';
 import '../domain/models/venta_enums.dart';
 
 class VentaApi {
@@ -42,10 +43,10 @@ class VentaApi {
     }
   }
 
-  Future<double> confirmar(String ventaId) async {
+  Future<ResumenVenta> confirmar(String ventaId) async {
     try {
       final respuesta = await _client.dio.post('/ventas/$ventaId/confirmar');
-      return (respuesta.data['total'] as num).toDouble();
+      return ResumenVenta.fromJson(respuesta.data as Map<String, dynamic>);
     } on DioException catch (e) {
       ApiClient.lanzarError(e);
     }
