@@ -444,7 +444,7 @@ class _SelectorCaja extends ConsumerWidget {
 
 /// Panel fijo del carrito — Cliente, líneas, aviso de stock si corresponde,
 /// desglose Subtotal/IVA/Total, y las acciones de cobro.
-Future<void> _editarCantidadPesable(BuildContext context, WidgetRef ref, LineaCarrito linea) async {
+Future<void> _editarCantidad(BuildContext context, WidgetRef ref, LineaCarrito linea) async {
   final cantidad = await showDialog<double>(
     context: context,
     builder: (_) => CantidadPesableDialog(producto: linea.producto, cantidadInicial: linea.cantidad),
@@ -555,7 +555,7 @@ class _PanelCarrito extends ConsumerWidget {
                               .cambiarCantidad(linea.producto.varianteProductoId, cantidad),
                           onQuitar: () =>
                               ref.read(posCartProvider.notifier).quitarLinea(linea.producto.varianteProductoId),
-                          onEditarCantidadPesable: () => _editarCantidadPesable(context, ref, linea),
+                          onEditarCantidad: () => _editarCantidad(context, ref, linea),
                         );
                       },
                     ),

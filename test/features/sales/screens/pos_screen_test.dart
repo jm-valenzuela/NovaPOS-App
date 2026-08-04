@@ -377,6 +377,43 @@ void main() {
     expect(find.text('0.5 kg'), findsOneWidget);
   });
 
+  testWidgets('Tocar la cantidad de una línea por Unidad permite tipear un número grande', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+
+    await buscarYEsperar(tester, 'coca');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    expect(find.text('1'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('carritoCantidadUnidad')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('cantidadPesable')), '2000');
+    await tester.tap(find.byKey(const Key('cantidadPesableConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2000'), findsOneWidget);
+    expect(textoDe(tester, const Key('posTotal')), r'$3.000.000');
+  });
+
+  testWidgets('El diálogo de cantidad por Unidad rechaza números no enteros', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+
+    await buscarYEsperar(tester, 'coca');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('carritoCantidadUnidad')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('cantidadPesable')), '2.5');
+    await tester.tap(find.byKey(const Key('cantidadPesableConfirmar')));
+    await tester.pump();
+
+    expect(find.text('Ingresa un número entero de unidades'), findsOneWidget);
+  });
+
   testWidgets('Un producto con descuento por volumen muestra el aviso en la tarjeta', (tester) async {
     await pumpPos(tester);
     fakeCatalog.resultadosARetornar = [productoTornillo];

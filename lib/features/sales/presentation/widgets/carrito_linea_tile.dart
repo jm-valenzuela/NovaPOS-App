@@ -10,17 +10,19 @@ class CarritoLineaTile extends StatelessWidget {
     required this.linea,
     required this.onCambiarCantidad,
     required this.onQuitar,
-    this.onEditarCantidadPesable,
+    this.onEditarCantidad,
   });
 
   final LineaCarrito linea;
   final ValueChanged<double> onCambiarCantidad;
   final VoidCallback onQuitar;
 
-  /// Solo se usa (y solo se muestra el control táctil en vez de los
-  /// botones +/-) cuando `linea.producto.unidad.esPesable` — un peso o
-  /// volumen exacto no se ajusta de a 1 en 1.
-  final VoidCallback? onEditarCantidadPesable;
+  /// Abre el diálogo para tipear una cantidad exacta — obligatorio para
+  /// productos por Kilogramo/Litro (un peso no se ajusta de a 1 en 1), y
+  /// disponible también para productos por Unidad tocando la cantidad,
+  /// para cuando hace falta un número grande (ej. 2000 sacos de cemento)
+  /// sin tocar "+" esa cantidad de veces.
+  final VoidCallback? onEditarCantidad;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +53,7 @@ class CarritoLineaTile extends StatelessWidget {
                 if (unidad.esPesable)
                   InkWell(
                     key: const Key('carritoCantidadPesable'),
-                    onTap: onEditarCantidadPesable,
+                    onTap: onEditarCantidad,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -79,12 +81,21 @@ class CarritoLineaTile extends StatelessWidget {
                         constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
                         onPressed: () => onCambiarCantidad(linea.cantidad - 1),
                       ),
-                      SizedBox(
-                        width: 24,
-                        child: Text(
-                          linea.cantidad % 1 == 0 ? linea.cantidad.toInt().toString() : linea.cantidad.toString(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: PosColors.textMuted, fontSize: 13),
+                      InkWell(
+                        key: const Key('carritoCantidadUnidad'),
+                        onTap: onEditarCantidad,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: Text(
+                            linea.cantidad % 1 == 0 ? linea.cantidad.toInt().toString() : linea.cantidad.toString(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: PosColors.accent,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                         ),
                       ),
                       IconButton(
@@ -96,9 +107,12 @@ class CarritoLineaTile extends StatelessWidget {
                         onPressed: () => onCambiarCantidad(linea.cantidad + 1),
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        'x ${MonedaFormatter.formatear(linea.producto.precioVenta)}',
-                        style: const TextStyle(color: PosColors.textMuted, fontSize: 12),
+                      Flexible(
+                        child: Text(
+                          'x ${MonedaFormatter.formatear(linea.producto.precioVenta)}',
+                          style: const TextStyle(color: PosColors.textMuted, fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),

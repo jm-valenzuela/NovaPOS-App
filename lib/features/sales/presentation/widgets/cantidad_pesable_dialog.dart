@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../../catalog/domain/models/producto_vendible.dart';
 
-/// Para productos por Kilogramo o Litro — a diferencia de un producto por
-/// Unidad (que se agrega directo y se ajusta de a 1 en 1), acá hace falta
-/// que el Cajero tipee el peso/volumen exacto (ej. 0.350 kg) antes de
-/// agregarlo al carrito, mismo criterio que una balanza de POS real.
+/// Para tipear una cantidad exacta en vez de ajustarla de a 1 en 1 — dos
+/// casos: productos por Kilogramo/Litro (obligatorio, ver
+/// PosScreen._agregarProducto, mismo criterio que una balanza real) y
+/// productos por Unidad cuando la cantidad es grande (ej. una Empresa que
+/// pide 2000 sacos de cemento — tocar "+" 2000 veces no es razonable). El
+/// diálogo se adapta según `producto.unidad.esPesable`: solo pide un
+/// número entero cuando no es pesable.
 class CantidadPesableDialog extends StatefulWidget {
   const CantidadPesableDialog({super.key, required this.producto, this.cantidadInicial});
 
@@ -34,21 +37,24 @@ class _CantidadPesableDialogState extends State<CantidadPesableDialog> {
   @override
   Widget build(BuildContext context) {
     final unidad = widget.producto.unidad;
+    final esPesable = unidad.esPesable;
     return AlertDialog(
       title: Text(widget.producto.nombreProducto),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${MonedaFormatter.formatear(widget.producto.precioVenta)} / ${unidad.abreviatura}'),
+          Text(esPesable
+              ? '${MonedaFormatter.formatear(widget.producto.precioVenta)} / ${unidad.abreviatura}'
+              : MonedaFormatter.formatear(widget.producto.precioVenta)),
           const SizedBox(height: 16),
           if (_error != null) Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
           TextField(
             key: const Key('cantidadPesable'),
             controller: _cantidadController,
             autofocus: true,
-            decoration: InputDecoration(labelText: 'Cantidad (${unidad.abreviatura})'),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(labelText: esPesable ? 'Cantidad (${unidad.abreviatura})' : 'Cantidad'),
+            keyboardType: TextInputType.numberWithOptions(decimal: esPesable),
             onSubmitted: (_) => _confirmar(),
           ),
         ],
@@ -72,6 +78,10 @@ class _CantidadPesableDialogState extends State<CantidadPesableDialog> {
     final cantidad = double.tryParse(_cantidadController.text.replaceAll(',', '.'));
     if (cantidad == null || cantidad <= 0) {
       setState(() => _error = 'Ingresa una cantidad válida');
+      return;
+    }
+    if (!widget.producto.unidad.esPesable && cantidad != cantidad.roundToDouble()) {
+      setState(() => _error = 'Ingresa un número entero de unidades');
       return;
     }
     Navigator.of(context).pop(cantidad);
