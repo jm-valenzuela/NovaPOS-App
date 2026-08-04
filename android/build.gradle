@@ -1,5 +1,8 @@
 buildscript {
-    ext.kotlin_version = '1.7.10'
+    // Elevado de 1.7.10: mobile_scanner (escaneo de código de barras)
+    // trae kotlin-stdlib 1.8.22 transitivamente, que duplica clases con
+    // los kotlin-stdlib-jdk7/jdk8 separados que resolvía la 1.7.10.
+    ext.kotlin_version = '1.9.10'
     repositories {
         google()
         mavenCentral()

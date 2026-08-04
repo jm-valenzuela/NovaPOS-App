@@ -177,6 +177,13 @@ class BusquedaProductosController extends StateNotifier<BusquedaProductosState> 
     _debounce = Timer(const Duration(milliseconds: 350), () => _ejecutarBusqueda(texto, departamentoId, bodegaId));
   }
 
+  /// Sin debounce — para un código de barras recién escaneado, que ya es
+  /// un valor exacto y completo (esperar 350ms no aporta nada acá).
+  Future<void> buscarInmediato(String texto, {String? departamentoId, String? bodegaId}) {
+    _debounce?.cancel();
+    return _ejecutarBusqueda(texto, departamentoId, bodegaId);
+  }
+
   Future<void> _ejecutarBusqueda(String texto, String? departamentoId, String? bodegaId) async {
     final idDeEstaPeticion = ++_peticionEnCurso;
     state = state.copyWith(buscando: true, limpiarError: true);

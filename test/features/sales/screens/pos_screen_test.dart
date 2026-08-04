@@ -24,6 +24,8 @@ void main() {
     WidgetTester tester, {
     List<CajaResumen>? cajas,
     List<Departamento>? departamentos,
+    EscanearCodigoBarra? escanearCodigoBarra,
+    bool escaneoDisponible = true,
   }) async {
     fakeCatalog = FakeCatalogRepository();
     fakeTenancy = FakeTenancyRepository()
@@ -43,7 +45,12 @@ void main() {
         catalogAdminRepositoryProvider.overrideWithValue(fakeCatalogAdmin),
         customerRepositoryProvider.overrideWithValue(fakeCustomer),
       ],
-      child: const MaterialApp(home: PosScreen()),
+      child: MaterialApp(
+        home: PosScreen(
+          escanearCodigoBarra: escanearCodigoBarra ?? (_) async => null,
+          escaneoDisponible: escaneoDisponible,
+        ),
+      ),
     ));
     await tester.pump();
     await tester.pump();
@@ -258,5 +265,52 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Cliente Genérico'), findsOneWidget);
+  });
+
+  testWidgets('Escanear un código con coincidencia exacta lo agrega directo al carrito', (tester) async {
+    await pumpPos(tester, escanearCodigoBarra: (_) async => productoCocaCola.codigoBarras);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+
+    await tester.tap(find.byKey(const Key('posEscanear')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCatalog.ultimoTexto, productoCocaCola.codigoBarras);
+    expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget);
+  });
+
+  testWidgets('Escanear un código sin coincidencia muestra un aviso y no agrega nada', (tester) async {
+    await pumpPos(tester, escanearCodigoBarra: (_) async => '0000000000000');
+    fakeCatalog.resultadosARetornar = [];
+
+    await tester.tap(find.byKey(const Key('posEscanear')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('No se encontró ningún producto'), findsOneWidget);
+    expect(find.byKey(const Key('posCarrito_variante-coca')), findsNothing);
+  });
+
+  testWidgets('Cancelar el escaneo (sin código) no agrega nada ni muestra el aviso de "no encontrado"', (tester) async {
+    var vecesEscaneado = 0;
+    await pumpPos(
+      tester,
+      escanearCodigoBarra: (_) async {
+        vecesEscaneado++;
+        return null;
+      },
+    );
+
+    await tester.tap(find.byKey(const Key('posEscanear')));
+    await tester.pumpAndSettle();
+
+    expect(vecesEscaneado, 1);
+    expect(find.textContaining('No se encontró ningún producto'), findsNothing);
+    expect(find.text('Carrito vacío'), findsOneWidget);
+  });
+
+  testWidgets('Sin soporte de cámara en la plataforma (ej. Windows desktop), el botón de escanear no se muestra',
+      (tester) async {
+    await pumpPos(tester, escaneoDisponible: false);
+
+    expect(find.byKey(const Key('posEscanear')), findsNothing);
   });
 }

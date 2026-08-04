@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,9 +13,27 @@ import '../providers/pos_providers.dart';
 import '../widgets/carrito_linea_tile.dart';
 import '../widgets/producto_resultado_tile.dart';
 import '../widgets/selector_cliente_dialog.dart';
+import 'escanear_codigo_barra_screen.dart';
+
+/// Firma de la función que abre el escáner y devuelve el código detectado
+/// (o null si se canceló) — inyectable para poder simular un escaneo en
+/// tests sin tocar la cámara real (mismo criterio que SecureStorage).
+typedef EscanearCodigoBarra = Future<String?> Function(BuildContext context);
+
+Future<String?> _escanearCodigoBarraReal(BuildContext context) =>
+    Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const EscanearCodigoBarraScreen()));
 
 class PosScreen extends ConsumerStatefulWidget {
-  const PosScreen({super.key});
+  const PosScreen({super.key, this.escanearCodigoBarra = _escanearCodigoBarraReal, this.escaneoDisponible});
+
+  final EscanearCodigoBarra escanearCodigoBarra;
+
+  /// Null = detectar según la plataforma real (mobile_scanner no tiene
+  /// implementación para Windows desktop, donde un lector físico de
+  /// código de barras ya funciona como teclado sobre el buscador). Se
+  /// puede forzar explícito en tests, donde `Platform.isWindows` refleja
+  /// el equipo que corre el test, no la plataforma que se quiere simular.
+  final bool? escaneoDisponible;
 
   @override
   ConsumerState<PosScreen> createState() => _PosScreenState();
@@ -121,12 +142,23 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   decoration: InputDecoration(
                     labelText: 'Buscar producto (nombre, SKU o código de barras)',
                     prefixIcon: const Icon(Icons.search),
-                    suffixIcon: busqueda.buscando
-                        ? const Padding(
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (busqueda.buscando)
+                          const Padding(
                             padding: EdgeInsets.all(12),
                             child: SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                          )
-                        : null,
+                          ),
+                        if (widget.escaneoDisponible ?? (kIsWeb || !Platform.isWindows))
+                          IconButton(
+                            key: const Key('posEscanear'),
+                            icon: const Icon(Icons.qr_code_scanner),
+                            tooltip: 'Escanear código de barras',
+                            onPressed: () => _escanear(context),
+                          ),
+                      ],
+                    ),
                   ),
                   onChanged: _buscar,
                 ),
@@ -233,6 +265,35 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         },
       ),
     );
+  }
+
+  /// Abre el escáner y, si detecta un código, busca ese código exacto y
+  /// agrega el producto directo al carrito — a diferencia de tipear en el
+  /// buscador, un código escaneado no necesita que el Cajero elija entre
+  /// resultados: si hay una coincidencia exacta de CódigoBarras, se agrega sola.
+  Future<void> _escanear(BuildContext context) async {
+    final codigo = await widget.escanearCodigoBarra(context);
+    if (codigo == null || !mounted) return;
+    await _buscarPorCodigoYAgregar(codigo);
+  }
+
+  Future<void> _buscarPorCodigoYAgregar(String codigo) async {
+    _busquedaController.text = codigo;
+    final departamentoId = ref.read(departamentoSeleccionadoProvider);
+    final bodegaId = ref.read(bodegaVentaProvider).valueOrNull?.bodegaId;
+    await ref
+        .read(busquedaProductosProvider.notifier)
+        .buscarInmediato(codigo, departamentoId: departamentoId, bodegaId: bodegaId);
+    if (!mounted) return;
+
+    final encontrado = ref.read(busquedaProductosProvider).resultados.where((p) => p.codigoBarras == codigo);
+    if (encontrado.isNotEmpty) {
+      ref.read(posCartProvider.notifier).agregarProducto(encontrado.first);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se encontró ningún producto con el código $codigo')),
+      );
+    }
   }
 
   Future<void> _elegirCliente(BuildContext context) async {
