@@ -1,11 +1,11 @@
 {
-    "name": "novapos_app",
-    "short_name": "novapos_app",
+    "name": "NovaPOS",
+    "short_name": "NovaPOS",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#12233D",
+    "theme_color": "#12233D",
+    "description": "NovaPOS — Punto de Venta y ERP para PyME en Chile.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

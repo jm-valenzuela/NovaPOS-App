@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "cl.novapos" "\0"
-            VALUE "FileDescription", "novapos_app" "\0"
+            VALUE "FileDescription", "NovaPOS" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "novapos_app" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 cl.novapos. All rights reserved." "\0"
             VALUE "OriginalFilename", "novapos_app.exe" "\0"
-            VALUE "ProductName", "novapos_app" "\0"
+            VALUE "ProductName", "NovaPOS" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="5 5 430 150" width="430" height="150">
+  <!-- ============ ÍCONO: etiqueta de precio de mercado ============ -->
+  <g transform="translate(20, 20)">
+    <!-- Cuerpo de la etiqueta: cuadrado redondeado, ligera inclinación -->
+    <rect x="0" y="0" width="120" height="120" rx="26"
+          fill="#12233D" transform="rotate(-4 60 60)"/>
+
+    <!-- Corte diagonal inferior derecho (esquina de etiqueta arrancada) -->
+    <path d="M 120 120 L 120 76 L 76 120 Z"
+          fill="#0B1830" transform="rotate(-4 60 60)"/>
+
+    <!-- Glifo "N" en negativo, trazo monolineal -->
+    <path d="M 34 88 L 34 34 L 50 34 L 78 76 L 78 34 L 92 34 L 92 88 L 76 88 L 48 46 L 48 88 Z"
+          fill="#EFEBE1" transform="rotate(-4 60 60)"/>
+
+    <!-- Ojal de la etiqueta (el "punto" de marca) -->
+    <circle cx="24" cy="24" r="10" fill="#EFEBE1" transform="rotate(-4 60 60)"/>
+    <circle cx="24" cy="24" r="5.5" fill="#E8A33D" transform="rotate(-4 60 60)"/>
+  </g>
+
+  <!-- ============ WORDMARK ============ -->
+  <text x="172" y="94" font-family="'Space Grotesk', 'Segoe UI', sans-serif" font-weight="700" font-size="56" fill="#12233D">Nova<tspan fill="#E8A33D">POS</tspan></text>
+
+  <!-- Línea utilitaria monoespaciada, bajo el wordmark -->
+  <text x="174" y="118" font-family="'IBM Plex Mono', monospace" font-size="15" letter-spacing="2.5" fill="#6B665C">ERP · POS · CHILE</text>
+</svg>

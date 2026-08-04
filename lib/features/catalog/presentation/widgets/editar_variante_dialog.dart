@@ -2,13 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/producto_admin.dart';
+import '../../domain/models/unidad_medida.dart';
 import '../providers/catalog_admin_providers.dart';
-
-const _unidadesMedida = [
-  (valor: 0, nombre: 'Unidad'),
-  (valor: 1, nombre: 'Kilogramo'),
-  (valor: 2, nombre: 'Litro'),
-];
 
 /// A diferencia de EditarProductoDialog, no depende de CatalogFormController
 /// — no hay cascada de clasificación que resolver, es un PUT directo.
@@ -62,7 +57,7 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
               key: const Key('editarUnidadMedidaVariante'),
               decoration: const InputDecoration(labelText: 'Unidad de medida'),
               value: _unidadMedida,
-              items: _unidadesMedida.map((u) => DropdownMenuItem(value: u.valor, child: Text(u.nombre))).toList(),
+              items: UnidadMedida.values.map((u) => DropdownMenuItem(value: u.valor, child: Text(u.nombre))).toList(),
               onChanged: (valor) => setState(() => _unidadMedida = valor ?? 0),
             ),
             const SizedBox(height: 12),

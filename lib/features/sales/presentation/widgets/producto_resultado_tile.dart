@@ -45,7 +45,9 @@ class ProductoResultadoTile extends StatelessWidget {
               Text(producto.sku, style: const TextStyle(fontSize: 12, color: PosColors.textMuted)),
               const SizedBox(height: 8),
               Text(
-                MonedaFormatter.formatear(producto.precioVenta),
+                producto.unidad.esPesable
+                    ? '${MonedaFormatter.formatear(producto.precioVenta)}/${producto.unidad.abreviatura}'
+                    : MonedaFormatter.formatear(producto.precioVenta),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ],

@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/models/unidad_medida.dart';
 import '../providers/catalog_admin_providers.dart';
 import '../providers/catalog_form_providers.dart';
 import '../widgets/clasificacion_cascade.dart';
-
-const _unidadesMedida = [
-  (valor: 0, nombre: 'Unidad'),
-  (valor: 1, nombre: 'Kilogramo'),
-  (valor: 2, nombre: 'Litro'),
-];
 
 /// Crea un Producto y su primera Variante juntos (mismo criterio que
 /// CrearProductoCommand en el backend) — editar Producto/Variantes
@@ -116,7 +111,7 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
                 key: const Key('unidadMedidaVariante'),
                 decoration: const InputDecoration(labelText: 'Unidad de medida'),
                 value: _unidadMedida,
-                items: _unidadesMedida
+                items: UnidadMedida.values
                     .map((u) => DropdownMenuItem(value: u.valor, child: Text(u.nombre)))
                     .toList(),
                 onChanged: (valor) => setState(() => _unidadMedida = valor ?? 0),

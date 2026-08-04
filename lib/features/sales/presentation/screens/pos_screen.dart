@@ -8,9 +8,12 @@ import '../../../../core/utils/moneda_formatter.dart';
 import '../../../catalog/domain/models/clasificacion.dart';
 import '../../../customers/domain/models/cliente_resumen.dart';
 import '../../../tenancy/domain/models/caja_resumen.dart';
+import '../../../catalog/domain/models/producto_vendible.dart';
+import '../../domain/models/linea_carrito.dart';
 import '../../domain/models/resumen_venta.dart';
 import '../providers/pos_providers.dart';
 import '../theme/pos_colors.dart';
+import '../widgets/cantidad_pesable_dialog.dart';
 import '../widgets/carrito_linea_tile.dart';
 import '../widgets/producto_resultado_tile.dart';
 import '../widgets/selector_cliente_dialog.dart';
@@ -232,7 +235,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                   key: Key('posResultado_${producto.varianteProductoId}'),
                                   producto: producto,
                                   stock: busqueda.stock[producto.varianteProductoId],
-                                  onAgregar: () => ref.read(posCartProvider.notifier).agregarProducto(producto),
+                                  onAgregar: () => _agregarProducto(context, producto),
                                 );
                               },
                             ),
@@ -279,12 +282,29 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
     final encontrado = ref.read(busquedaProductosProvider).resultados.where((p) => p.codigoBarras == codigo);
     if (encontrado.isNotEmpty) {
-      ref.read(posCartProvider.notifier).agregarProducto(encontrado.first);
+      await _agregarProducto(context, encontrado.first);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se encontró ningún producto con el código $codigo')),
       );
     }
+  }
+
+  /// Por Unidad se agrega directo (un tap = una pieza más). Por Kilogramo
+  /// o Litro, primero hay que preguntarle al Cajero el peso/volumen
+  /// exacto — no tiene sentido "agregar 1" y ajustar de a 1 en 1 cuando
+  /// la unidad real es una fracción de kilo.
+  Future<void> _agregarProducto(BuildContext context, ProductoVendible producto) async {
+    if (!producto.unidad.esPesable) {
+      ref.read(posCartProvider.notifier).agregarProducto(producto);
+      return;
+    }
+    final cantidad = await showDialog<double>(
+      context: context,
+      builder: (_) => CantidadPesableDialog(producto: producto),
+    );
+    if (cantidad == null || !mounted) return;
+    ref.read(posCartProvider.notifier).agregarProducto(producto, cantidad: cantidad);
   }
 
   Future<void> _elegirCliente(BuildContext context) async {
@@ -417,6 +437,15 @@ class _SelectorCaja extends ConsumerWidget {
 
 /// Panel fijo del carrito — Cliente, líneas, aviso de stock si corresponde,
 /// desglose Subtotal/IVA/Total, y las acciones de cobro.
+Future<void> _editarCantidadPesable(BuildContext context, WidgetRef ref, LineaCarrito linea) async {
+  final cantidad = await showDialog<double>(
+    context: context,
+    builder: (_) => CantidadPesableDialog(producto: linea.producto, cantidadInicial: linea.cantidad),
+  );
+  if (cantidad == null) return;
+  ref.read(posCartProvider.notifier).cambiarCantidad(linea.producto.varianteProductoId, cantidad);
+}
+
 class _PanelCarrito extends ConsumerWidget {
   const _PanelCarrito({
     required this.carrito,
@@ -519,6 +548,7 @@ class _PanelCarrito extends ConsumerWidget {
                               .cambiarCantidad(linea.producto.varianteProductoId, cantidad),
                           onQuitar: () =>
                               ref.read(posCartProvider.notifier).quitarLinea(linea.producto.varianteProductoId),
+                          onEditarCantidadPesable: () => _editarCantidadPesable(context, ref, linea),
                         );
                       },
                     ),

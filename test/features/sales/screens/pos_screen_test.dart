@@ -114,8 +114,13 @@ void main() {
     await buscarYEsperar(tester, 'a');
     await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
     await tester.pump();
+    // Pan es por Kilogramo (unidadMedida: 1 en el fixture) — tocarlo abre
+    // el diálogo de cantidad exacta en vez de agregarlo directo.
     await tester.tap(find.byKey(const Key('posResultado_variante-pan')));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('cantidadPesable')), '0.5');
+    await tester.tap(find.byKey(const Key('cantidadPesableConfirmar')));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('posCobrar')));
     await tester.pumpAndSettle();
@@ -314,5 +319,61 @@ void main() {
     await pumpPos(tester, escaneoDisponible: false);
 
     expect(find.byKey(const Key('posEscanear')), findsNothing);
+  });
+
+  testWidgets('Tocar un producto por Kilogramo abre el diálogo de cantidad y agrega el peso exacto', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoPan];
+
+    await buscarYEsperar(tester, 'pan');
+    await tester.tap(find.byKey(const Key('posResultado_variante-pan')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('cantidadPesable')), findsOneWidget);
+    expect(find.textContaining('/kg'), findsWidgets);
+
+    await tester.enterText(find.byKey(const Key('cantidadPesable')), '0.350');
+    await tester.tap(find.byKey(const Key('cantidadPesableConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('posCarrito_variante-pan')), findsOneWidget);
+    expect(find.text('0.35 kg'), findsOneWidget);
+  });
+
+  testWidgets('Cancelar el diálogo de cantidad pesable no agrega nada al carrito', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoPan];
+
+    await buscarYEsperar(tester, 'pan');
+    await tester.tap(find.byKey(const Key('posResultado_variante-pan')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('cantidadPesableCancelar')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('posCarrito_variante-pan')), findsNothing);
+    expect(find.text('Carrito vacío'), findsOneWidget);
+  });
+
+  testWidgets('Tocar la cantidad de una línea pesable en el carrito permite corregirla', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoPan];
+
+    await buscarYEsperar(tester, 'pan');
+    await tester.tap(find.byKey(const Key('posResultado_variante-pan')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('cantidadPesable')), '0.350');
+    await tester.tap(find.byKey(const Key('cantidadPesableConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('0.35 kg'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('carritoCantidadPesable')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('cantidadPesable')), '0.5');
+    await tester.tap(find.byKey(const Key('cantidadPesableConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('0.5 kg'), findsOneWidget);
   });
 }

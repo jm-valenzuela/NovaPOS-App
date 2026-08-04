@@ -264,12 +264,18 @@ class PosCartController extends StateNotifier<PosCartState> {
 
   final SalesRepository _salesRepository;
 
-  void agregarProducto(ProductoVendible producto) {
+  /// `cantidad` es 1 por defecto (un producto por Unidad, ej. una botella
+  /// más cada vez que se toca). Para productos por Kilogramo/Litro, quien
+  /// llama pasa el peso/volumen exacto pedido al Cajero (ver
+  /// CantidadPesableDialog en PosScreen) — si la Variante ya estaba en el
+  /// carrito, se SUMA a lo ya pesado, no lo reemplaza (permite pesar el
+  /// mismo producto en más de una tanda).
+  void agregarProducto(ProductoVendible producto, {double cantidad = 1}) {
     final indice = state.lineas.indexWhere((l) => l.producto.varianteProductoId == producto.varianteProductoId);
     if (indice == -1) {
-      state = state.copyWith(lineas: [...state.lineas, LineaCarrito(producto: producto, cantidad: 1)]);
+      state = state.copyWith(lineas: [...state.lineas, LineaCarrito(producto: producto, cantidad: cantidad)]);
     } else {
-      _actualizarCantidad(indice, state.lineas[indice].cantidad + 1);
+      _actualizarCantidad(indice, state.lineas[indice].cantidad + cantidad);
     }
   }
 

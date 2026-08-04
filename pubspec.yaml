@@ -41,6 +41,7 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   intl: ^0.19.0
   mobile_scanner: ^4.0.1
+  flutter_svg: ^2.0.10+1
 
 dev_dependencies:
   flutter_test:
@@ -52,6 +53,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -68,6 +70,8 @@ flutter:
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/branding/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
@@ -94,3 +98,20 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+
+# Genera los íconos de Android/Web/Windows a partir de una única fuente —
+# correr `dart run flutter_launcher_icons` tras cambiar la imagen fuente.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/branding/novapos_icon_source.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/branding/novapos_icon_source.png"
+    background_color: "#12233D"
+    theme_color: "#12233D"
+  windows:
+    generate: true
+    image_path: "assets/branding/novapos_icon_source.png"
+    icon_size: 256

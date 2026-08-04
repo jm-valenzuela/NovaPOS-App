@@ -1,3 +1,5 @@
+import 'unidad_medida.dart';
+
 /// Espejo de ProductoVendibleResumen (BuscarProductosVendiblesQuery en el backend).
 class ProductoVendible {
   const ProductoVendible({
@@ -27,4 +29,6 @@ class ProductoVendible {
   final String? codigoBarras;
   final double precioVenta;
   final int unidadMedida;
+
+  UnidadMedida get unidad => UnidadMedida.desdeValor(unidadMedida);
 }
