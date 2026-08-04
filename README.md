@@ -43,6 +43,14 @@ flutter devices          # lista los destinos disponibles
 flutter run -d chrome --release
 ```
 
+**Cuenta de prueba fija** (para no tener que registrar una Empresa nueva cada vez — ver detalle en el README de `NovaPOS-Code`, no eliminar de la LocalDB):
+
+| Campo | Valor |
+|---|---|
+| RUT | `76.123.456-0` |
+| Correo | `admin@novapos-demo.cl` |
+| Contraseña | `Demo1234!` |
+
 La solución definitiva es actualizar el SDK de Flutter, no hecho todavía en este repo.
 
 Para probar el Punto de Venta hace falta una Empresa ya registrada (pantalla Registro de Empresa) con al menos una Caja cargada (la que UC-01 auto-provisiona alcanza) y un Producto — este último ya se puede crear desde la propia app, en Home → Catálogo.
