@@ -22,15 +22,19 @@ class ApiClient {
   final Dio dio;
 
   /// Traduce un DioException a una excepción propia con el mensaje real
-  /// que devuelve el backend (`{"error": "..."}`) — si no hay uno
-  /// (falla de red/timeout), usa un mensaje genérico.
+  /// que devuelve el backend (`{"error": "..."}`) — si no hay uno (falla
+  /// de red/timeout/CORS/parseo), usa un mensaje genérico con el detalle
+  /// técnico de Dio agregado (tipo + statusCode si lo hay), para poder
+  /// diagnosticar sin depender de las DevTools del navegador.
   static Never lanzarError(DioException e) {
     if (e.error is AuthException) throw e.error as AuthException;
 
     final data = e.response?.data;
     final mensaje = (data is Map && data['error'] is String)
         ? data['error'] as String
-        : 'No se pudo conectar con el servidor. Intenta nuevamente.';
+        : 'No se pudo conectar con el servidor. Intenta nuevamente. '
+            '[${e.type.name}${e.response?.statusCode != null ? ' HTTP ${e.response?.statusCode}' : ''}] '
+            '${e.message ?? e.error ?? ''}';
 
     throw ApiException(mensaje, statusCode: e.response?.statusCode);
   }
