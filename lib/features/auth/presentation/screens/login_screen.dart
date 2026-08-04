@@ -14,9 +14,13 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _rutController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+
+  // Precargados con la cuenta demo fija (ver "Cuenta de prueba fija" en el
+  // README) — a pedido explícito, para no tener que tipearla cada vez que
+  // se prueba la app manualmente.
+  final _rutController = TextEditingController(text: '81.814.677-9');
+  final _emailController = TextEditingController(text: 'admin@novapos-demo.cl');
+  final _passwordController = TextEditingController(text: 'Demo1234!');
   bool _passwordVisible = false;
 
   @override

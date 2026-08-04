@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -44,6 +45,12 @@ void main() {
     await tester.pumpWidget(ProviderScope(overrides: _overridesDeTest(), child: const NovaPosApp()));
     await tester.pump();
     await tester.pump();
+
+    // Los campos vienen precargados con la cuenta demo fija — se limpian acá
+    // para probar la validación real de campos vacíos.
+    await tester.enterText(find.byKey(const Key('loginRut')), '');
+    await tester.enterText(find.byKey(const Key('loginEmail')), '');
+    await tester.enterText(find.byKey(const Key('loginPassword')), '');
 
     await tester.tap(find.text('Iniciar sesión'));
     await tester.pump();
