@@ -285,6 +285,10 @@ class PosCartController extends StateNotifier<PosCartState> {
     );
   }
 
+  void vaciarCarrito() {
+    state = state.copyWith(lineas: const []);
+  }
+
   void _actualizarCantidad(int indice, double nuevaCantidad) {
     if (nuevaCantidad <= 0) {
       state = state.copyWith(lineas: [...state.lineas]..removeAt(indice));

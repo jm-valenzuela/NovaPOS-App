@@ -56,6 +56,8 @@ void main() {
     await tester.pump();
   }
 
+  String textoDe(WidgetTester tester, Key key) => tester.widget<Text>(find.byKey(key)).data!;
+
   Future<void> buscarYEsperar(WidgetTester tester, String texto) async {
     await tester.enterText(find.byKey(const Key('posBusqueda')), texto);
     await tester.pump(const Duration(milliseconds: 400)); // pasa el debounce
@@ -82,9 +84,9 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget);
-    expect(find.text(r'Total: $1.500'), findsOneWidget);
-    expect(find.text(r'Neto: $1.261'), findsOneWidget);
-    expect(find.text(r'IVA (19%): $239'), findsOneWidget);
+    expect(textoDe(tester, const Key('posSubtotal')), r'$1.261');
+    expect(textoDe(tester, const Key('posIva')), r'$239');
+    expect(textoDe(tester, const Key('posTotal')), r'$1.500');
   });
 
   testWidgets('Agregar el mismo producto dos veces suma la cantidad, no duplica la línea', (tester) async {
@@ -99,9 +101,9 @@ void main() {
 
     expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
-    expect(find.text(r'Total: $3.000'), findsOneWidget);
-    expect(find.text(r'Neto: $2.521'), findsOneWidget);
-    expect(find.text(r'IVA (19%): $479'), findsOneWidget);
+    expect(textoDe(tester, const Key('posTotal')), r'$3.000');
+    expect(textoDe(tester, const Key('posSubtotal')), r'$2.521');
+    expect(textoDe(tester, const Key('posIva')), r'$479');
   });
 
   testWidgets('Cobrar crea la Venta, agrega cada línea y confirma — luego muestra el total', (tester) async {
@@ -125,7 +127,7 @@ void main() {
 
     expect(find.text('Venta confirmada'), findsOneWidget);
     expect(find.text(r'Total cobrado: $2.300'), findsOneWidget);
-    expect(find.text(r'Neto: $1.933'), findsOneWidget);
+    expect(find.text(r'Subtotal: $1.933'), findsOneWidget);
     expect(find.text(r'IVA (19%): $367'), findsOneWidget);
   });
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../../catalog/domain/models/producto_vendible.dart';
+import '../theme/pos_colors.dart';
 
 class ProductoResultadoTile extends StatelessWidget {
   const ProductoResultadoTile({super.key, required this.producto, required this.onAgregar, this.stock});
@@ -16,26 +17,41 @@ class ProductoResultadoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(producto.nombreProducto),
-      subtitle: Text(producto.sku),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (stock != null) ...[
-            _BadgeStock(cantidad: stock!),
-            const SizedBox(width: 8),
-          ],
-          Text(MonedaFormatter.formatear(producto.precioVenta)),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.add_circle),
-            tooltip: 'Agregar al carrito',
-            onPressed: onAgregar,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onAgregar,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: PosColors.cardBorder),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (stock != null)
+                Align(alignment: Alignment.centerRight, child: _BadgeStock(cantidad: stock!)),
+              Text(
+                producto.nombreProducto,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(producto.sku, style: const TextStyle(fontSize: 12, color: PosColors.textMuted)),
+              const SizedBox(height: 8),
+              Text(
+                MonedaFormatter.formatear(producto.precioVenta),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
       ),
-      onTap: onAgregar,
     );
   }
 }
@@ -47,20 +63,17 @@ class _BadgeStock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sinStock = cantidad <= 0;
-    final colores = Theme.of(context).colorScheme;
+    final (bg, fg) = switch (cantidad) {
+      <= 0 => (PosColors.stockOutBg, PosColors.stockOut),
+      <= 5 => (PosColors.stockLowBg, PosColors.stockLow),
+      _ => (PosColors.stockOkBg, PosColors.stockOk),
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: sinStock ? colores.errorContainer : colores.secondaryContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
       child: Text(
         'Stock ${cantidad.toStringAsFixed(cantidad.truncateToDouble() == cantidad ? 0 : 1)}',
-        style: TextStyle(
-          fontSize: 12,
-          color: sinStock ? colores.onErrorContainer : colores.onSecondaryContainer,
-        ),
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
       ),
     );
   }

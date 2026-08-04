@@ -10,6 +10,7 @@ import '../../../customers/domain/models/cliente_resumen.dart';
 import '../../../tenancy/domain/models/caja_resumen.dart';
 import '../../domain/models/resumen_venta.dart';
 import '../providers/pos_providers.dart';
+import '../theme/pos_colors.dart';
 import '../widgets/carrito_linea_tile.dart';
 import '../widgets/producto_resultado_tile.dart';
 import '../widgets/selector_cliente_dialog.dart';
@@ -95,9 +96,29 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     });
 
     return Scaffold(
+      backgroundColor: PosColors.workspace,
       appBar: AppBar(
-        title: const Text('Punto de Venta'),
+        backgroundColor: PosColors.navy,
+        foregroundColor: Colors.white,
+        titleSpacing: 16,
+        title: const Row(
+          children: [
+            Icon(Icons.point_of_sale, color: PosColors.accent),
+            SizedBox(width: 8),
+            Text('NovaPOS', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
         actions: [
+          if (cajaSeleccionada != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Center(
+                child: Text(
+                  '${cajaSeleccionada.nombreSucursal} · ${cajaSeleccionada.nombreCaja}',
+                  style: const TextStyle(color: PosColors.textMuted, fontSize: 13),
+                ),
+              ),
+            ),
           cajasAsync.when(
             data: (cajas) => cajas.length <= 1
                 ? const SizedBox.shrink()
@@ -119,146 +140,116 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             return const Center(child: Text('Elige con qué Caja vas a trabajar.'));
           }
 
-          return Column(
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: ListTile(
-                  key: const Key('posCliente'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.person_outline),
-                  title: Text(clienteSeleccionado?.nombre ?? 'Cliente Genérico'),
-                  subtitle: clienteSeleccionado?.rut != null ? Text(clienteSeleccionado!.rut!) : null,
-                  trailing: const Text('Cambiar'),
-                  onTap: () => _elegirCliente(context),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: TextField(
-                  key: const Key('posBusqueda'),
-                  controller: _busquedaController,
-                  decoration: InputDecoration(
-                    labelText: 'Buscar producto (nombre, SKU o código de barras)',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (busqueda.buscando)
-                          const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                          ),
-                        if (widget.escaneoDisponible ?? (kIsWeb || !Platform.isWindows))
-                          IconButton(
-                            key: const Key('posEscanear'),
-                            icon: const Icon(Icons.qr_code_scanner),
-                            tooltip: 'Escanear código de barras',
-                            onPressed: () => _escanear(context),
-                          ),
-                      ],
-                    ),
-                  ),
-                  onChanged: _buscar,
-                ),
-              ),
-              departamentosAsync.when(
-                data: (departamentos) => departamentos.isEmpty
-                    ? const SizedBox.shrink()
-                    : _TabsCategorias(
-                        departamentos: departamentos,
-                        seleccionado: departamentoSeleccionado,
-                        onSeleccionar: (departamentoId) {
-                          ref.read(departamentoSeleccionadoProvider.notifier).state = departamentoId;
-                          _buscar(_busquedaController.text);
-                        },
-                      ),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
               Expanded(
-                flex: 3,
-                child: busqueda.resultados.isEmpty
-                    ? const Center(child: Text('Sin resultados'))
-                    : ListView.builder(
-                        itemCount: busqueda.resultados.length,
-                        itemBuilder: (context, index) {
-                          final producto = busqueda.resultados[index];
-                          return ProductoResultadoTile(
-                            key: Key('posResultado_${producto.varianteProductoId}'),
-                            producto: producto,
-                            stock: busqueda.stock[producto.varianteProductoId],
-                            onAgregar: () => ref.read(posCartProvider.notifier).agregarProducto(producto),
-                          );
-                        },
-                      ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                flex: 2,
-                child: carrito.lineas.isEmpty
-                    ? const Center(child: Text('Carrito vacío'))
-                    : ListView.builder(
-                        itemCount: carrito.lineas.length,
-                        itemBuilder: (context, index) {
-                          final linea = carrito.lineas[index];
-                          return CarritoLineaTile(
-                            key: Key('posCarrito_${linea.producto.varianteProductoId}'),
-                            linea: linea,
-                            onCambiarCantidad: (cantidad) => ref
-                                .read(posCartProvider.notifier)
-                                .cambiarCantidad(linea.producto.varianteProductoId, cantidad),
-                            onQuitar: () =>
-                                ref.read(posCartProvider.notifier).quitarLinea(linea.producto.varianteProductoId),
-                          );
-                        },
-                      ),
-              ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Neto: ${MonedaFormatter.formatear(carrito.resumen.neto)}',
-                              style: Theme.of(context).textTheme.bodyMedium,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              key: const Key('posBusqueda'),
+                              controller: _busquedaController,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Colors.white,
+                                hintText: 'Buscar producto por nombre, SKU o código de barras...',
+                                prefixIcon: const Icon(Icons.search),
+                                suffixIcon: busqueda.buscando
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          height: 16,
+                                          width: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                      )
+                                    : null,
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: PosColors.cardBorder),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: PosColors.navy),
+                                ),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              onChanged: _buscar,
                             ),
-                            Text(
-                              'IVA (19%): ${MonedaFormatter.formatear(carrito.resumen.iva)}',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            Text(
-                              'Total: ${MonedaFormatter.formatear(carrito.total)}',
-                              style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          if (widget.escaneoDisponible ?? (kIsWeb || !Platform.isWindows)) ...[
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              key: const Key('posEscanear'),
+                              onPressed: () => _escanear(context),
+                              icon: const Icon(Icons.qr_code_scanner, size: 20),
+                              label: const Text('Escanear'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: PosColors.navy,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
                             ),
                           ],
-                        ),
+                        ],
                       ),
-                      ElevatedButton(
-                        key: const Key('posCobrar'),
-                        onPressed: (carrito.lineas.isEmpty || carrito.cobrando)
-                            ? null
-                            : () => ref.read(posCartProvider.notifier).cobrar(
-                                  cajaId: cajaSeleccionada.cajaId,
-                                  clienteId: ref.read(clienteSeleccionadoProvider)?.id,
-                                ),
-                        child: carrito.cobrando
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Text('Cobrar'),
-                      ),
-                    ],
-                  ),
+                    ),
+                    departamentosAsync.when(
+                      data: (departamentos) => departamentos.isEmpty
+                          ? const SizedBox.shrink()
+                          : _TabsCategorias(
+                              departamentos: departamentos,
+                              seleccionado: departamentoSeleccionado,
+                              onSeleccionar: (departamentoId) {
+                                ref.read(departamentoSeleccionadoProvider.notifier).state = departamentoId;
+                                _buscar(_busquedaController.text);
+                              },
+                            ),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                    Expanded(
+                      child: busqueda.resultados.isEmpty
+                          ? const Center(child: Text('Sin resultados', style: TextStyle(color: PosColors.textMuted)))
+                          : GridView.builder(
+                              padding: const EdgeInsets.all(16),
+                              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 260,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                mainAxisExtent: 140,
+                              ),
+                              itemCount: busqueda.resultados.length,
+                              itemBuilder: (context, index) {
+                                final producto = busqueda.resultados[index];
+                                return ProductoResultadoTile(
+                                  key: Key('posResultado_${producto.varianteProductoId}'),
+                                  producto: producto,
+                                  stock: busqueda.stock[producto.varianteProductoId],
+                                  onAgregar: () => ref.read(posCartProvider.notifier).agregarProducto(producto),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
+              ),
+              _PanelCarrito(
+                carrito: carrito,
+                clienteSeleccionado: clienteSeleccionado,
+                stockPorVariante: busqueda.stock,
+                onElegirCliente: () => _elegirCliente(context),
+                onCobrar: () => ref.read(posCartProvider.notifier).cobrar(
+                      cajaId: cajaSeleccionada.cajaId,
+                      clienteId: ref.read(clienteSeleccionadoProvider)?.id,
+                    ),
+                onVaciar: () => ref.read(posCartProvider.notifier).vaciarCarrito(),
               ),
             ],
           );
@@ -322,7 +313,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Neto: ${MonedaFormatter.formatear(resumen.neto)}'),
+            Text('Subtotal: ${MonedaFormatter.formatear(resumen.neto)}'),
             Text('IVA (19%): ${MonedaFormatter.formatear(resumen.iva)}'),
             Text('Total cobrado: ${MonedaFormatter.formatear(resumen.total)}'),
           ],
@@ -354,29 +345,50 @@ class _TabsCategorias extends StatelessWidget {
       height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: ChoiceChip(
+            child: _ChipCategoria(
               key: const Key('posCategoriaTodos'),
-              label: const Text('Todos'),
+              label: 'Todos',
               selected: seleccionado == null,
-              onSelected: (_) => onSeleccionar(null),
+              onTap: () => onSeleccionar(null),
             ),
           ),
           for (final departamento in departamentos)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: ChoiceChip(
+              child: _ChipCategoria(
                 key: Key('posCategoria_${departamento.id}'),
-                label: Text(departamento.nombre),
+                label: departamento.nombre,
                 selected: seleccionado == departamento.id,
-                onSelected: (_) => onSeleccionar(departamento.id),
+                onTap: () => onSeleccionar(departamento.id),
               ),
             ),
         ],
       ),
+    );
+  }
+}
+
+class _ChipCategoria extends StatelessWidget {
+  const _ChipCategoria({super.key, required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      selectedColor: PosColors.navy,
+      backgroundColor: Colors.white,
+      side: BorderSide(color: selected ? PosColors.navy : PosColors.cardBorder),
+      labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
     );
   }
 }
@@ -392,13 +404,235 @@ class _SelectorCaja extends ConsumerWidget {
     return DropdownButton<CajaResumen>(
       value: seleccionada,
       hint: const Text('Elige una Caja', style: TextStyle(color: Colors.white)),
-      dropdownColor: Theme.of(context).colorScheme.primary,
+      dropdownColor: PosColors.navy,
       underline: const SizedBox.shrink(),
       style: const TextStyle(color: Colors.white),
       items: cajas
           .map((caja) => DropdownMenuItem(value: caja, child: Text('${caja.nombreCaja} (${caja.nombreSucursal})')))
           .toList(),
       onChanged: (caja) => ref.read(cajaSeleccionadaProvider.notifier).state = caja,
+    );
+  }
+}
+
+/// Panel fijo del carrito — Cliente, líneas, aviso de stock si corresponde,
+/// desglose Subtotal/IVA/Total, y las acciones de cobro.
+class _PanelCarrito extends ConsumerWidget {
+  const _PanelCarrito({
+    required this.carrito,
+    required this.clienteSeleccionado,
+    required this.stockPorVariante,
+    required this.onElegirCliente,
+    required this.onCobrar,
+    required this.onVaciar,
+  });
+
+  final PosCartState carrito;
+  final ClienteResumen? clienteSeleccionado;
+  final Map<String, double> stockPorVariante;
+  final VoidCallback onElegirCliente;
+  final VoidCallback onCobrar;
+  final VoidCallback onVaciar;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Aviso informativo (nunca bloquea la venta) — solo detecta líneas cuyo
+    // stock consultado en la búsqueda actual es exactamente 0. Si el
+    // producto no aparece en el mapa (búsqueda distinta desde que se
+    // agregó), simplemente no se muestra aviso para esa línea.
+    final sinStock = carrito.lineas.where((l) => stockPorVariante[l.producto.varianteProductoId] == 0).toList();
+
+    return Container(
+      width: 400,
+      color: PosColors.navy,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: InkWell(
+                key: const Key('posCliente'),
+                onTap: onElegirCliente,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('CLIENTE',
+                              style: TextStyle(color: PosColors.textMuted, fontSize: 11, letterSpacing: 0.5)),
+                          const SizedBox(height: 2),
+                          Text(
+                            clienteSeleccionado?.nombre ?? 'Cliente Genérico',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          if (clienteSeleccionado?.rut != null)
+                            Text(clienteSeleccionado!.rut!, style: const TextStyle(color: PosColors.textMuted, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    const Text('Cambiar', style: TextStyle(color: PosColors.accent, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+            if (sinStock.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: PosColors.accent.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: PosColors.accent.withOpacity(0.4)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: PosColors.accent, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${sinStock.map((l) => l.producto.nombreProducto).join(", ")} sin stock — se permitirá la venta',
+                          style: const TextStyle(color: PosColors.accent, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const Divider(color: PosColors.navyBorder, height: 24),
+            Expanded(
+              child: carrito.lineas.isEmpty
+                  ? const Center(child: Text('Carrito vacío', style: TextStyle(color: PosColors.textMuted)))
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: carrito.lineas.length,
+                      separatorBuilder: (_, __) => const Divider(color: PosColors.navyBorder, height: 1),
+                      itemBuilder: (context, index) {
+                        final linea = carrito.lineas[index];
+                        return CarritoLineaTile(
+                          key: Key('posCarrito_${linea.producto.varianteProductoId}'),
+                          linea: linea,
+                          onCambiarCantidad: (cantidad) => ref
+                              .read(posCartProvider.notifier)
+                              .cambiarCantidad(linea.producto.varianteProductoId, cantidad),
+                          onQuitar: () =>
+                              ref.read(posCartProvider.notifier).quitarLinea(linea.producto.varianteProductoId),
+                        );
+                      },
+                    ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(border: Border(top: BorderSide(color: PosColors.navyBorder))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _FilaResumen(valorKey: const Key('posSubtotal'), label: 'Subtotal', valor: carrito.resumen.neto),
+                  _FilaResumen(valorKey: const Key('posIva'), label: 'IVA (19%)', valor: carrito.resumen.iva),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+                      Text(
+                        MonedaFormatter.formatear(carrito.total),
+                        key: const Key('posTotal'),
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    key: const Key('posCobrar'),
+                    onPressed: (carrito.lineas.isEmpty || carrito.cobrando) ? null : onCobrar,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: PosColors.accent,
+                      foregroundColor: PosColors.navy,
+                      disabledBackgroundColor: PosColors.navyBorder,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    child: carrito.cobrando
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text('Cobrar ${MonedaFormatter.formatear(carrito.total)}'),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Tooltip(
+                          message: 'Próximamente',
+                          child: OutlinedButton(
+                            onPressed: null,
+                            style: _estiloBotonSecundario,
+                            child: const Text('+ Descuento', overflow: TextOverflow.ellipsis),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Tooltip(
+                          message: 'Próximamente',
+                          child: OutlinedButton(
+                            onPressed: null,
+                            style: _estiloBotonSecundario,
+                            child: const Text('Cotización', overflow: TextOverflow.ellipsis),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: carrito.lineas.isEmpty ? null : onVaciar,
+                          style: _estiloBotonSecundario,
+                          child: const Text('Vaciar', overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ButtonStyle get _estiloBotonSecundario => OutlinedButton.styleFrom(
+        foregroundColor: Colors.white,
+        disabledForegroundColor: PosColors.textMuted,
+        side: const BorderSide(color: PosColors.navyBorder),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      );
+}
+
+class _FilaResumen extends StatelessWidget {
+  const _FilaResumen({required this.label, required this.valor, this.valorKey});
+
+  final String label;
+  final double valor;
+  final Key? valorKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: PosColors.textMuted)),
+          Text(MonedaFormatter.formatear(valor), key: valorKey, style: const TextStyle(color: Colors.white)),
+        ],
+      ),
     );
   }
 }
