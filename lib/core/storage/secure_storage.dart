@@ -20,7 +20,19 @@ class FlutterSecureStorageAdapter implements SecureStorage {
   Future<void> write({required String key, required String? value}) => _storage.write(key: key, value: value);
 
   @override
-  Future<String?> read({required String key}) => _storage.read(key: key);
+  Future<String?> read({required String key}) async {
+    try {
+      return await _storage.read(key: key);
+    } catch (_) {
+      // En Web, un valor cifrado con una clave AES-GCM que ya no coincide
+      // con la persistida (ver TokenStorage.guardar) falla al desencriptar
+      // (DOMException: OperationError) — irrecuperable, así que se trata
+      // como si no existiera y se limpia para no repetir el error en cada
+      // llamada (AuthInterceptor llama read() en cada request).
+      await delete(key: key);
+      return null;
+    }
+  }
 
   @override
   Future<void> delete({required String key}) => _storage.delete(key: key);

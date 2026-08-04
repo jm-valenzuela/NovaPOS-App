@@ -12,16 +12,23 @@ class TokenStorage {
   static const _accessTokenExpiraKey = 'access_token_expira';
   static const _refreshTokenKey = 'refresh_token';
 
+  /// Escribe secuencial, NUNCA con Future.wait: en flutter_secure_storage_web,
+  /// la primera escritura en un origen nuevo (sin clave de cifrado AES-GCM
+  /// todavía en localStorage) genera y persiste una — si dos escrituras
+  /// corren en paralelo, cada una genera SU PROPIA clave al no ver
+  /// todavía la de la otra, y la que pierde la carrera queda con un
+  /// valor cifrado con una clave que ya no está guardada en ningún lado
+  /// (falla al desencriptar con "OperationError" más tarde). Ver
+  /// flutter_secure_storage_web/lib/flutter_secure_storage_web.dart,
+  /// _getEncryptionKey.
   Future<void> guardar({
     required String accessToken,
     required DateTime accessTokenExpira,
     required String refreshToken,
   }) async {
-    await Future.wait([
-      _storage.write(key: _accessTokenKey, value: accessToken),
-      _storage.write(key: _accessTokenExpiraKey, value: accessTokenExpira.toIso8601String()),
-      _storage.write(key: _refreshTokenKey, value: refreshToken),
-    ]);
+    await _storage.write(key: _accessTokenKey, value: accessToken);
+    await _storage.write(key: _accessTokenExpiraKey, value: accessTokenExpira.toIso8601String());
+    await _storage.write(key: _refreshTokenKey, value: refreshToken);
   }
 
   Future<String?> obtenerAccessToken() => _storage.read(key: _accessTokenKey);
