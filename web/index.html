@@ -42,11 +42,14 @@
 <body>
   <script>
     window.addEventListener('load', function(ev) {
-      // Download main.dart.js
+      // Sin Service Worker a propósito: esta app no es una PWA instalable
+      // ni necesita funcionar offline (siempre depende de NovaPOS.Api en
+      // vivo) — un Service Worker que se cuelga al registrarse
+      // ("prepareServiceWorker took more than 4000ms to resolve") dejaba
+      // flutter_secure_storage en un estado roto, causando que toda
+      // llamada al backend después del login fallara silenciosamente
+      // (0 requests de red, "No se pudo conectar con el servidor").
       _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
-        },
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
             appRunner.runApp();
