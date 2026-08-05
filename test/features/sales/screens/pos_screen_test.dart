@@ -511,4 +511,76 @@ void main() {
     final boton = tester.widget<ElevatedButton>(find.byKey(const Key('posCobrar')));
     expect(boton.onPressed, isNull);
   });
+
+  testWidgets('Con un descuento ya solicitado, tocar otro producto no lo agrega y avisa por qué', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola, productoPan];
+    await buscarYEsperar(tester, 'a');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('posDescuento')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('solicitarDescuentoValor')), '10');
+    await tester.tap(find.byKey(const Key('solicitarDescuentoConfirmar')));
+    await tester.pumpAndSettle();
+
+    // Pan es por Kilogramo — igual queda bloqueado el diálogo de agregar.
+    await tester.tap(find.byKey(const Key('posResultado_variante-pan')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('cantidadPesable')), '0.5');
+    await tester.tap(find.byKey(const Key('cantidadPesableConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('posCarrito_variante-pan')), findsNothing);
+    expect(fakeSales.lineasAgregadas, hasLength(1));
+    expect(find.textContaining('No puedes agregar más productos'), findsOneWidget);
+  });
+
+  testWidgets('Vaciar con un descuento ya solicitado pide confirmación antes de borrar', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    await buscarYEsperar(tester, 'coca');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('posDescuento')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('solicitarDescuentoValor')), '10');
+    await tester.tap(find.byKey(const Key('solicitarDescuentoConfirmar')));
+    await tester.pumpAndSettle();
+
+    // El botón sigue habilitado (ya no se deshabilita solo por estar bloqueado).
+    await tester.tap(find.text('Vaciar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('¿Vaciar el carrito?'), findsOneWidget);
+
+    // Cancelar: el carrito sigue igual.
+    await tester.tap(find.byKey(const Key('confirmarVaciarCancelar')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget);
+
+    // Confirmar: se vacía de verdad.
+    await tester.tap(find.text('Vaciar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmarVaciarConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('posCarrito_variante-coca')), findsNothing);
+  });
+
+  testWidgets('Vaciar sin ningún descuento solicitado no pide confirmación', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    await buscarYEsperar(tester, 'coca');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await tester.tap(find.text('Vaciar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('¿Vaciar el carrito?'), findsNothing);
+    expect(find.byKey(const Key('posCarrito_variante-coca')), findsNothing);
+  });
 }

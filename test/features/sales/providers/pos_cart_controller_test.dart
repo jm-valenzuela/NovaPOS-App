@@ -96,6 +96,54 @@ void main() {
     expect(controller.state.resumenCobrado, isNotNull);
   });
 
+  test('agregarProducto no hace nada mientras el carrito está bloqueado por un descuento', () async {
+    await controller.solicitarDescuento(cajaId: 'caja-1', porcentaje: 10);
+    final lineasAntes = controller.state.lineas;
+
+    controller.agregarProducto(productoPan);
+
+    expect(controller.state.lineas, lineasAntes);
+    expect(fakeSales.lineasAgregadas, hasLength(1)); // solo la línea original, ninguna nueva
+    expect(controller.state.error, isNotNull);
+  });
+
+  test('agregarProducto sigue bloqueado tras un descuento Autorizado', () async {
+    await controller.solicitarDescuento(cajaId: 'caja-1', porcentaje: 10);
+    fakeSales.estadoDescuentoARetornar = EstadoDescuentoVenta(
+      ventaId: fakeSales.ventaIdARetornar,
+      estado: EstadoDescuentoGeneral.autorizado,
+      total: 2700,
+      subtotalLineas: 3000,
+      motivoRechazo: null,
+    );
+    await controller.verificarEstadoDescuento();
+
+    controller.agregarProducto(productoPan);
+
+    expect(controller.state.lineas, hasLength(1));
+  });
+
+  test('cambiarCantidad y quitarLinea no hacen nada mientras el carrito está bloqueado', () async {
+    await controller.solicitarDescuento(cajaId: 'caja-1', porcentaje: 10);
+
+    controller.cambiarCantidad(productoCocaCola.varianteProductoId, 5);
+    controller.quitarLinea(productoCocaCola.varianteProductoId);
+
+    expect(controller.state.lineas, hasLength(1));
+    expect(controller.state.lineas.first.cantidad, 2);
+  });
+
+  test('vaciarCarrito reinicia todo el estado, no solo las líneas', () async {
+    await controller.solicitarDescuento(cajaId: 'caja-1', porcentaje: 10);
+
+    controller.vaciarCarrito();
+
+    expect(controller.state.lineas, isEmpty);
+    expect(controller.state.ventaId, isNull);
+    expect(controller.state.estadoDescuento, EstadoDescuentoGeneral.sinSolicitar);
+    expect(controller.state.carritoBloqueado, isFalse);
+  });
+
   test('montoDescuentoAplicado y totalConDescuento solo restan cuando está Autorizado', () async {
     await controller.solicitarDescuento(cajaId: 'caja-1', porcentaje: 10);
 

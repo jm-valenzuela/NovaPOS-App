@@ -293,7 +293,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       cajaId: cajaSeleccionada.cajaId,
                       clienteId: ref.read(clienteSeleccionadoProvider)?.id,
                     ),
-                onVaciar: () => ref.read(posCartProvider.notifier).vaciarCarrito(),
+                onVaciar: () => _vaciar(context, ref, carrito),
                 onSolicitarDescuento: () => _solicitarDescuento(context, cajaSeleccionada.cajaId),
               ),
             ],
@@ -361,6 +361,38 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           porcentaje: solicitado.porcentaje,
           monto: solicitado.monto,
         );
+  }
+
+  /// Si ya se pidió un descuento para esta venta (Pendiente, Autorizado o
+  /// Rechazado), vaciar abandona la Venta que ya existe en el servidor —
+  /// se avisa antes en vez de borrarlo en silencio.
+  Future<void> _vaciar(BuildContext context, WidgetRef ref, PosCartState carrito) async {
+    if (carrito.estadoDescuento != EstadoDescuentoGeneral.sinSolicitar) {
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('¿Vaciar el carrito?'),
+          content: const Text(
+            'Ya se solicitó un descuento para esta venta. Vaciar el carrito lo descarta — '
+            'tendrás que pedirlo de nuevo si sigues con esta venta.',
+          ),
+          actions: [
+            TextButton(
+              key: const Key('confirmarVaciarCancelar'),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              key: const Key('confirmarVaciarConfirmar'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Vaciar'),
+            ),
+          ],
+        ),
+      );
+      if (confirmar != true) return;
+    }
+    ref.read(posCartProvider.notifier).vaciarCarrito();
   }
 
   Future<void> _elegirCliente(BuildContext context) async {
@@ -692,7 +724,7 @@ class _PanelCarrito extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: (carrito.lineas.isEmpty || carrito.carritoBloqueado) ? null : onVaciar,
+                          onPressed: carrito.lineas.isEmpty ? null : onVaciar,
                           style: _estiloBotonSecundario,
                           child: const Text('Vaciar', overflow: TextOverflow.ellipsis),
                         ),

@@ -326,7 +326,20 @@ class PosCartController extends StateNotifier<PosCartState> {
   /// CantidadPesableDialog en PosScreen) — si la Variante ya estaba en el
   /// carrito, se SUMA a lo ya pesado, no lo reemplaza (permite pesar el
   /// mismo producto en más de una tanda).
+  /// Una vez que se pidió un descuento, la Venta y sus líneas ya existen
+  /// en el servidor (ver solicitarDescuento) — agregar un Producto más acá
+  /// solo cambiaría el carrito local, sin avisarle al backend, así que el
+  /// Total que se ve en pantalla dejaría de coincidir con lo que
+  /// Confirmar() realmente va a cobrar. Se bloquea, no se ignora en
+  /// silencio: se informa por qué (mismo canal que otros errores del carrito).
   void agregarProducto(ProductoVendible producto, {double cantidad = 1}) {
+    if (state.carritoBloqueado) {
+      state = state.copyWith(
+        error: 'No puedes agregar más productos: ya se solicitó un descuento para esta venta. '
+            'Vacía el carrito para empezar de nuevo.',
+      );
+      return;
+    }
     final indice = state.lineas.indexWhere((l) => l.producto.varianteProductoId == producto.varianteProductoId);
     if (indice == -1) {
       state = state.copyWith(lineas: [...state.lineas, LineaCarrito(producto: producto, cantidad: cantidad)]);
@@ -336,19 +349,27 @@ class PosCartController extends StateNotifier<PosCartState> {
   }
 
   void cambiarCantidad(String varianteProductoId, double cantidad) {
+    if (state.carritoBloqueado) return;
     final indice = state.lineas.indexWhere((l) => l.producto.varianteProductoId == varianteProductoId);
     if (indice == -1) return;
     _actualizarCantidad(indice, cantidad);
   }
 
   void quitarLinea(String varianteProductoId) {
+    if (state.carritoBloqueado) return;
     state = state.copyWith(
       lineas: state.lineas.where((l) => l.producto.varianteProductoId != varianteProductoId).toList(),
     );
   }
 
+  /// Reinicio completo a propósito (no solo las líneas): si ya se pidió un
+  /// descuento, la Venta creada en el servidor queda abandonada en
+  /// Borrador (no hay forma de cancelarla — mismo criterio que el resto
+  /// del sistema, ver EstadoVenta.Anulada sin método que la use todavía).
+  /// PosScreen pide confirmación antes de llamar esto si había un
+  /// descuento en curso, ver _PosScreenState._vaciar.
   void vaciarCarrito() {
-    state = state.copyWith(lineas: const []);
+    state = const PosCartState();
   }
 
   void _actualizarCantidad(int indice, double nuevaCantidad) {
