@@ -1,3 +1,4 @@
+import '../../../core/auth/jwt_permisos.dart';
 import '../../../core/storage/token_storage.dart';
 import '../domain/auth_repository.dart';
 import '../domain/models/registrar_empresa_result.dart';
@@ -25,6 +26,7 @@ class AuthRepositoryImpl implements AuthRepository {
       nombreCompleto: resultado.nombreCompleto ?? resultado.email ?? email,
       email: resultado.email ?? email,
       empresaRazonSocial: resultado.empresaRazonSocial ?? '',
+      permisos: permisosDesdeJwt(resultado.accessToken),
     );
   }
 
@@ -34,7 +36,13 @@ class AuthRepositoryImpl implements AuthRepository {
     final email = await _tokenStorage.obtenerEmail();
     final empresaRazonSocial = await _tokenStorage.obtenerEmpresaRazonSocial();
     if (nombreCompleto == null || email == null || empresaRazonSocial == null) return null;
-    return SesionUsuario(nombreCompleto: nombreCompleto, email: email, empresaRazonSocial: empresaRazonSocial);
+    final accessToken = await _tokenStorage.obtenerAccessToken();
+    return SesionUsuario(
+      nombreCompleto: nombreCompleto,
+      email: email,
+      empresaRazonSocial: empresaRazonSocial,
+      permisos: accessToken == null ? const [] : permisosDesdeJwt(accessToken),
+    );
   }
 
   @override

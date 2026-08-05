@@ -25,6 +25,7 @@ import '../../data/sales_repository_impl.dart';
 import '../../data/venta_api.dart';
 import '../../domain/models/linea_carrito.dart';
 import '../../domain/models/resumen_venta.dart';
+import '../../domain/models/venta_enums.dart';
 import '../../domain/sales_repository.dart';
 
 final catalogoApiProvider = Provider<CatalogoApi>((ref) => CatalogoApi(ref.watch(apiClientProvider)));
@@ -227,7 +228,18 @@ final busquedaProductosProvider =
 });
 
 class PosCartState {
-  const PosCartState({this.lineas = const [], this.cobrando = false, this.error, this.resumenCobrado});
+  const PosCartState({
+    this.lineas = const [],
+    this.cobrando = false,
+    this.error,
+    this.resumenCobrado,
+    this.ventaId,
+    this.estadoDescuento = EstadoDescuentoGeneral.sinSolicitar,
+    this.descuentoPorcentaje,
+    this.descuentoMonto,
+    this.motivoRechazoDescuento,
+    this.solicitandoDescuento = false,
+  });
 
   final List<LineaCarrito> lineas;
   final bool cobrando;
@@ -237,11 +249,48 @@ class PosCartState {
   /// tras un cobro exitoso, para el diálogo de venta cobrada.
   final ResumenVenta? resumenCobrado;
 
+  /// Null hasta que se solicita un descuento — recién ahí se crea la
+  /// Venta real en el servidor (ver PosCartController.solicitarDescuento),
+  /// antes de eso el carrito es 100% local. Una vez asignado, el carrito
+  /// queda bloqueado para edición (ver carritoBloqueado): las líneas ya
+  /// están en el servidor y cambiarlas localmente las desincronizaría.
+  final String? ventaId;
+
+  final EstadoDescuentoGeneral estadoDescuento;
+
+  /// Mutuamente excluyentes — lo que el Cajero pidió, para mostrarlo
+  /// mientras se espera la resolución.
+  final double? descuentoPorcentaje;
+  final double? descuentoMonto;
+
+  final String? motivoRechazoDescuento;
+  final bool solicitandoDescuento;
+
+  bool get carritoBloqueado => ventaId != null;
+
+  /// No se puede volver a pedir mientras ya hay uno Pendiente (esperando
+  /// resolución) o ya Autorizado (no tiene sentido pedir otro encima) —
+  /// sí se puede tras un Rechazado, para pedir un monto distinto.
+  bool get puedeSolicitarDescuento =>
+      lineas.isNotEmpty &&
+      !solicitandoDescuento &&
+      estadoDescuento != EstadoDescuentoGeneral.pendiente &&
+      estadoDescuento != EstadoDescuentoGeneral.autorizado;
+
   double get total => lineas.fold(0, (suma, linea) => suma + linea.subtotal);
+
+  double get montoDescuentoAplicado {
+    if (estadoDescuento != EstadoDescuentoGeneral.autorizado) return 0;
+    if (descuentoPorcentaje != null) return total * descuentoPorcentaje! / 100;
+    return descuentoMonto ?? 0;
+  }
+
+  double get totalConDescuento => total - montoDescuentoAplicado;
 
   /// Desglose en vivo mientras se arma el carrito (antes de que exista una
   /// Venta real en el servidor) — mismo cálculo que el backend, ver ResumenVenta.calcular.
-  ResumenVenta get resumen => ResumenVenta.calcular(total);
+  /// Ya incluye el descuento general una vez autorizado.
+  ResumenVenta get resumen => ResumenVenta.calcular(totalConDescuento);
 
   PosCartState copyWith({
     List<LineaCarrito>? lineas,
@@ -249,12 +298,19 @@ class PosCartState {
     String? error,
     bool limpiarError = false,
     bool limpiarResumenCobrado = false,
+    bool? solicitandoDescuento,
   }) {
     return PosCartState(
       lineas: lineas ?? this.lineas,
       cobrando: cobrando ?? this.cobrando,
       error: limpiarError ? null : (error ?? this.error),
       resumenCobrado: limpiarResumenCobrado ? null : resumenCobrado,
+      ventaId: ventaId,
+      estadoDescuento: estadoDescuento,
+      descuentoPorcentaje: descuentoPorcentaje,
+      descuentoMonto: descuentoMonto,
+      motivoRechazoDescuento: motivoRechazoDescuento,
+      solicitandoDescuento: solicitandoDescuento ?? this.solicitandoDescuento,
     );
   }
 }
@@ -305,25 +361,30 @@ class PosCartController extends StateNotifier<PosCartState> {
     state = state.copyWith(lineas: lineas);
   }
 
-  /// Crea la Venta recién ahora, agrega cada línea del carrito y
-  /// confirma — el carrito no toca el backend antes de esto (ver
-  /// LineaCarrito). Si algo falla a mitad de camino, la Venta queda en
-  /// Borrador en el servidor sin las líneas restantes — se informa el
+  /// Crea la Venta recién ahora (salvo que ya exista por haberse pedido un
+  /// descuento antes, ver solicitarDescuento), agrega cada línea del
+  /// carrito y confirma — el carrito no toca el backend antes de esto
+  /// (ver LineaCarrito). Si algo falla a mitad de camino, la Venta queda
+  /// en Borrador en el servidor sin las líneas restantes — se informa el
   /// error y el carrito local NO se vacía, para que el Cajero pueda
   /// reintentar sin volver a tipear todo.
   Future<void> cobrar({required String cajaId, String? clienteId}) async {
     if (state.lineas.isEmpty) return;
+    if (state.estadoDescuento == EstadoDescuentoGeneral.pendiente) return;
 
     state = state.copyWith(cobrando: true, limpiarError: true, limpiarResumenCobrado: true);
     try {
-      final ventaId = await _salesRepository.crearVenta(cajaId: cajaId, clienteId: clienteId);
+      var ventaId = state.ventaId;
+      if (ventaId == null) {
+        ventaId = await _salesRepository.crearVenta(cajaId: cajaId, clienteId: clienteId);
 
-      for (final linea in state.lineas) {
-        await _salesRepository.agregarLinea(
-          ventaId: ventaId,
-          varianteProductoId: linea.producto.varianteProductoId,
-          cantidad: linea.cantidad,
-        );
+        for (final linea in state.lineas) {
+          await _salesRepository.agregarLinea(
+            ventaId: ventaId,
+            varianteProductoId: linea.producto.varianteProductoId,
+            cantidad: linea.cantidad,
+          );
+        }
       }
 
       final resumen = await _salesRepository.confirmarVenta(ventaId);
@@ -336,6 +397,73 @@ class PosCartController extends StateNotifier<PosCartState> {
 
   void limpiarVentaCobrada() {
     state = state.copyWith(limpiarResumenCobrado: true);
+  }
+
+  /// Primera vez que se pide un descuento en este carrito: crea la Venta y
+  /// agrega las líneas ahora mismo (antes de esto el carrito era 100%
+  /// local) para tener un VentaId real contra el cual pedir el descuento.
+  /// Pedidos siguientes (ej. el Supervisor rechazó y el Cajero pide un
+  /// monto menor) reusan la misma Venta — porcentaje/monto son
+  /// mutuamente excluyentes, mandar exactamente uno de los dos.
+  Future<void> solicitarDescuento({
+    required String cajaId,
+    String? clienteId,
+    double? porcentaje,
+    double? monto,
+  }) async {
+    if (state.lineas.isEmpty) return;
+
+    state = state.copyWith(solicitandoDescuento: true, limpiarError: true);
+    try {
+      var ventaId = state.ventaId;
+      if (ventaId == null) {
+        ventaId = await _salesRepository.crearVenta(cajaId: cajaId, clienteId: clienteId);
+
+        for (final linea in state.lineas) {
+          await _salesRepository.agregarLinea(
+            ventaId: ventaId,
+            varianteProductoId: linea.producto.varianteProductoId,
+            cantidad: linea.cantidad,
+          );
+        }
+      }
+
+      await _salesRepository.solicitarDescuentoGeneral(ventaId: ventaId, porcentaje: porcentaje, monto: monto);
+
+      state = PosCartState(
+        lineas: state.lineas,
+        ventaId: ventaId,
+        estadoDescuento: EstadoDescuentoGeneral.pendiente,
+        descuentoPorcentaje: porcentaje,
+        descuentoMonto: monto,
+      );
+    } catch (e) {
+      state = state.copyWith(solicitandoDescuento: false, error: e.toString());
+    }
+  }
+
+  /// El POS llama esto mientras espera — ver SolicitarDescuentoDialog. Si
+  /// el estado sigue Pendiente no cambia nada (el Supervisor, en el piso
+  /// o en la oficina, todavía no resolvió); si falla la consulta se
+  /// ignora en silencio y se reintenta en el próximo tick, sin tumbar la
+  /// espera por un error de red puntual.
+  Future<void> verificarEstadoDescuento() async {
+    final ventaId = state.ventaId;
+    if (ventaId == null || state.estadoDescuento != EstadoDescuentoGeneral.pendiente) return;
+    try {
+      final estado = await _salesRepository.obtenerEstadoDescuento(ventaId);
+      if (estado.estado == EstadoDescuentoGeneral.pendiente) return;
+      state = PosCartState(
+        lineas: state.lineas,
+        ventaId: state.ventaId,
+        estadoDescuento: estado.estado,
+        descuentoPorcentaje: state.descuentoPorcentaje,
+        descuentoMonto: state.descuentoMonto,
+        motivoRechazoDescuento: estado.motivoRechazo,
+      );
+    } catch (_) {
+      // Informativo — se reintenta en el próximo tick del poller.
+    }
   }
 }
 

@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
+import '../domain/models/descuento_pendiente.dart';
+import '../domain/models/estado_descuento_venta.dart';
 import '../domain/models/resumen_venta.dart';
 import '../domain/models/venta_enums.dart';
 
@@ -47,6 +49,54 @@ class VentaApi {
     try {
       final respuesta = await _client.dio.post('/ventas/$ventaId/confirmar');
       return ResumenVenta.fromJson(respuesta.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  /// El Cajero pide el descuento — porcentaje y monto son mutuamente
+  /// excluyentes, quien llama debe mandar exactamente uno de los dos.
+  Future<void> solicitarDescuento({required String ventaId, double? porcentaje, double? monto}) async {
+    try {
+      await _client.dio.post('/ventas/$ventaId/descuento', data: {
+        'porcentaje': porcentaje,
+        'monto': monto,
+      });
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<EstadoDescuentoVenta> obtenerEstadoDescuento(String ventaId) async {
+    try {
+      final respuesta = await _client.dio.get('/ventas/$ventaId/descuento');
+      return EstadoDescuentoVenta.fromJson(respuesta.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<List<DescuentoPendiente>> listarDescuentosPendientes() async {
+    try {
+      final respuesta = await _client.dio.get('/ventas/descuentos-pendientes');
+      final lista = respuesta.data as List<dynamic>;
+      return lista.map((json) => DescuentoPendiente.fromJson(json as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<void> autorizarDescuento(String ventaId) async {
+    try {
+      await _client.dio.post('/ventas/$ventaId/descuento/autorizar');
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<void> rechazarDescuento({required String ventaId, required String motivo}) async {
+    try {
+      await _client.dio.post('/ventas/$ventaId/descuento/rechazar', data: {'motivo': motivo});
     } on DioException catch (e) {
       ApiClient.lanzarError(e);
     }

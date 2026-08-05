@@ -12,11 +12,19 @@ class CarritoLineaTile extends StatelessWidget {
     required this.onCambiarCantidad,
     required this.onQuitar,
     this.onEditarCantidad,
+    this.bloqueado = false,
   });
 
   final LineaCarrito linea;
   final ValueChanged<double> onCambiarCantidad;
   final VoidCallback onQuitar;
+
+  /// true una vez que la Venta ya existe en el servidor (se pidió un
+  /// descuento general) — las líneas ya se agregaron allá, así que
+  /// cambiarlas localmente las desincronizaría. Deshabilita cantidad,
+  /// quitar y el diálogo de editar cantidad; el descuento en sí sigue
+  /// gestionándose desde el panel del carrito, no desde acá.
+  final bool bloqueado;
 
   /// Abre el diálogo para tipear una cantidad exacta — obligatorio para
   /// productos por Kilogramo/Litro (un peso no se ajusta de a 1 en 1), y
@@ -37,7 +45,7 @@ class CarritoLineaTile extends StatelessWidget {
             icon: const Icon(Icons.remove_circle_outline, size: 20),
             color: PosColors.textMuted,
             tooltip: 'Quitar del carrito',
-            onPressed: onQuitar,
+            onPressed: bloqueado ? null : onQuitar,
             visualDensity: VisualDensity.compact,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -54,7 +62,7 @@ class CarritoLineaTile extends StatelessWidget {
                 if (unidad.esPesable)
                   InkWell(
                     key: const Key('carritoCantidadPesable'),
-                    onTap: onEditarCantidad,
+                    onTap: bloqueado ? null : onEditarCantidad,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -80,11 +88,11 @@ class CarritoLineaTile extends StatelessWidget {
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                        onPressed: () => onCambiarCantidad(linea.cantidad - 1),
+                        onPressed: bloqueado ? null : () => onCambiarCantidad(linea.cantidad - 1),
                       ),
                       InkWell(
                         key: const Key('carritoCantidadUnidad'),
-                        onTap: onEditarCantidad,
+                        onTap: bloqueado ? null : onEditarCantidad,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 2),
                           child: Text(
@@ -105,7 +113,7 @@ class CarritoLineaTile extends StatelessWidget {
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                        onPressed: () => onCambiarCantidad(linea.cantidad + 1),
+                        onPressed: bloqueado ? null : () => onCambiarCantidad(linea.cantidad + 1),
                       ),
                       const SizedBox(width: 4),
                       Flexible(

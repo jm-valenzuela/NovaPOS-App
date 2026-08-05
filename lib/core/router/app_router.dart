@@ -7,6 +7,7 @@ import '../../features/auth/presentation/screens/registro_empresa_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/catalog/presentation/screens/productos_admin_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/sales/presentation/screens/descuentos_pendientes_screen.dart';
 import '../../features/sales/presentation/screens/pos_screen.dart';
 
 /// GoRouter reconstruido cada vez que cambia AuthState (watch, no read) —
@@ -42,6 +43,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
       GoRoute(path: '/pos', builder: (context, state) => const PosScreen()),
       GoRoute(path: '/catalogo', builder: (context, state) => const ProductosAdminScreen()),
+      GoRoute(path: '/descuentos-pendientes', builder: (context, state) => const DescuentosPendientesScreen()),
     ],
   );
 });

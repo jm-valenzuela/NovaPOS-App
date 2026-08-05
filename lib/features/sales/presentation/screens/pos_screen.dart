@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -12,12 +13,14 @@ import '../../../tenancy/domain/models/caja_resumen.dart';
 import '../../../catalog/domain/models/producto_vendible.dart';
 import '../../domain/models/linea_carrito.dart';
 import '../../domain/models/resumen_venta.dart';
+import '../../domain/models/venta_enums.dart';
 import '../providers/pos_providers.dart';
 import '../theme/pos_colors.dart';
 import '../widgets/cantidad_pesable_dialog.dart';
 import '../widgets/carrito_linea_tile.dart';
 import '../widgets/producto_resultado_tile.dart';
 import '../widgets/selector_cliente_dialog.dart';
+import '../widgets/solicitar_descuento_dialog.dart';
 import 'escanear_codigo_barra_screen.dart';
 
 /// Firma de la función que abre el escáner y devuelve el código detectado
@@ -47,8 +50,25 @@ class PosScreen extends ConsumerStatefulWidget {
 class _PosScreenState extends ConsumerState<PosScreen> {
   final _busquedaController = TextEditingController();
 
+  /// Mientras haya un descuento Pendiente, consulta cada 3s si ya lo
+  /// resolvieron — sirve igual si el Supervisor está en el piso (lo
+  /// resuelve casi al toque) o en la oficina (tarda más). El método del
+  /// controller no hace nada si no hay nada pendiente, así que no hace
+  /// falta prender/apagar el timer según el estado.
+  Timer? _pollDescuento;
+
+  @override
+  void initState() {
+    super.initState();
+    _pollDescuento = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => ref.read(posCartProvider.notifier).verificarEstadoDescuento(),
+    );
+  }
+
   @override
   void dispose() {
+    _pollDescuento?.cancel();
     _busquedaController.dispose();
     super.dispose();
   }
@@ -96,6 +116,17 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       }
       if (actual.resumenCobrado != null && previo?.resumenCobrado == null) {
         _mostrarVentaCobrada(actual.resumenCobrado!);
+      }
+      if (actual.estadoDescuento != previo?.estadoDescuento) {
+        if (actual.estadoDescuento == EstadoDescuentoGeneral.autorizado) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Descuento autorizado — ya puedes cobrar.'), backgroundColor: Colors.green),
+          );
+        } else if (actual.estadoDescuento == EstadoDescuentoGeneral.rechazado) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Descuento rechazado: ${actual.motivoRechazoDescuento ?? "sin motivo"}')),
+          );
+        }
       }
     });
 
@@ -260,6 +291,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       clienteId: ref.read(clienteSeleccionadoProvider)?.id,
                     ),
                 onVaciar: () => ref.read(posCartProvider.notifier).vaciarCarrito(),
+                onSolicitarDescuento: () => _solicitarDescuento(context, cajaSeleccionada.cajaId),
               ),
             ],
           );
@@ -312,6 +344,20 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     );
     if (cantidad == null || !mounted) return;
     ref.read(posCartProvider.notifier).agregarProducto(producto, cantidad: cantidad);
+  }
+
+  Future<void> _solicitarDescuento(BuildContext context, String cajaId) async {
+    final solicitado = await showDialog<DescuentoSolicitado>(
+      context: context,
+      builder: (_) => const SolicitarDescuentoDialog(),
+    );
+    if (solicitado == null || !mounted) return;
+    await ref.read(posCartProvider.notifier).solicitarDescuento(
+          cajaId: cajaId,
+          clienteId: ref.read(clienteSeleccionadoProvider)?.id,
+          porcentaje: solicitado.porcentaje,
+          monto: solicitado.monto,
+        );
   }
 
   Future<void> _elegirCliente(BuildContext context) async {
@@ -461,6 +507,7 @@ class _PanelCarrito extends ConsumerWidget {
     required this.onElegirCliente,
     required this.onCobrar,
     required this.onVaciar,
+    required this.onSolicitarDescuento,
   });
 
   final PosCartState carrito;
@@ -469,6 +516,7 @@ class _PanelCarrito extends ConsumerWidget {
   final VoidCallback onElegirCliente;
   final VoidCallback onCobrar;
   final VoidCallback onVaciar;
+  final VoidCallback onSolicitarDescuento;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -537,6 +585,11 @@ class _PanelCarrito extends ConsumerWidget {
                   ),
                 ),
               ),
+            if (carrito.estadoDescuento != EstadoDescuentoGeneral.sinSolicitar)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                child: _BannerDescuento(carrito: carrito),
+              ),
             const Divider(color: PosColors.navyBorder, height: 24),
             Expanded(
               child: carrito.lineas.isEmpty
@@ -550,6 +603,7 @@ class _PanelCarrito extends ConsumerWidget {
                         return CarritoLineaTile(
                           key: Key('posCarrito_${linea.producto.varianteProductoId}'),
                           linea: linea,
+                          bloqueado: carrito.carritoBloqueado,
                           onCambiarCantidad: (cantidad) => ref
                               .read(posCartProvider.notifier)
                               .cambiarCantidad(linea.producto.varianteProductoId, cantidad),
@@ -574,7 +628,7 @@ class _PanelCarrito extends ConsumerWidget {
                     children: [
                       const Text('Total', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
                       Text(
-                        MonedaFormatter.formatear(carrito.total),
+                        MonedaFormatter.formatear(carrito.totalConDescuento),
                         key: const Key('posTotal'),
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
                       ),
@@ -583,7 +637,11 @@ class _PanelCarrito extends ConsumerWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     key: const Key('posCobrar'),
-                    onPressed: (carrito.lineas.isEmpty || carrito.cobrando) ? null : onCobrar,
+                    onPressed: (carrito.lineas.isEmpty ||
+                            carrito.cobrando ||
+                            carrito.estadoDescuento == EstadoDescuentoGeneral.pendiente)
+                        ? null
+                        : onCobrar,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: PosColors.accent,
                       foregroundColor: PosColors.navy,
@@ -598,19 +656,23 @@ class _PanelCarrito extends ConsumerWidget {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : Text('Cobrar ${MonedaFormatter.formatear(carrito.total)}'),
+                        : Text('Cobrar ${MonedaFormatter.formatear(carrito.totalConDescuento)}'),
                   ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(
-                        child: Tooltip(
-                          message: 'Próximamente',
-                          child: OutlinedButton(
-                            onPressed: null,
-                            style: _estiloBotonSecundario,
-                            child: const Text('+ Descuento', overflow: TextOverflow.ellipsis),
-                          ),
+                        child: OutlinedButton(
+                          key: const Key('posDescuento'),
+                          onPressed: carrito.puedeSolicitarDescuento ? onSolicitarDescuento : null,
+                          style: _estiloBotonSecundario,
+                          child: carrito.solicitandoDescuento
+                              ? const SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text('+ Descuento', overflow: TextOverflow.ellipsis),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -627,7 +689,7 @@ class _PanelCarrito extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: carrito.lineas.isEmpty ? null : onVaciar,
+                          onPressed: (carrito.lineas.isEmpty || carrito.carritoBloqueado) ? null : onVaciar,
                           style: _estiloBotonSecundario,
                           child: const Text('Vaciar', overflow: TextOverflow.ellipsis),
                         ),
@@ -650,6 +712,56 @@ class _PanelCarrito extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       );
+}
+
+class _BannerDescuento extends StatelessWidget {
+  const _BannerDescuento({required this.carrito});
+
+  final PosCartState carrito;
+
+  String get _etiquetaValor => carrito.descuentoPorcentaje != null
+      ? '${_formatearNumero(carrito.descuentoPorcentaje!)}%'
+      : MonedaFormatter.formatear(carrito.descuentoMonto ?? 0);
+
+  static String _formatearNumero(double n) => n.truncateToDouble() == n ? n.toInt().toString() : n.toString();
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, icono, mensaje) = switch (carrito.estadoDescuento) {
+      EstadoDescuentoGeneral.pendiente => (
+          PosColors.accent,
+          Icons.hourglass_top,
+          'Descuento de $_etiquetaValor pendiente de autorización...',
+        ),
+      EstadoDescuentoGeneral.autorizado => (
+          PosColors.stockOk,
+          Icons.check_circle,
+          'Descuento de $_etiquetaValor autorizado.',
+        ),
+      EstadoDescuentoGeneral.rechazado => (
+          PosColors.stockOut,
+          Icons.cancel,
+          'Descuento rechazado: ${carrito.motivoRechazoDescuento ?? "sin motivo"}',
+        ),
+      EstadoDescuentoGeneral.sinSolicitar => (PosColors.textMuted, Icons.info_outline, ''),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(icono, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(mensaje, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+  }
 }
 
 class _FilaResumen extends StatelessWidget {

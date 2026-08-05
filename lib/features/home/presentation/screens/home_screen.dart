@@ -76,6 +76,18 @@ class HomeScreen extends ConsumerWidget {
                     onTap: () => context.push('/catalogo'),
                   ),
                 ),
+                if (sesion?.tienePermiso('sales.descuentos.autorizar') ?? false) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.percent, size: 32),
+                      title: const Text('Descuentos pendientes'),
+                      subtitle: const Text('Autorizar o rechazar descuentos solicitados en el POS'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/descuentos-pendientes'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

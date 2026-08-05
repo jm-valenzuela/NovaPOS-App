@@ -4,7 +4,10 @@ import 'package:novapos_app/features/customers/domain/customer_repository.dart';
 import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dart';
 import 'package:novapos_app/features/inventory/domain/inventory_repository.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
+import 'package:novapos_app/features/sales/domain/models/descuento_pendiente.dart';
+import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/resumen_venta.dart';
+import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/domain/sales_repository.dart';
 import 'package:novapos_app/features/tenancy/domain/models/bodega_venta.dart';
 import 'package:novapos_app/features/tenancy/domain/models/caja_resumen.dart';
@@ -78,6 +81,55 @@ class FakeSalesRepository implements SalesRepository {
   Future<ResumenVenta> confirmarVenta(String ventaId) async {
     if (errorAforzar != null) throw Exception(errorAforzar);
     return ResumenVenta.calcular(totalARetornar);
+  }
+
+  String? ultimaVentaIdDescuento;
+  double? ultimoPorcentajeSolicitado;
+  double? ultimoMontoSolicitado;
+  EstadoDescuentoVenta? estadoDescuentoARetornar;
+  List<DescuentoPendiente> pendientesARetornar = [];
+  String? ultimaVentaIdAutorizada;
+  String? ultimaVentaIdRechazada;
+  String? ultimoMotivoRechazo;
+
+  @override
+  Future<void> solicitarDescuentoGeneral({required String ventaId, double? porcentaje, double? monto}) async {
+    ultimaVentaIdDescuento = ventaId;
+    ultimoPorcentajeSolicitado = porcentaje;
+    ultimoMontoSolicitado = monto;
+    if (errorAforzar != null) throw Exception(errorAforzar);
+  }
+
+  @override
+  Future<EstadoDescuentoVenta> obtenerEstadoDescuento(String ventaId) async {
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return estadoDescuentoARetornar ??
+        EstadoDescuentoVenta(
+          ventaId: ventaId,
+          estado: EstadoDescuentoGeneral.pendiente,
+          total: totalARetornar,
+          subtotalLineas: totalARetornar,
+          motivoRechazo: null,
+        );
+  }
+
+  @override
+  Future<List<DescuentoPendiente>> listarDescuentosPendientes() async {
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return pendientesARetornar;
+  }
+
+  @override
+  Future<void> autorizarDescuentoGeneral(String ventaId) async {
+    ultimaVentaIdAutorizada = ventaId;
+    if (errorAforzar != null) throw Exception(errorAforzar);
+  }
+
+  @override
+  Future<void> rechazarDescuentoGeneral({required String ventaId, required String motivo}) async {
+    ultimaVentaIdRechazada = ventaId;
+    ultimoMotivoRechazo = motivo;
+    if (errorAforzar != null) throw Exception(errorAforzar);
   }
 }
 

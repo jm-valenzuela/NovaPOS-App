@@ -475,4 +475,40 @@ void main() {
     expect(textoDe(tester, const Key('posTotal')), r'$1.425');
     expect(find.textContaining('5% dto. por volumen aplicado'), findsOneWidget);
   });
+
+  testWidgets('Solicitar un descuento crea la Venta, agrega las líneas y muestra el aviso de pendiente', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    await buscarYEsperar(tester, 'coca');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('posDescuento')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('solicitarDescuentoValor')), '10');
+    await tester.tap(find.byKey(const Key('solicitarDescuentoConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeSales.vecesCrearLlamado, 1);
+    expect(fakeSales.lineasAgregadas, hasLength(1));
+    expect(fakeSales.ultimoPorcentajeSolicitado, 10);
+    expect(find.textContaining('pendiente de autorización'), findsOneWidget);
+  });
+
+  testWidgets('Con un descuento Pendiente, Cobrar queda deshabilitado', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    await buscarYEsperar(tester, 'coca');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('posDescuento')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('solicitarDescuentoValor')), '10');
+    await tester.tap(find.byKey(const Key('solicitarDescuentoConfirmar')));
+    await tester.pumpAndSettle();
+
+    final boton = tester.widget<ElevatedButton>(find.byKey(const Key('posCobrar')));
+    expect(boton.onPressed, isNull);
+  });
 }

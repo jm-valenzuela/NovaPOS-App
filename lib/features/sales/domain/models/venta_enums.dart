@@ -21,3 +21,19 @@ enum TipoEntrega {
 
   final int valorApi;
 }
+
+/// Espejo de EstadoDescuentoGeneral en NovaPOS.Domain.Sales.Venta —
+/// SinSolicitar es el estado por defecto (nunca se pidió un descuento).
+enum EstadoDescuentoGeneral {
+  sinSolicitar(0),
+  pendiente(1),
+  autorizado(2),
+  rechazado(3);
+
+  const EstadoDescuentoGeneral(this.valorApi);
+
+  final int valorApi;
+
+  static EstadoDescuentoGeneral desdeValor(int valor) =>
+      EstadoDescuentoGeneral.values.firstWhere((e) => e.valorApi == valor, orElse: () => EstadoDescuentoGeneral.sinSolicitar);
+}

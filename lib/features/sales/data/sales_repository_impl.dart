@@ -1,3 +1,5 @@
+import '../domain/models/descuento_pendiente.dart';
+import '../domain/models/estado_descuento_venta.dart';
 import '../domain/models/resumen_venta.dart';
 import '../domain/models/venta_enums.dart';
 import '../domain/sales_repository.dart';
@@ -22,4 +24,21 @@ class SalesRepositoryImpl implements SalesRepository {
 
   @override
   Future<ResumenVenta> confirmarVenta(String ventaId) => _api.confirmar(ventaId);
+
+  @override
+  Future<void> solicitarDescuentoGeneral({required String ventaId, double? porcentaje, double? monto}) =>
+      _api.solicitarDescuento(ventaId: ventaId, porcentaje: porcentaje, monto: monto);
+
+  @override
+  Future<EstadoDescuentoVenta> obtenerEstadoDescuento(String ventaId) => _api.obtenerEstadoDescuento(ventaId);
+
+  @override
+  Future<List<DescuentoPendiente>> listarDescuentosPendientes() => _api.listarDescuentosPendientes();
+
+  @override
+  Future<void> autorizarDescuentoGeneral(String ventaId) => _api.autorizarDescuento(ventaId);
+
+  @override
+  Future<void> rechazarDescuentoGeneral({required String ventaId, required String motivo}) =>
+      _api.rechazarDescuento(ventaId: ventaId, motivo: motivo);
 }
