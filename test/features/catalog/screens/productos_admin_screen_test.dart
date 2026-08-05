@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:novapos_app/features/catalog/domain/models/clasificacion.dart';
 import 'package:novapos_app/features/catalog/presentation/providers/catalog_admin_providers.dart';
 import 'package:novapos_app/features/catalog/presentation/screens/catalog_form_screen.dart';
 import 'package:novapos_app/features/catalog/presentation/screens/productos_admin_screen.dart';
 
 import '../fakes/catalog_admin_fakes.dart';
+
+const _departamentoVestuario = Departamento(id: 'depto-vestuario', nombre: 'Vestuario', activo: true);
+const _departamentoCalzado = Departamento(id: 'depto-calzado', nombre: 'Calzado', activo: true);
 
 void main() {
   late FakeCatalogAdminRepository fake;
@@ -142,5 +146,61 @@ void main() {
 
     expect(find.text('Polera Nike Dri-Fit'), findsOneWidget);
     expect(find.text('Zapatilla Adidas Running'), findsOneWidget);
+  });
+
+  testWidgets('Elegir un Departamento filtra la lista en memoria', (tester) async {
+    fake = FakeCatalogAdminRepository()
+      ..productos = [productoPoleraAdmin, productoZapatillaAdmin]
+      ..departamentos = [_departamentoVestuario, _departamentoCalzado];
+    await pumpPantalla(tester);
+
+    expect(find.text('Polera Nike Dri-Fit'), findsOneWidget);
+    expect(find.text('Zapatilla Adidas Running'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('catalogoDepartamento_depto-calzado')));
+    await tester.pump();
+
+    expect(find.text('Polera Nike Dri-Fit'), findsNothing);
+    expect(find.text('Zapatilla Adidas Running'), findsOneWidget);
+    // No se vuelve a llamar al backend — es un filtro local.
+    expect(fake.vecesListarProductosLlamado, 1);
+  });
+
+  testWidgets('Volver a "Todos" quita el filtro de Departamento', (tester) async {
+    fake = FakeCatalogAdminRepository()
+      ..productos = [productoPoleraAdmin, productoZapatillaAdmin]
+      ..departamentos = [_departamentoVestuario, _departamentoCalzado];
+    await pumpPantalla(tester);
+
+    await tester.tap(find.byKey(const Key('catalogoDepartamento_depto-calzado')));
+    await tester.pump();
+    expect(find.text('Polera Nike Dri-Fit'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalogoDepartamentoTodos')));
+    await tester.pump();
+
+    expect(find.text('Polera Nike Dri-Fit'), findsOneWidget);
+    expect(find.text('Zapatilla Adidas Running'), findsOneWidget);
+  });
+
+  testWidgets('El filtro de Departamento se combina con la búsqueda por texto', (tester) async {
+    fake = FakeCatalogAdminRepository()
+      ..productos = [productoPoleraAdmin, productoZapatillaAdmin]
+      ..departamentos = [_departamentoVestuario, _departamentoCalzado];
+    await pumpPantalla(tester);
+
+    await tester.tap(find.byKey(const Key('catalogoDepartamento_depto-vestuario')));
+    await tester.pump();
+    await tester.enterText(find.byKey(const Key('catalogoBusqueda')), 'zapatilla');
+    await tester.pump();
+
+    expect(find.textContaining('Sin resultados'), findsOneWidget);
+  });
+
+  testWidgets('Sin Departamentos, no muestra la fila de tabs', (tester) async {
+    fake = FakeCatalogAdminRepository()..productos = [productoPoleraAdmin];
+    await pumpPantalla(tester);
+
+    expect(find.byKey(const Key('catalogoDepartamentoTodos')), findsNothing);
   });
 }

@@ -7,6 +7,8 @@ class ProductoAdmin {
     required this.productoId,
     required this.nombre,
     required this.descripcion,
+    required this.departamentoId,
+    required this.departamentoNombre,
     required this.subclaseId,
     required this.subclaseNombre,
     required this.marcaId,
@@ -19,6 +21,8 @@ class ProductoAdmin {
         productoId: json['productoId'] as String,
         nombre: json['nombre'] as String,
         descripcion: json['descripcion'] as String?,
+        departamentoId: json['departamentoId'] as String,
+        departamentoNombre: json['departamentoNombre'] as String,
         subclaseId: json['subclaseId'] as String,
         subclaseNombre: json['subclaseNombre'] as String,
         marcaId: json['marcaId'] as String,
@@ -32,6 +36,8 @@ class ProductoAdmin {
   final String productoId;
   final String nombre;
   final String? descripcion;
+  final String departamentoId;
+  final String departamentoNombre;
   final String subclaseId;
   final String subclaseNombre;
   final String marcaId;

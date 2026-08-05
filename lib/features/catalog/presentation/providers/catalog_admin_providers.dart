@@ -4,12 +4,23 @@ import '../../../../core/providers/core_providers.dart';
 import '../../data/catalog_admin_api.dart';
 import '../../data/catalog_admin_repository_impl.dart';
 import '../../domain/catalog_admin_repository.dart';
+import '../../domain/models/clasificacion.dart';
 import '../../domain/models/producto_admin.dart';
 
 final catalogAdminApiProvider = Provider<CatalogAdminApi>((ref) => CatalogAdminApi(ref.watch(apiClientProvider)));
 
 final catalogAdminRepositoryProvider =
     Provider<CatalogAdminRepository>((ref) => CatalogAdminRepositoryImpl(ref.watch(catalogAdminApiProvider)));
+
+/// Departamentos para las tabs de filtro del catálogo admin — mismo dato que
+/// departamentosProvider del POS (Sales), pero definido acá para no hacer
+/// depender a Catalog de un provider de otro feature.
+final departamentosAdminProvider = FutureProvider.autoDispose<List<Departamento>>((ref) async {
+  return ref.watch(catalogAdminRepositoryProvider).listarDepartamentos();
+});
+
+/// Tab de Departamento seleccionada en el catálogo admin — null = "Todos".
+final departamentoAdminSeleccionadoProvider = StateProvider.autoDispose<String?>((ref) => null);
 
 class ProductosAdminState {
   const ProductosAdminState({this.productos = const [], this.cargando = false, this.error});

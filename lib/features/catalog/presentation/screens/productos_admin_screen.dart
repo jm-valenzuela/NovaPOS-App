@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../domain/models/clasificacion.dart';
 import '../../domain/models/producto_admin.dart';
 import '../providers/catalog_admin_providers.dart';
 import '../widgets/editar_producto_dialog.dart';
@@ -29,12 +30,14 @@ class _ProductosAdminScreenState extends ConsumerState<ProductosAdminScreen> {
   /// búsqueda del POS (que pagina sobre un catálogo potencialmente
   /// grande), acá ya se cargó la lista completa de una vez (ver
   /// ProductosAdminController: "el catálogo de una PyME es chico"), así
-  /// que filtrar en memoria por nombre, SKU o código de barras es
-  /// instantáneo y no necesita debounce ni un endpoint nuevo.
-  List<ProductoAdmin> _filtrar(List<ProductoAdmin> productos) {
+  /// que filtrar en memoria por nombre, SKU, código de barras o
+  /// Departamento es instantáneo y no necesita debounce ni un endpoint
+  /// nuevo — mismo criterio combinado que las tabs de categoría del POS.
+  List<ProductoAdmin> _filtrar(List<ProductoAdmin> productos, String? departamentoId) {
     final texto = _texto.trim().toLowerCase();
-    if (texto.isEmpty) return productos;
     return productos.where((p) {
+      if (departamentoId != null && p.departamentoId != departamentoId) return false;
+      if (texto.isEmpty) return true;
       if (p.nombre.toLowerCase().contains(texto)) return true;
       return p.variantes.any((v) =>
           v.sku.toLowerCase().contains(texto) || (v.codigoBarras?.toLowerCase().contains(texto) ?? false));
@@ -44,7 +47,9 @@ class _ProductosAdminScreenState extends ConsumerState<ProductosAdminScreen> {
   @override
   Widget build(BuildContext context) {
     final estado = ref.watch(productosAdminProvider);
-    final productosFiltrados = _filtrar(estado.productos);
+    final departamentosAsync = ref.watch(departamentosAdminProvider);
+    final departamentoSeleccionado = ref.watch(departamentoAdminSeleccionadoProvider);
+    final productosFiltrados = _filtrar(estado.productos, departamentoSeleccionado);
 
     ref.listen(productosAdminProvider, (previo, actual) {
       if (actual.error != null && actual.error != previo?.error) {
@@ -80,6 +85,21 @@ class _ProductosAdminScreenState extends ConsumerState<ProductosAdminScreen> {
               onChanged: (texto) => setState(() => _texto = texto),
             ),
           ),
+          departamentosAsync.when(
+            data: (departamentos) => departamentos.isEmpty
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _TabsDepartamentos(
+                      departamentos: departamentos,
+                      seleccionado: departamentoSeleccionado,
+                      onSeleccionar: (departamentoId) =>
+                          ref.read(departamentoAdminSeleccionadoProvider.notifier).state = departamentoId,
+                    ),
+                  ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () => ref.read(productosAdminProvider.notifier).cargar(),
@@ -99,7 +119,11 @@ class _ProductosAdminScreenState extends ConsumerState<ProductosAdminScreen> {
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.all(32),
-                                  child: Center(child: Text('Sin resultados para "$_texto".')),
+                                  child: Center(
+                                    child: Text(_texto.isEmpty
+                                        ? 'Sin resultados en este Departamento.'
+                                        : 'Sin resultados para "$_texto".'),
+                                  ),
                                 ),
                               ],
                             )
@@ -190,6 +214,50 @@ class _VarianteTile extends ConsumerWidget {
           context: context,
           builder: (_) => EditarVarianteDialog(variante: variante),
         ),
+      ),
+    );
+  }
+}
+
+/// Mismo patrón que _TabsCategorias del POS (chips horizontales con
+/// "Todos" al inicio), pero con los colores por defecto de Material en
+/// vez del tema navy del POS — esta pantalla no comparte esa identidad
+/// visual.
+class _TabsDepartamentos extends StatelessWidget {
+  const _TabsDepartamentos({required this.departamentos, required this.seleccionado, required this.onSeleccionar});
+
+  final List<Departamento> departamentos;
+  final String? seleccionado;
+  final ValueChanged<String?> onSeleccionar;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: ChoiceChip(
+              key: const Key('catalogoDepartamentoTodos'),
+              label: const Text('Todos'),
+              selected: seleccionado == null,
+              onSelected: (_) => onSeleccionar(null),
+            ),
+          ),
+          for (final departamento in departamentos)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ChoiceChip(
+                key: Key('catalogoDepartamento_${departamento.id}'),
+                label: Text(departamento.nombre),
+                selected: seleccionado == departamento.id,
+                onSelected: (_) => onSeleccionar(departamento.id),
+              ),
+            ),
+        ],
       ),
     );
   }
