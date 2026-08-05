@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novapos_app/features/catalog/domain/models/clasificacion.dart';
 import 'package:novapos_app/features/catalog/presentation/providers/catalog_admin_providers.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
+import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
+import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart';
 import 'package:novapos_app/features/sales/presentation/screens/pos_screen.dart';
 import 'package:novapos_app/features/tenancy/domain/models/caja_resumen.dart';
@@ -510,6 +512,36 @@ void main() {
 
     final boton = tester.widget<ElevatedButton>(find.byKey(const Key('posCobrar')));
     expect(boton.onPressed, isNull);
+  });
+
+  testWidgets('Con un descuento Autorizado, muestra el monto del descuento antes del Subtotal', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    await buscarYEsperar(tester, 'coca');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('posDescuento')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('solicitarDescuentoValor')), '10');
+    await tester.tap(find.byKey(const Key('solicitarDescuentoConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('posDescuentoAplicado')), findsNothing);
+
+    fakeSales.estadoDescuentoARetornar = EstadoDescuentoVenta(
+      ventaId: fakeSales.ventaIdARetornar,
+      estado: EstadoDescuentoGeneral.autorizado,
+      total: 1350,
+      subtotalLineas: 1500,
+      motivoRechazo: null,
+    );
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+
+    expect(find.byKey(const Key('posDescuentoAplicado')), findsOneWidget);
+    expect(find.text('Descuento (10%)'), findsOneWidget);
+    expect(textoDe(tester, const Key('posDescuentoAplicado')), '-\$150');
   });
 
   testWidgets('Con un descuento ya solicitado, tocar otro producto no lo agrega y avisa por qué', (tester) async {

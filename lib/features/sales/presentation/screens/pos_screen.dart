@@ -655,6 +655,7 @@ class _PanelCarrito extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (carrito.montoDescuentoAplicado > 0) _FilaDescuentoAplicado(carrito: carrito),
                   _FilaResumen(valorKey: const Key('posSubtotal'), label: 'Subtotal', valor: carrito.resumen.neto),
                   _FilaResumen(valorKey: const Key('posIva'), label: 'IVA (19%)', valor: carrito.resumen.iva),
                   const SizedBox(height: 8),
@@ -793,6 +794,39 @@ class _BannerDescuento extends StatelessWidget {
           Icon(icono, color: color, size: 18),
           const SizedBox(width: 8),
           Expanded(child: Text(mensaje, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+  }
+}
+
+/// El monto que restó el descuento autorizado — antes solo se veía el
+/// efecto en el Total (y por lo tanto en el Subtotal/IVA, que se derivan
+/// de él), sin ningún $ explícito que explicara la diferencia.
+class _FilaDescuentoAplicado extends StatelessWidget {
+  const _FilaDescuentoAplicado({required this.carrito});
+
+  final PosCartState carrito;
+
+  String get _etiqueta => carrito.descuentoPorcentaje != null
+      ? 'Descuento (${_formatearNumero(carrito.descuentoPorcentaje!)}%)'
+      : 'Descuento';
+
+  static String _formatearNumero(double n) => n.truncateToDouble() == n ? n.toInt().toString() : n.toString();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(_etiqueta, style: const TextStyle(color: PosColors.accent)),
+          Text(
+            '-${MonedaFormatter.formatear(carrito.montoDescuentoAplicado)}',
+            key: const Key('posDescuentoAplicado'),
+            style: const TextStyle(color: PosColors.accent, fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
