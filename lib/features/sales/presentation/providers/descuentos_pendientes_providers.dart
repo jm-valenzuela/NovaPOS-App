@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/descuento_pendiente.dart';
+import '../../domain/models/detalle_descuento_pendiente.dart';
 import '../../domain/sales_repository.dart';
 import 'pos_providers.dart' show salesRepositoryProvider;
 
@@ -80,4 +81,12 @@ class DescuentosPendientesController extends StateNotifier<DescuentosPendientesS
 final descuentosPendientesProvider =
     StateNotifierProvider.autoDispose<DescuentosPendientesController, DescuentosPendientesState>((ref) {
   return DescuentosPendientesController(ref.watch(salesRepositoryProvider));
+});
+
+/// "Ver más" de una fila puntual — parametrizado por VentaId para no
+/// acoplarlo al estado de la lista completa; se pide recién cuando el
+/// Supervisor lo abre, no de entrada para toda la cola.
+final detalleDescuentoPendienteProvider =
+    FutureProvider.autoDispose.family<DetalleDescuentoPendiente, String>((ref, ventaId) {
+  return ref.watch(salesRepositoryProvider).obtenerDetalleDescuentoPendiente(ventaId);
 });

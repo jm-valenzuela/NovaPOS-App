@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:novapos_app/features/sales/domain/models/descuento_pendiente.dart';
+import 'package:novapos_app/features/sales/domain/models/detalle_descuento_pendiente.dart';
 import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart';
 import 'package:novapos_app/features/sales/presentation/screens/descuentos_pendientes_screen.dart';
 
@@ -61,6 +62,48 @@ void main() {
 
     expect(fakeSales.ultimaVentaIdRechazada, 'venta-1');
     expect(fakeSales.ultimoMotivoRechazo, 'Monto muy alto');
+  });
+
+  testWidgets('Ver más expande y muestra Cliente y Productos', (tester) async {
+    await pumpScreen(tester);
+    fakeSales.detalleDescuentoARetornar = const DetalleDescuentoPendiente(
+      ventaId: 'venta-1',
+      clienteId: 'cliente-1',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: '76.123.456-0',
+      subtotalLineas: 10000,
+      porcentaje: 10,
+      monto: null,
+      lineas: [
+        LineaDescuentoPendienteDetalle(
+          varianteProductoId: 'variante-1',
+          nombreProducto: 'Coca Cola 1.5L',
+          sku: 'COCA-15',
+          cantidad: 2,
+          precioUnitario: 1500,
+          subtotal: 3000,
+        ),
+      ],
+    );
+
+    expect(find.byKey(const Key('descuentoPendienteDetalle_venta-1')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('descuentoPendienteVerMas_venta-1')));
+    await tester.pump();
+    await tester.pump();
+
+    expect(fakeSales.ultimaVentaIdDetalleConsultada, 'venta-1');
+    expect(find.byKey(const Key('descuentoPendienteDetalle_venta-1')), findsOneWidget);
+    expect(find.textContaining('Juan Pérez'), findsOneWidget);
+    expect(find.textContaining('76.123.456-0'), findsOneWidget);
+    expect(find.textContaining('2 × Coca Cola 1.5L'), findsOneWidget);
+    expect(find.text('Ver menos'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('descuentoPendienteVerMas_venta-1')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('descuentoPendienteDetalle_venta-1')), findsNothing);
+    expect(find.text('Ver más — Cliente y Productos'), findsOneWidget);
   });
 
   testWidgets('Sin pendientes, muestra el mensaje vacío', (tester) async {

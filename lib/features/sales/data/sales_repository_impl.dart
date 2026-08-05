@@ -1,4 +1,5 @@
 import '../domain/models/descuento_pendiente.dart';
+import '../domain/models/detalle_descuento_pendiente.dart';
 import '../domain/models/estado_descuento_venta.dart';
 import '../domain/models/resumen_venta.dart';
 import '../domain/models/venta_enums.dart';
@@ -34,6 +35,10 @@ class SalesRepositoryImpl implements SalesRepository {
 
   @override
   Future<List<DescuentoPendiente>> listarDescuentosPendientes() => _api.listarDescuentosPendientes();
+
+  @override
+  Future<DetalleDescuentoPendiente> obtenerDetalleDescuentoPendiente(String ventaId) =>
+      _api.obtenerDetalleDescuentoPendiente(ventaId);
 
   @override
   Future<void> autorizarDescuentoGeneral(String ventaId) => _api.autorizarDescuento(ventaId);

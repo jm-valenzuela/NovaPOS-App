@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
 import '../domain/models/descuento_pendiente.dart';
+import '../domain/models/detalle_descuento_pendiente.dart';
 import '../domain/models/estado_descuento_venta.dart';
 import '../domain/models/resumen_venta.dart';
 import '../domain/models/venta_enums.dart';
@@ -81,6 +82,17 @@ class VentaApi {
       final respuesta = await _client.dio.get('/ventas/descuentos-pendientes');
       final lista = respuesta.data as List<dynamic>;
       return lista.map((json) => DescuentoPendiente.fromJson(json as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  /// "Ver más" en la cola de trabajo del Supervisor — Cliente y líneas
+  /// (con nombre de Producto ya resuelto) de una Venta puntual.
+  Future<DetalleDescuentoPendiente> obtenerDetalleDescuentoPendiente(String ventaId) async {
+    try {
+      final respuesta = await _client.dio.get('/ventas/descuentos-pendientes/$ventaId');
+      return DetalleDescuentoPendiente.fromJson(respuesta.data as Map<String, dynamic>);
     } on DioException catch (e) {
       ApiClient.lanzarError(e);
     }

@@ -5,6 +5,7 @@ import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dar
 import 'package:novapos_app/features/inventory/domain/inventory_repository.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
 import 'package:novapos_app/features/sales/domain/models/descuento_pendiente.dart';
+import 'package:novapos_app/features/sales/domain/models/detalle_descuento_pendiente.dart';
 import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/resumen_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
@@ -88,6 +89,8 @@ class FakeSalesRepository implements SalesRepository {
   double? ultimoMontoSolicitado;
   EstadoDescuentoVenta? estadoDescuentoARetornar;
   List<DescuentoPendiente> pendientesARetornar = [];
+  DetalleDescuentoPendiente? detalleDescuentoARetornar;
+  String? ultimaVentaIdDetalleConsultada;
   String? ultimaVentaIdAutorizada;
   String? ultimaVentaIdRechazada;
   String? ultimoMotivoRechazo;
@@ -117,6 +120,23 @@ class FakeSalesRepository implements SalesRepository {
   Future<List<DescuentoPendiente>> listarDescuentosPendientes() async {
     if (errorAforzar != null) throw Exception(errorAforzar);
     return pendientesARetornar;
+  }
+
+  @override
+  Future<DetalleDescuentoPendiente> obtenerDetalleDescuentoPendiente(String ventaId) async {
+    ultimaVentaIdDetalleConsultada = ventaId;
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return detalleDescuentoARetornar ??
+        DetalleDescuentoPendiente(
+          ventaId: ventaId,
+          clienteId: 'cliente-generico',
+          clienteNombre: 'Cliente Genérico',
+          clienteRut: null,
+          subtotalLineas: totalARetornar,
+          porcentaje: null,
+          monto: null,
+          lineas: const [],
+        );
   }
 
   @override

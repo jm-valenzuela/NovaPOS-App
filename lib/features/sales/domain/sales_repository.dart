@@ -1,4 +1,5 @@
 import 'models/descuento_pendiente.dart';
+import 'models/detalle_descuento_pendiente.dart';
 import 'models/estado_descuento_venta.dart';
 import 'models/resumen_venta.dart';
 
@@ -22,6 +23,9 @@ abstract class SalesRepository {
 
   /// Cola de trabajo de quien autoriza descuentos.
   Future<List<DescuentoPendiente>> listarDescuentosPendientes();
+
+  /// "Ver más" — Cliente y líneas de una Venta puntual de la cola.
+  Future<DetalleDescuentoPendiente> obtenerDetalleDescuentoPendiente(String ventaId);
 
   Future<void> autorizarDescuentoGeneral(String ventaId);
 
