@@ -4,14 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/producto_admin.dart';
 import '../../domain/models/unidad_medida.dart';
 import '../providers/catalog_admin_providers.dart';
+import 'etiqueta_codigo_barras.dart';
 import 'promocion_grupo_field.dart';
 
 /// A diferencia de EditarProductoDialog, no depende de CatalogFormController
 /// — no hay cascada de clasificación que resolver, es un PUT directo.
 class EditarVarianteDialog extends ConsumerStatefulWidget {
-  const EditarVarianteDialog({super.key, required this.variante});
+  const EditarVarianteDialog({super.key, required this.variante, required this.nombreProducto});
 
   final VarianteAdmin variante;
+
+  /// Para armar la etiqueta al imprimir — VarianteAdmin no trae el Nombre,
+  /// solo vive en el Producto padre (ver ProductoAdmin).
+  final String nombreProducto;
 
   @override
   ConsumerState<EditarVarianteDialog> createState() => _EditarVarianteDialogState();
@@ -29,7 +34,9 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
       TextEditingController(text: widget.variante.porcentajeDescuentoVolumen?.toString() ?? '');
   PromocionGrupoValor _promocionGrupo = const PromocionGrupoValor();
   late int _unidadMedida = widget.variante.unidadMedida;
+  late bool _tieneCodigoPersistido = widget.variante.codigoBarras != null;
   bool _guardando = false;
+  bool _generandoCodigo = false;
   String? _error;
 
   @override
@@ -73,7 +80,41 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
               key: const Key('editarCodigoBarrasVariante'),
               controller: _codigoBarrasController,
               decoration: const InputDecoration(labelText: 'Código de barras (opcional)'),
+              onChanged: (_) => setState(() {}),
             ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                if (!_tieneCodigoPersistido)
+                  OutlinedButton.icon(
+                    key: const Key('generarCodigoBarrasVariante'),
+                    onPressed: _generandoCodigo ? null : _generarCodigoBarras,
+                    icon: _generandoCodigo
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.qr_code, size: 18),
+                    label: const Text('Generar código de barras'),
+                  ),
+                if (_codigoBarrasController.text.trim().isNotEmpty)
+                  OutlinedButton.icon(
+                    key: const Key('imprimirEtiquetaVariante'),
+                    onPressed: _imprimirEtiqueta,
+                    icon: const Icon(Icons.print, size: 18),
+                    label: const Text('Imprimir etiqueta'),
+                  ),
+              ],
+            ),
+            if (_codigoBarrasController.text.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: VistaPreviaEtiqueta(
+                  nombre: widget.nombreProducto,
+                  sku: widget.variante.sku,
+                  precioVenta: widget.variante.precioVenta,
+                  codigoBarras: _codigoBarrasController.text.trim(),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             TextField(
               key: const Key('editarColorVariante'),
@@ -179,6 +220,41 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
         _guardando = false;
         _error = e.toString();
       });
+    }
+  }
+
+  Future<void> _generarCodigoBarras() async {
+    setState(() => _generandoCodigo = true);
+
+    final codigo = await ref.read(productosAdminProvider.notifier).generarCodigoBarras(widget.variante);
+
+    if (!mounted) return;
+    setState(() {
+      _generandoCodigo = false;
+      if (codigo != null) {
+        _codigoBarrasController.text = codigo;
+        _tieneCodigoPersistido = true;
+      }
+    });
+  }
+
+  Future<void> _imprimirEtiqueta() async {
+    final codigo = _codigoBarrasController.text.trim();
+    if (codigo.isEmpty) return;
+
+    try {
+      await imprimirEtiquetaCodigoBarras(
+        nombre: widget.nombreProducto,
+        sku: widget.variante.sku,
+        precioVenta: widget.variante.precioVenta,
+        codigoBarras: codigo,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('Error al imprimir etiqueta: $e\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo abrir la impresión: $e')),
+      );
     }
   }
 }

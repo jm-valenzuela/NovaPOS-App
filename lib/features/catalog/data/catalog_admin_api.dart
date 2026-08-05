@@ -249,4 +249,15 @@ class CatalogAdminApi {
       ApiClient.lanzarError(e);
     }
   }
+
+  /// Para Variantes sin código de barras del proveedor — el backend genera
+  /// uno EAN-13 interno y lo asigna. Falla si la Variante ya tiene uno.
+  Future<String> generarCodigoBarras(String varianteProductoId) async {
+    try {
+      final respuesta = await _client.dio.post('/catalogo/variantes/$varianteProductoId/codigo-barras');
+      return respuesta.data['codigoBarras'] as String;
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
 }

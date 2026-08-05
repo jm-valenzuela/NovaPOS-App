@@ -67,4 +67,8 @@ abstract class CatalogAdminRepository {
 
   Future<void> activarVariante(String varianteProductoId);
   Future<void> desactivarVariante(String varianteProductoId);
+
+  /// Para Variantes sin código de barras del proveedor — genera uno EAN-13
+  /// interno y lo asigna. Falla si la Variante ya tiene uno.
+  Future<String> generarCodigoBarras(String varianteProductoId);
 }

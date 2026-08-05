@@ -37,6 +37,16 @@ void main() {
     expect(find.byKey(const Key('catalogoVariante_variante-polera-az-m')), findsOneWidget);
   });
 
+  testWidgets('Una Variante con código de barras muestra el botón de imprimir etiqueta', (tester) async {
+    fake = FakeCatalogAdminRepository()..productos = [productoPoleraAdmin];
+    await pumpPantalla(tester);
+
+    await tester.tap(find.byKey(const Key('catalogoProducto_producto-polera')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('catalogoImprimirEtiqueta_variante-polera-az-m')), findsOneWidget);
+  });
+
   testWidgets('Lista vacía muestra el mensaje correspondiente', (tester) async {
     fake = FakeCatalogAdminRepository();
     await pumpPantalla(tester);

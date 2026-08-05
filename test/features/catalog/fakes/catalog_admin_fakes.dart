@@ -189,6 +189,16 @@ class FakeCatalogAdminRepository implements CatalogAdminRepository {
     _fallarSiCorresponde();
     variantesDesactivadas.add(varianteProductoId);
   }
+
+  String codigoBarrasARetornar = '2012345678905';
+  final List<String> codigosBarrasGenerados = [];
+
+  @override
+  Future<String> generarCodigoBarras(String varianteProductoId) async {
+    _fallarSiCorresponde();
+    codigosBarrasGenerados.add(varianteProductoId);
+    return codigoBarrasARetornar;
+  }
 }
 
 const productoPoleraAdmin = ProductoAdmin(

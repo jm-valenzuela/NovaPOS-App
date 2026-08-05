@@ -129,4 +129,7 @@ class CatalogAdminRepositoryImpl implements CatalogAdminRepository {
 
   @override
   Future<void> desactivarVariante(String varianteProductoId) => _api.desactivarVariante(varianteProductoId);
+
+  @override
+  Future<String> generarCodigoBarras(String varianteProductoId) => _api.generarCodigoBarras(varianteProductoId);
 }

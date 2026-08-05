@@ -85,6 +85,21 @@ class ProductosAdminController extends StateNotifier<ProductosAdminState> {
       state = state.copyWith(error: e.toString());
     }
   }
+
+  /// Para una Variante sin código de barras del proveedor — el backend
+  /// genera uno EAN-13 interno. Devuelve el código generado (para abrir la
+  /// previsualización de la etiqueta de una vez, sin esperar a un segundo
+  /// `cargar()`) y de paso recarga la lista para que quede reflejado.
+  Future<String?> generarCodigoBarras(VarianteAdmin variante) async {
+    try {
+      final codigo = await _repository.generarCodigoBarras(variante.varianteProductoId);
+      await cargar();
+      return codigo;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return null;
+    }
+  }
 }
 
 final productosAdminProvider = StateNotifierProvider.autoDispose<ProductosAdminController, ProductosAdminState>((ref) {

@@ -7,6 +7,7 @@ import '../../domain/models/producto_admin.dart';
 import '../providers/catalog_admin_providers.dart';
 import '../widgets/editar_producto_dialog.dart';
 import '../widgets/editar_variante_dialog.dart';
+import '../widgets/etiqueta_codigo_barras.dart';
 import 'catalog_form_screen.dart';
 
 class ProductosAdminScreen extends ConsumerStatefulWidget {
@@ -179,16 +180,19 @@ class _ProductoTile extends ConsumerWidget {
         ),
         children: producto.variantes.isEmpty
             ? [const Padding(padding: EdgeInsets.all(12), child: Text('Sin Variantes'))]
-            : producto.variantes.map((variante) => _VarianteTile(variante: variante)).toList(),
+            : producto.variantes
+                .map((variante) => _VarianteTile(variante: variante, nombreProducto: producto.nombre))
+                .toList(),
       ),
     );
   }
 }
 
 class _VarianteTile extends ConsumerWidget {
-  const _VarianteTile({required this.variante});
+  const _VarianteTile({required this.variante, required this.nombreProducto});
 
   final VarianteAdmin variante;
+  final String nombreProducto;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -207,13 +211,40 @@ class _VarianteTile extends ConsumerWidget {
         value: variante.activa,
         onChanged: (_) => ref.read(productosAdminProvider.notifier).alternarVariante(variante),
       ),
-      trailing: IconButton(
-        key: Key('catalogoEditarVariante_${variante.varianteProductoId}'),
-        icon: const Icon(Icons.edit),
-        onPressed: () => showDialog<void>(
-          context: context,
-          builder: (_) => EditarVarianteDialog(variante: variante),
-        ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (variante.codigoBarras != null)
+            IconButton(
+              key: Key('catalogoImprimirEtiqueta_${variante.varianteProductoId}'),
+              icon: const Icon(Icons.print),
+              tooltip: 'Imprimir etiqueta',
+              onPressed: () async {
+                try {
+                  await imprimirEtiquetaCodigoBarras(
+                    nombre: nombreProducto,
+                    sku: variante.sku,
+                    precioVenta: variante.precioVenta,
+                    codigoBarras: variante.codigoBarras!,
+                  );
+                } catch (e, stackTrace) {
+                  debugPrint('Error al imprimir etiqueta: $e\n$stackTrace');
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('No se pudo abrir la impresión: $e')),
+                  );
+                }
+              },
+            ),
+          IconButton(
+            key: Key('catalogoEditarVariante_${variante.varianteProductoId}'),
+            icon: const Icon(Icons.edit),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => EditarVarianteDialog(variante: variante, nombreProducto: nombreProducto),
+            ),
+          ),
+        ],
       ),
     );
   }
