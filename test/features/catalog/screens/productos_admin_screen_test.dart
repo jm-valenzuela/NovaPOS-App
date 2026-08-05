@@ -91,4 +91,56 @@ void main() {
 
     expect(find.textContaining('No se pudo conectar'), findsOneWidget);
   });
+
+  testWidgets('Buscar por nombre filtra la lista en memoria', (tester) async {
+    fake = FakeCatalogAdminRepository()..productos = [productoPoleraAdmin, productoZapatillaAdmin];
+    await pumpPantalla(tester);
+
+    expect(find.text('Polera Nike Dri-Fit'), findsOneWidget);
+    expect(find.text('Zapatilla Adidas Running'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('catalogoBusqueda')), 'zapatilla');
+    await tester.pump();
+
+    expect(find.text('Polera Nike Dri-Fit'), findsNothing);
+    expect(find.text('Zapatilla Adidas Running'), findsOneWidget);
+    // No se vuelve a llamar al backend — es un filtro local.
+    expect(fake.vecesListarProductosLlamado, 1);
+  });
+
+  testWidgets('Buscar por SKU de una Variante también filtra', (tester) async {
+    fake = FakeCatalogAdminRepository()..productos = [productoPoleraAdmin, productoZapatillaAdmin];
+    await pumpPantalla(tester);
+
+    await tester.enterText(find.byKey(const Key('catalogoBusqueda')), 'POLNIKE');
+    await tester.pump();
+
+    expect(find.text('Polera Nike Dri-Fit'), findsOneWidget);
+    expect(find.text('Zapatilla Adidas Running'), findsNothing);
+  });
+
+  testWidgets('Sin resultados para el texto buscado muestra un mensaje', (tester) async {
+    fake = FakeCatalogAdminRepository()..productos = [productoPoleraAdmin];
+    await pumpPantalla(tester);
+
+    await tester.enterText(find.byKey(const Key('catalogoBusqueda')), 'inexistente');
+    await tester.pump();
+
+    expect(find.textContaining('Sin resultados'), findsOneWidget);
+  });
+
+  testWidgets('Limpiar la búsqueda vuelve a mostrar todos los Productos', (tester) async {
+    fake = FakeCatalogAdminRepository()..productos = [productoPoleraAdmin, productoZapatillaAdmin];
+    await pumpPantalla(tester);
+
+    await tester.enterText(find.byKey(const Key('catalogoBusqueda')), 'zapatilla');
+    await tester.pump();
+    expect(find.text('Polera Nike Dri-Fit'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.clear));
+    await tester.pump();
+
+    expect(find.text('Polera Nike Dri-Fit'), findsOneWidget);
+    expect(find.text('Zapatilla Adidas Running'), findsOneWidget);
+  });
 }

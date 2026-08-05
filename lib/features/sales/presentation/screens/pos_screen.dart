@@ -264,7 +264,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 maxCrossAxisExtent: 260,
                                 mainAxisSpacing: 12,
                                 crossAxisSpacing: 12,
-                                mainAxisExtent: 156,
+                                // Suficiente para el peor caso: badge de stock +
+                                // nombre de 2 líneas + SKU + precio + etiqueta de
+                                // descuento/promoción, todo en la misma tarjeta.
+                                mainAxisExtent: 172,
                               ),
                               itemCount: busqueda.resultados.length,
                               itemBuilder: (context, index) {

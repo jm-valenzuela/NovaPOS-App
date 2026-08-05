@@ -8,12 +8,43 @@ import '../widgets/editar_producto_dialog.dart';
 import '../widgets/editar_variante_dialog.dart';
 import 'catalog_form_screen.dart';
 
-class ProductosAdminScreen extends ConsumerWidget {
+class ProductosAdminScreen extends ConsumerStatefulWidget {
   const ProductosAdminScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProductosAdminScreen> createState() => _ProductosAdminScreenState();
+}
+
+class _ProductosAdminScreenState extends ConsumerState<ProductosAdminScreen> {
+  final _busquedaController = TextEditingController();
+  String _texto = '';
+
+  @override
+  void dispose() {
+    _busquedaController.dispose();
+    super.dispose();
+  }
+
+  /// Filtro local, no una llamada al backend — a diferencia de la
+  /// búsqueda del POS (que pagina sobre un catálogo potencialmente
+  /// grande), acá ya se cargó la lista completa de una vez (ver
+  /// ProductosAdminController: "el catálogo de una PyME es chico"), así
+  /// que filtrar en memoria por nombre, SKU o código de barras es
+  /// instantáneo y no necesita debounce ni un endpoint nuevo.
+  List<ProductoAdmin> _filtrar(List<ProductoAdmin> productos) {
+    final texto = _texto.trim().toLowerCase();
+    if (texto.isEmpty) return productos;
+    return productos.where((p) {
+      if (p.nombre.toLowerCase().contains(texto)) return true;
+      return p.variantes.any((v) =>
+          v.sku.toLowerCase().contains(texto) || (v.codigoBarras?.toLowerCase().contains(texto) ?? false));
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final estado = ref.watch(productosAdminProvider);
+    final productosFiltrados = _filtrar(estado.productos);
 
     ref.listen(productosAdminProvider, (previo, actual) {
       if (actual.error != null && actual.error != previo?.error) {
@@ -25,26 +56,66 @@ class ProductosAdminScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Catálogo')),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(productosAdminProvider.notifier).cargar(),
-        child: estado.cargando && estado.productos.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : estado.productos.isEmpty
-                ? ListView(
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Center(child: Text('No hay Productos creados todavía.')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              key: const Key('catalogoBusqueda'),
+              controller: _busquedaController,
+              decoration: InputDecoration(
+                hintText: 'Buscar producto por nombre, SKU o código de barras...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _texto.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _busquedaController.clear();
+                          setState(() => _texto = '');
+                        },
                       ),
-                    ],
-                  )
-                : ListView.builder(
-                    itemCount: estado.productos.length,
-                    itemBuilder: (context, index) {
-                      final producto = estado.productos[index];
-                      return _ProductoTile(key: Key('catalogoProducto_${producto.productoId}'), producto: producto);
-                    },
-                  ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onChanged: (texto) => setState(() => _texto = texto),
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => ref.read(productosAdminProvider.notifier).cargar(),
+              child: estado.cargando && estado.productos.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : estado.productos.isEmpty
+                      ? ListView(
+                          children: const [
+                            Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Center(child: Text('No hay Productos creados todavía.')),
+                            ),
+                          ],
+                        )
+                      : productosFiltrados.isEmpty
+                          ? ListView(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(32),
+                                  child: Center(child: Text('Sin resultados para "$_texto".')),
+                                ),
+                              ],
+                            )
+                          : ListView.builder(
+                              itemCount: productosFiltrados.length,
+                              itemBuilder: (context, index) {
+                                final producto = productosFiltrados[index];
+                                return _ProductoTile(
+                                  key: Key('catalogoProducto_${producto.productoId}'),
+                                  producto: producto,
+                                );
+                              },
+                            ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         key: const Key('catalogoNuevoProducto'),

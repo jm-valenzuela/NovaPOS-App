@@ -214,3 +214,27 @@ const productoPoleraAdmin = ProductoAdmin(
     ),
   ],
 );
+
+const productoZapatillaAdmin = ProductoAdmin(
+  productoId: 'producto-zapatilla',
+  nombre: 'Zapatilla Adidas Running',
+  descripcion: null,
+  subclaseId: 'subclase-2',
+  subclaseNombre: 'Deportivo',
+  marcaId: 'marca-2',
+  marcaNombre: 'Adidas',
+  activo: true,
+  variantes: [
+    VarianteAdmin(
+      varianteProductoId: 'variante-zapatilla-42',
+      sku: 'ZAPADI-42',
+      codigoBarras: '7809876543210',
+      color: null,
+      talla: '42',
+      precioVenta: 39990,
+      unidadMedida: 0,
+      ubicacionFisica: null,
+      activa: true,
+    ),
+  ],
+);
