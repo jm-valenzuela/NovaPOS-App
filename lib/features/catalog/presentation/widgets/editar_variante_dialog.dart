@@ -95,13 +95,20 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
                         : const Icon(Icons.qr_code, size: 18),
                     label: const Text('Generar código de barras'),
                   ),
-                if (_codigoBarrasController.text.trim().isNotEmpty)
+                if (_codigoBarrasController.text.trim().isNotEmpty) ...[
                   OutlinedButton.icon(
-                    key: const Key('imprimirEtiquetaVariante'),
-                    onPressed: _imprimirEtiqueta,
+                    key: const Key('imprimirEtiquetaConPrecioVariante'),
+                    onPressed: () => _imprimirEtiqueta(mostrarPrecio: true),
                     icon: const Icon(Icons.print, size: 18),
-                    label: const Text('Imprimir etiqueta'),
+                    label: const Text('Imprimir con precio'),
                   ),
+                  OutlinedButton.icon(
+                    key: const Key('imprimirEtiquetaSinPrecioVariante'),
+                    onPressed: () => _imprimirEtiqueta(mostrarPrecio: false),
+                    icon: const Icon(Icons.print_disabled, size: 18),
+                    label: const Text('Imprimir sin precio'),
+                  ),
+                ],
               ],
             ),
             if (_codigoBarrasController.text.trim().isNotEmpty) ...[
@@ -238,7 +245,7 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
     });
   }
 
-  Future<void> _imprimirEtiqueta() async {
+  Future<void> _imprimirEtiqueta({required bool mostrarPrecio}) async {
     final codigo = _codigoBarrasController.text.trim();
     if (codigo.isEmpty) return;
 
@@ -248,6 +255,7 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
         sku: widget.variante.sku,
         precioVenta: widget.variante.precioVenta,
         codigoBarras: codigo,
+        mostrarPrecio: mostrarPrecio,
       );
     } catch (e, stackTrace) {
       debugPrint('Error al imprimir etiqueta: $e\n$stackTrace');

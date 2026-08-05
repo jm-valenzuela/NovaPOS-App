@@ -36,12 +36,18 @@ class VistaPreviaEtiqueta extends StatelessWidget {
     required this.sku,
     required this.precioVenta,
     required this.codigoBarras,
+    this.mostrarPrecio = true,
   });
 
   final String nombre;
   final String sku;
   final double precioVenta;
   final String codigoBarras;
+
+  /// Algunas Empresas no quieren el precio impreso en la etiqueta (ej. para
+  /// que el vendedor lo consulte en el sistema en vez de en la góndola) —
+  /// ver imprimirEtiquetaCodigoBarras.
+  final bool mostrarPrecio;
 
   @override
   Widget build(BuildContext context) {
@@ -62,8 +68,10 @@ class VistaPreviaEtiqueta extends StatelessWidget {
             height: 70,
             drawText: true,
           ),
-          const SizedBox(height: 4),
-          Text(MonedaFormatter.formatear(precioVenta), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          if (mostrarPrecio) ...[
+            const SizedBox(height: 4),
+            Text(MonedaFormatter.formatear(precioVenta), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
         ],
       ),
     );
@@ -72,13 +80,16 @@ class VistaPreviaEtiqueta extends StatelessWidget {
 
 /// Abre el diálogo de impresión del sistema operativo con una etiqueta de
 /// 8x5cm (tamaño típico de etiqueta autoadhesiva de góndola) — Nombre,
-/// Sku, código de barras y Precio. No se guarda ningún archivo: `printing`
-/// entrega el PDF directo al diálogo de impresión/vista previa nativo.
+/// Sku, código de barras y, opcionalmente, Precio (algunas Empresas no
+/// quieren el precio impreso — ver `mostrarPrecio`). No se guarda ningún
+/// archivo: `printing` entrega el PDF directo al diálogo de impresión/vista
+/// previa nativo.
 Future<void> imprimirEtiquetaCodigoBarras({
   required String nombre,
   required String sku,
   required double precioVenta,
   required String codigoBarras,
+  bool mostrarPrecio = true,
 }) {
   const formato = PdfPageFormat(8 * PdfPageFormat.cm, 5 * PdfPageFormat.cm, marginAll: 4 * PdfPageFormat.mm);
   final simbologia = _simbologiaPara(codigoBarras);
@@ -103,8 +114,10 @@ Future<void> imprimirEtiquetaCodigoBarras({
               // subconjunto limitado) — mismo criterio que BarcodeWidget de
               // Flutter en la previsualización de pantalla.
               pw.BarcodeWidget(data: codigoBarras, barcode: simbologia, width: 60 * PdfPageFormat.mm, height: 20 * PdfPageFormat.mm),
-              pw.SizedBox(height: 4),
-              pw.Text(MonedaFormatter.formatear(precioVenta), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+              if (mostrarPrecio) ...[
+                pw.SizedBox(height: 4),
+                pw.Text(MonedaFormatter.formatear(precioVenta), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+              ],
             ],
           ),
         ),

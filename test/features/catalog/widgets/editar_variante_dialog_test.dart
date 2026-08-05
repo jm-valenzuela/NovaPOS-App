@@ -60,14 +60,16 @@ void main() {
     await pumpDialogo(tester, varianteSinCodigo);
 
     expect(find.byKey(const Key('generarCodigoBarrasVariante')), findsOneWidget);
-    expect(find.byKey(const Key('imprimirEtiquetaVariante')), findsNothing);
+    expect(find.byKey(const Key('imprimirEtiquetaConPrecioVariante')), findsNothing);
+    expect(find.byKey(const Key('imprimirEtiquetaSinPrecioVariante')), findsNothing);
   });
 
   testWidgets('Variante con código ya asignado muestra imprimir y la previsualización, no el de generar', (tester) async {
     await pumpDialogo(tester, varianteConCodigo);
 
     expect(find.byKey(const Key('generarCodigoBarrasVariante')), findsNothing);
-    expect(find.byKey(const Key('imprimirEtiquetaVariante')), findsOneWidget);
+    expect(find.byKey(const Key('imprimirEtiquetaConPrecioVariante')), findsOneWidget);
+    expect(find.byKey(const Key('imprimirEtiquetaSinPrecioVariante')), findsOneWidget);
     expect(find.byKey(const Key('vistaPreviaEtiquetaBarcode')), findsOneWidget);
   });
 
@@ -81,7 +83,8 @@ void main() {
     expect(fake.codigosBarrasGenerados, contains('variante-sin-codigo'));
     expect(find.text('2099999999998'), findsOneWidget);
     expect(find.byKey(const Key('generarCodigoBarrasVariante')), findsNothing);
-    expect(find.byKey(const Key('imprimirEtiquetaVariante')), findsOneWidget);
+    expect(find.byKey(const Key('imprimirEtiquetaConPrecioVariante')), findsOneWidget);
+    expect(find.byKey(const Key('imprimirEtiquetaSinPrecioVariante')), findsOneWidget);
     expect(find.byKey(const Key('vistaPreviaEtiquetaBarcode')), findsOneWidget);
   });
 
@@ -93,6 +96,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('generarCodigoBarrasVariante')), findsOneWidget);
-    expect(find.byKey(const Key('imprimirEtiquetaVariante')), findsNothing);
+    expect(find.byKey(const Key('imprimirEtiquetaConPrecioVariante')), findsNothing);
+    expect(find.byKey(const Key('imprimirEtiquetaSinPrecioVariante')), findsNothing);
   });
 }

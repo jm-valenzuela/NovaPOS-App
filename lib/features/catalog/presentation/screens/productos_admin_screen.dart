@@ -215,17 +215,24 @@ class _VarianteTile extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (variante.codigoBarras != null)
-            IconButton(
+            PopupMenuButton<bool>(
               key: Key('catalogoImprimirEtiqueta_${variante.varianteProductoId}'),
               icon: const Icon(Icons.print),
               tooltip: 'Imprimir etiqueta',
-              onPressed: () async {
+              // El valor es `mostrarPrecio` — algunas Empresas no quieren el
+              // precio impreso en la etiqueta, ver imprimirEtiquetaCodigoBarras.
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: true, child: Text('Imprimir con precio')),
+                PopupMenuItem(value: false, child: Text('Imprimir sin precio')),
+              ],
+              onSelected: (mostrarPrecio) async {
                 try {
                   await imprimirEtiquetaCodigoBarras(
                     nombre: nombreProducto,
                     sku: variante.sku,
                     precioVenta: variante.precioVenta,
                     codigoBarras: variante.codigoBarras!,
+                    mostrarPrecio: mostrarPrecio,
                   );
                 } catch (e, stackTrace) {
                   debugPrint('Error al imprimir etiqueta: $e\n$stackTrace');

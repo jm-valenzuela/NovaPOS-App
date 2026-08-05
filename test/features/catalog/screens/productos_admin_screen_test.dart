@@ -47,6 +47,20 @@ void main() {
     expect(find.byKey(const Key('catalogoImprimirEtiqueta_variante-polera-az-m')), findsOneWidget);
   });
 
+  testWidgets('El botón de imprimir etiqueta ofrece con y sin precio', (tester) async {
+    fake = FakeCatalogAdminRepository()..productos = [productoPoleraAdmin];
+    await pumpPantalla(tester);
+
+    await tester.tap(find.byKey(const Key('catalogoProducto_producto-polera')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('catalogoImprimirEtiqueta_variante-polera-az-m')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Imprimir con precio'), findsOneWidget);
+    expect(find.text('Imprimir sin precio'), findsOneWidget);
+  });
+
   testWidgets('Lista vacía muestra el mensaje correspondiente', (tester) async {
     fake = FakeCatalogAdminRepository();
     await pumpPantalla(tester);
