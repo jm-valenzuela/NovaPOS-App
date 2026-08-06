@@ -19,4 +19,48 @@ class CustomerApi {
       ApiClient.lanzarError(e);
     }
   }
+
+  Future<String> crearCliente({
+    required String nombre,
+    String? rut,
+    String? email,
+    String? telefono,
+    double cupoCredito = 0,
+    int plazoPagoDias = 0,
+  }) async {
+    try {
+      final respuesta = await _client.dio.post('/clientes', data: {
+        'nombre': nombre,
+        'rut': rut,
+        'email': email,
+        'telefono': telefono,
+        'cupoCredito': cupoCredito,
+        'plazoPagoDias': plazoPagoDias,
+      });
+      return respuesta.data['id'] as String;
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<void> actualizarCliente({
+    required String clienteId,
+    required String nombre,
+    String? email,
+    String? telefono,
+    double cupoCredito = 0,
+    int plazoPagoDias = 0,
+  }) async {
+    try {
+      await _client.dio.put('/clientes/$clienteId', data: {
+        'nombre': nombre,
+        'email': email,
+        'telefono': telefono,
+        'cupoCredito': cupoCredito,
+        'plazoPagoDias': plazoPagoDias,
+      });
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
 }

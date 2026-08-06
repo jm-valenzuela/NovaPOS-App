@@ -191,11 +191,36 @@ class FakeSalesRepository implements SalesRepository {
 class FakeCustomerRepository implements CustomerRepository {
   List<ClienteResumen> resultadosARetornar = [];
   String? ultimoTexto;
+  String clienteIdARetornar = 'cliente-nuevo';
+  String? ultimoClienteIdActualizado;
 
   @override
   Future<List<ClienteResumen>> buscarClientes({String? texto}) async {
     ultimoTexto = texto;
     return resultadosARetornar;
+  }
+
+  @override
+  Future<String> crearCliente({
+    required String nombre,
+    String? rut,
+    String? email,
+    String? telefono,
+    double cupoCredito = 0,
+    int plazoPagoDias = 0,
+  }) async =>
+      clienteIdARetornar;
+
+  @override
+  Future<void> actualizarCliente({
+    required String clienteId,
+    required String nombre,
+    String? email,
+    String? telefono,
+    double cupoCredito = 0,
+    int plazoPagoDias = 0,
+  }) async {
+    ultimoClienteIdActualizado = clienteId;
   }
 }
 

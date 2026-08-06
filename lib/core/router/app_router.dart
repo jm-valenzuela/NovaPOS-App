@@ -6,7 +6,14 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/registro_empresa_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/catalog/presentation/screens/productos_admin_screen.dart';
+import '../../features/customers/presentation/screens/clientes_admin_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/purchasing/presentation/screens/compras_hub_screen.dart';
+import '../../features/purchasing/presentation/screens/discrepancias_screen.dart';
+import '../../features/purchasing/presentation/screens/documentos_recibidos_screen.dart';
+import '../../features/purchasing/presentation/screens/orden_compra_detalle_screen.dart';
+import '../../features/purchasing/presentation/screens/ordenes_compra_screen.dart';
+import '../../features/purchasing/presentation/screens/proveedores_screen.dart';
 import '../../features/sales/presentation/screens/descuentos_pendientes_screen.dart';
 import '../../features/sales/presentation/screens/pos_screen.dart';
 
@@ -44,6 +51,26 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/pos', builder: (context, state) => const PosScreen()),
       GoRoute(path: '/catalogo', builder: (context, state) => const ProductosAdminScreen()),
       GoRoute(path: '/descuentos-pendientes', builder: (context, state) => const DescuentosPendientesScreen()),
+      GoRoute(path: '/clientes', builder: (context, state) => const ClientesAdminScreen()),
+      GoRoute(path: '/compras', builder: (context, state) => const ComprasHubScreen()),
+      GoRoute(path: '/compras/proveedores', builder: (context, state) => const ProveedoresScreen()),
+      GoRoute(path: '/compras/ordenes', builder: (context, state) => const OrdenesCompraScreen()),
+      GoRoute(
+        path: '/compras/ordenes/:id',
+        builder: (context, state) => OrdenCompraDetalleScreen(ordenCompraId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/compras/proveedores/:id/documentos',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, String?>?;
+          return DocumentosRecibidosScreen(
+            proveedorId: state.pathParameters['id']!,
+            proveedorNombre: extra?['nombre'] ?? '',
+            rutProveedor: extra?['rut'],
+          );
+        },
+      ),
+      GoRoute(path: '/compras/discrepancias', builder: (context, state) => const DiscrepanciasScreen()),
     ],
   );
 });

@@ -48,6 +48,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final sesion = ref.watch(authControllerProvider).sesion;
     final tieneAutorizarDescuentos = sesion?.tienePermiso('sales.descuentos.autorizar') ?? false;
+    final tieneClientes = sesion?.tienePermiso('customers.clientes.gestionar') ?? false;
+    final tieneCompras = (sesion?.tienePermiso('purchasing.ordenescompra.gestionar') ?? false) ||
+        (sesion?.tienePermiso('purchasing.proveedores.gestionar') ?? false);
     // Solo se observa el provider si hay permiso — evita el llamado inicial
     // a listarDescuentosPendientes() para Usuarios que ni siquiera ven la
     // tarjeta (ej. un Cajero sin el permiso).
@@ -129,6 +132,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             )
                           : const Icon(Icons.chevron_right),
                       onTap: () => context.push('/descuentos-pendientes'),
+                    ),
+                  ),
+                ],
+                if (tieneClientes) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    child: ListTile(
+                      key: const Key('homeClientesCard'),
+                      leading: const Icon(Icons.people_outline, size: 32),
+                      title: const Text('Clientes'),
+                      subtitle: const Text('Crear y editar Clientes'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/clientes'),
+                    ),
+                  ),
+                ],
+                if (tieneCompras) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    child: ListTile(
+                      key: const Key('homeComprasCard'),
+                      leading: const Icon(Icons.shopping_cart_outlined, size: 32),
+                      title: const Text('Compras'),
+                      subtitle: const Text('Proveedores, Órdenes de Compra y discrepancias'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/compras'),
                     ),
                   ),
                 ],

@@ -85,4 +85,28 @@ void main() {
     expect(find.byKey(const Key('badgeDescuentosPendientes')), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
   });
+
+  testWidgets('Sin permisos de Clientes/Compras, no muestra esas tarjetas', (tester) async {
+    await pumpHome(tester, permisos: []);
+
+    expect(find.byKey(const Key('homeClientesCard')), findsNothing);
+    expect(find.byKey(const Key('homeComprasCard')), findsNothing);
+  });
+
+  testWidgets('Con customers.clientes.gestionar, muestra la tarjeta Clientes', (tester) async {
+    await pumpHome(tester, permisos: ['customers.clientes.gestionar']);
+
+    expect(find.byKey(const Key('homeClientesCard')), findsOneWidget);
+    expect(find.byKey(const Key('homeComprasCard')), findsNothing);
+  });
+
+  testWidgets('Con cualquiera de los permisos de Compras, muestra la tarjeta Compras', (tester) async {
+    await pumpHome(tester, permisos: ['purchasing.proveedores.gestionar']);
+
+    expect(find.byKey(const Key('homeComprasCard')), findsOneWidget);
+
+    await pumpHome(tester, permisos: ['purchasing.ordenescompra.gestionar']);
+
+    expect(find.byKey(const Key('homeComprasCard')), findsOneWidget);
+  });
 }
