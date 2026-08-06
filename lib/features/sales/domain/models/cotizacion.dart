@@ -1,3 +1,4 @@
+import '../../../catalog/domain/models/unidad_medida.dart';
 import 'venta_enums.dart';
 
 /// Espejo de CotizacionResumen — fila liviana para "rescatar cotización" en el POS.
@@ -48,6 +49,7 @@ class LineaCotizacionDetalle {
     required this.subtotal,
     this.porcentajeDescuentoAplicado,
     this.montoDescuentoPromocion,
+    this.unidadMedida = UnidadMedida.unidad,
   });
 
   factory LineaCotizacionDetalle.fromJson(Map<String, dynamic> json) => LineaCotizacionDetalle(
@@ -59,6 +61,7 @@ class LineaCotizacionDetalle {
         subtotal: (json['subtotal'] as num).toDouble(),
         porcentajeDescuentoAplicado: (json['porcentajeDescuentoAplicado'] as num?)?.toDouble(),
         montoDescuentoPromocion: (json['montoDescuentoPromocion'] as num?)?.toDouble(),
+        unidadMedida: UnidadMedida.desdeValor(json['unidadMedida'] as int? ?? 0),
       );
 
   final String varianteProductoId;
@@ -69,6 +72,7 @@ class LineaCotizacionDetalle {
   final double subtotal;
   final double? porcentajeDescuentoAplicado;
   final double? montoDescuentoPromocion;
+  final UnidadMedida unidadMedida;
 }
 
 /// Espejo de CotizacionDetalle — detalle completo para rehidratar el

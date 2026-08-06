@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:novapos_app/features/catalog/domain/models/clasificacion.dart';
+import 'package:novapos_app/features/catalog/domain/models/unidad_medida.dart';
 import 'package:novapos_app/features/catalog/presentation/providers/catalog_admin_providers.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
 import 'package:novapos_app/features/sales/domain/models/cotizacion.dart';
@@ -782,6 +783,55 @@ void main() {
     expect(find.textContaining(r'x $45.990'), findsOneWidget);
     expect(find.text('Promoción aplicada (-\$45.990)'), findsOneWidget);
     expect(textoDe(tester, const Key('posTotal')), r'$137.970');
+  });
+
+  testWidgets('Rescatar una cotización de un producto por Kilogramo muestra la cantidad con su unidad', (tester) async {
+    await pumpPos(tester);
+    fakeSales.cotizacionesARetornar = [
+      CotizacionResumen(
+        ventaId: 'venta-cot-4',
+        numeroCotizacion: 'COT-20260806-004',
+        fechaVenta: DateTime(2026, 8, 6),
+        clienteId: 'cliente-generico',
+        clienteNombre: 'Cliente Genérico',
+        cantidadLineas: 1,
+        total: 3024,
+      ),
+    ];
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-cot-4',
+      numeroCotizacion: 'COT-20260806-004',
+      clienteId: 'cliente-generico',
+      clienteNombre: 'Cliente Genérico',
+      clienteRut: null,
+      subtotalLineas: 3024,
+      total: 3024,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+      descuentoGeneralPorcentaje: null,
+      descuentoGeneralMonto: null,
+      lineas: [
+        LineaCotizacionDetalle(
+          varianteProductoId: 'variante-pan-hallulla',
+          nombreProducto: 'Pan Hallulla',
+          sku: 'PAN-HALL',
+          cantidad: 1.6,
+          precioUnitario: 1890,
+          subtotal: 3024,
+          unidadMedida: UnidadMedida.kilogramo,
+        ),
+      ],
+    );
+
+    await abrirMenuCotizacion(tester);
+    await tester.tap(find.byKey(const Key('cotizacionRescatarItem')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cotizacionRescatable_venta-cot-4')));
+    await tester.pumpAndSettle();
+
+    // Antes de este fix la UnidadMedida no viajaba desde el backend y
+    // quedaba fija en Unidad, así que un Producto por Kilogramo rescatado
+    // mostraba "1.6" en vez de "1.6 kg".
+    expect(find.text('1.6 kg'), findsOneWidget);
   });
 
   testWidgets('Rescatar con el carrito no vacío pide confirmar antes de reemplazarlo', (tester) async {

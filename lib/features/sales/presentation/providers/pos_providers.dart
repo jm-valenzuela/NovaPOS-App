@@ -540,7 +540,11 @@ class PosCartController extends StateNotifier<PosCartState> {
   /// reportado tras comparar el carrito rescatado contra el ticket
   /// impreso). LineaCarrito.subtotal ahora aplica el descuento histórico
   /// directamente sobre este precio real, así que el Total sigue
-  /// coincidiendo exactamente con lo impreso al guardar.
+  /// coincidiendo exactamente con lo impreso al guardar. La UnidadMedida
+  /// también viene resuelta desde el backend (antes quedaba fija en
+  /// Unidad, así que un Producto por Kilogramo/Litro rescatado perdía el
+  /// sufijo "kg"/"L" junto a la cantidad — bug real, ej. "1.6" en vez de
+  /// "1.6 kg" para Pan Hallulla).
   void cargarCotizacion(CotizacionDetalle detalle) {
     final lineas = detalle.lineas
         .map((linea) => LineaCarrito(
@@ -551,7 +555,7 @@ class PosCartController extends StateNotifier<PosCartState> {
                 sku: linea.sku,
                 codigoBarras: null,
                 precioVenta: linea.precioUnitario,
-                unidadMedida: 0,
+                unidadMedida: linea.unidadMedida.valor,
               ),
               cantidad: linea.cantidad,
               porcentajeDescuentoVolumenHistorico: linea.porcentajeDescuentoAplicado,
