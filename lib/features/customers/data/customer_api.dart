@@ -63,4 +63,12 @@ class CustomerApi {
       ApiClient.lanzarError(e);
     }
   }
+
+  Future<void> asignarRutCliente({required String clienteId, required String rut}) async {
+    try {
+      await _client.dio.put('/clientes/$clienteId/rut', data: {'rut': rut});
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
 }

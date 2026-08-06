@@ -79,6 +79,18 @@ class ClientesAdminController extends StateNotifier<ClientesAdminState> {
       return false;
     }
   }
+
+  /// Completa el Rut de un Cliente que quedó sin uno (ej. creado antes de que el alta lo exigiera).
+  Future<bool> asignarRut({required String clienteId, required String rut}) async {
+    try {
+      await _repository.asignarRutCliente(clienteId: clienteId, rut: rut);
+      await cargar();
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
 }
 
 final clientesAdminProvider = StateNotifierProvider.autoDispose<ClientesAdminController, ClientesAdminState>((ref) {

@@ -20,4 +20,7 @@ abstract class CustomerRepository {
     double cupoCredito = 0,
     int plazoPagoDias = 0,
   });
+
+  /// Completa el Rut de un Cliente que quedó sin uno (ej. creado antes de que el alta lo exigiera) — falla si ya tiene uno.
+  Future<void> asignarRutCliente({required String clienteId, required String rut});
 }

@@ -18,6 +18,16 @@ const _clienteJuan = ClienteResumen(
   plazoPagoDias: 30,
 );
 
+const _clienteSinRut = ClienteResumen(
+  id: 'cliente-2',
+  rut: null,
+  nombre: 'Cliente Sin Rut',
+  email: null,
+  telefono: null,
+  cupoCredito: 0,
+  plazoPagoDias: 0,
+);
+
 void main() {
   late FakeCustomerRepository fakeCustomer;
 
@@ -99,5 +109,41 @@ void main() {
 
     expect(fakeCustomer.crearLlamado, isTrue);
     expect(fakeCustomer.ultimoRutCreado, '76543210-3');
+  });
+
+  testWidgets('Editar un Cliente sin RUT habilita el campo para completarlo', (tester) async {
+    fakeCustomer = FakeCustomerRepository()..resultadosARetornar = [_clienteSinRut];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [customerRepositoryProvider.overrideWithValue(fakeCustomer)],
+      child: const MaterialApp(home: ClientesAdminScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.text('Cliente Sin Rut'));
+    await tester.pumpAndSettle();
+
+    final campoRut = tester.widget<TextField>(find.byKey(const Key('clienteRut')));
+    expect(campoRut.enabled, isTrue);
+    expect(campoRut.controller?.text, isEmpty);
+  });
+
+  testWidgets('Completar el RUT de un Cliente sin RUT llama a asignarRutCliente', (tester) async {
+    fakeCustomer = FakeCustomerRepository()..resultadosARetornar = [_clienteSinRut];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [customerRepositoryProvider.overrideWithValue(fakeCustomer)],
+      child: const MaterialApp(home: ClientesAdminScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.text('Cliente Sin Rut'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('clienteRut')), '76.543.210-3');
+    await tester.tap(find.byKey(const Key('clienteGuardar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCustomer.ultimoClienteIdConRutAsignado, 'cliente-2');
+    expect(fakeCustomer.ultimoRutAsignado, '76543210-3');
   });
 }

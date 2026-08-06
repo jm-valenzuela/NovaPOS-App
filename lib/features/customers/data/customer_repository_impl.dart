@@ -32,4 +32,8 @@ class CustomerRepositoryImpl implements CustomerRepository {
   }) =>
       _api.actualizarCliente(
           clienteId: clienteId, nombre: nombre, email: email, telefono: telefono, cupoCredito: cupoCredito, plazoPagoDias: plazoPagoDias);
+
+  @override
+  Future<void> asignarRutCliente({required String clienteId, required String rut}) =>
+      _api.asignarRutCliente(clienteId: clienteId, rut: rut);
 }

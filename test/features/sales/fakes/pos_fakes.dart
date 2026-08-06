@@ -194,6 +194,8 @@ class FakeCustomerRepository implements CustomerRepository {
   String clienteIdARetornar = 'cliente-nuevo';
   String? ultimoClienteIdActualizado;
   String? ultimoRutCreado;
+  String? ultimoRutAsignado;
+  String? ultimoClienteIdConRutAsignado;
   bool crearLlamado = false;
 
   @override
@@ -226,6 +228,12 @@ class FakeCustomerRepository implements CustomerRepository {
     int plazoPagoDias = 0,
   }) async {
     ultimoClienteIdActualizado = clienteId;
+  }
+
+  @override
+  Future<void> asignarRutCliente({required String clienteId, required String rut}) async {
+    ultimoClienteIdConRutAsignado = clienteId;
+    ultimoRutAsignado = rut;
   }
 }
 

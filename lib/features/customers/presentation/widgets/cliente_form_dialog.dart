@@ -8,7 +8,9 @@ import '../providers/customer_admin_providers.dart';
 /// Un solo diálogo para crear y editar. El Rut es obligatorio al registrar un
 /// Cliente aquí (a diferencia del dominio, que lo permite nulo solo para el
 /// Cliente Genérico sembrado automáticamente en UC-01 — ver Cliente.cs), y no
-/// es editable una vez creado.
+/// es editable una vez asignado — salvo que el Cliente haya quedado sin uno
+/// (ej. creado antes de que el alta lo exigiera), caso en el que el campo se
+/// habilita para completarlo (Cliente.AsignarRut, no reemplaza uno existente).
 class ClienteFormDialog extends ConsumerStatefulWidget {
   const ClienteFormDialog({super.key, this.existente});
 
@@ -27,6 +29,8 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
   String? _error;
 
   bool get _esEdicion => widget.existente != null;
+  bool get _rutFaltante => _esEdicion && (widget.existente!.rut == null || widget.existente!.rut!.trim().isEmpty);
+  bool get _rutEditable => !_esEdicion || _rutFaltante;
 
   @override
   void dispose() {
@@ -53,8 +57,8 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
             TextField(
               key: const Key('clienteRut'),
               controller: _rutController,
-              enabled: !_esEdicion,
-              decoration: const InputDecoration(labelText: 'RUT'),
+              enabled: _rutEditable,
+              decoration: InputDecoration(labelText: _rutFaltante ? 'RUT (completar)' : 'RUT'),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -109,6 +113,9 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
         setState(() => _error = 'El RUT no es válido.');
         return;
       }
+    } else if (_rutFaltante && rutTexto.isNotEmpty && !RutValidator.esValido(rutTexto)) {
+      setState(() => _error = 'El RUT no es válido.');
+      return;
     }
 
     // Cupo de crédito y plazo de pago no se editan desde este formulario — requieren
@@ -125,23 +132,32 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
       _error = null;
     });
 
-    final exito = _esEdicion
-        ? await ref.read(clientesAdminProvider.notifier).actualizar(
+    bool exito;
+    if (_esEdicion) {
+      exito = await ref.read(clientesAdminProvider.notifier).actualizar(
+            clienteId: widget.existente!.id,
+            nombre: nombre,
+            email: email,
+            telefono: telefono,
+            cupoCredito: cupoCredito,
+            plazoPagoDias: plazoPagoDias,
+          );
+      if (exito && _rutFaltante && rutTexto.isNotEmpty) {
+        exito = await ref.read(clientesAdminProvider.notifier).asignarRut(
               clienteId: widget.existente!.id,
-              nombre: nombre,
-              email: email,
-              telefono: telefono,
-              cupoCredito: cupoCredito,
-              plazoPagoDias: plazoPagoDias,
-            )
-        : await ref.read(clientesAdminProvider.notifier).crear(
-              nombre: nombre,
               rut: RutValidator.normalizarConGuion(rutTexto),
-              email: email,
-              telefono: telefono,
-              cupoCredito: cupoCredito,
-              plazoPagoDias: plazoPagoDias,
             );
+      }
+    } else {
+      exito = await ref.read(clientesAdminProvider.notifier).crear(
+            nombre: nombre,
+            rut: RutValidator.normalizarConGuion(rutTexto),
+            email: email,
+            telefono: telefono,
+            cupoCredito: cupoCredito,
+            plazoPagoDias: plazoPagoDias,
+          );
+    }
 
     if (!mounted) return;
     if (exito) {
