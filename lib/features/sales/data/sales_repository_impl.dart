@@ -1,3 +1,4 @@
+import '../domain/models/cotizacion.dart';
 import '../domain/models/descuento_pendiente.dart';
 import '../domain/models/detalle_descuento_pendiente.dart';
 import '../domain/models/estado_descuento_venta.dart';
@@ -46,4 +47,13 @@ class SalesRepositoryImpl implements SalesRepository {
   @override
   Future<void> rechazarDescuentoGeneral({required String ventaId, required String motivo}) =>
       _api.rechazarDescuento(ventaId: ventaId, motivo: motivo);
+
+  @override
+  Future<void> marcarComoCotizacion(String ventaId) => _api.marcarComoCotizacion(ventaId);
+
+  @override
+  Future<List<CotizacionResumen>> listarCotizaciones(String sucursalId) => _api.listarCotizaciones(sucursalId);
+
+  @override
+  Future<CotizacionDetalle> obtenerCotizacion(String ventaId) => _api.obtenerCotizacion(ventaId);
 }

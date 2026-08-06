@@ -11,6 +11,7 @@ import '../../../catalog/domain/models/clasificacion.dart';
 import '../../../customers/domain/models/cliente_resumen.dart';
 import '../../../tenancy/domain/models/caja_resumen.dart';
 import '../../../catalog/domain/models/producto_vendible.dart';
+import '../../domain/models/cotizacion.dart';
 import '../../domain/models/linea_carrito.dart';
 import '../../domain/models/resumen_venta.dart';
 import '../../domain/models/venta_enums.dart';
@@ -19,8 +20,10 @@ import '../theme/pos_colors.dart';
 import '../widgets/cantidad_pesable_dialog.dart';
 import '../widgets/carrito_linea_tile.dart';
 import '../widgets/producto_resultado_tile.dart';
+import '../widgets/rescatar_cotizacion_dialog.dart';
 import '../widgets/selector_cliente_dialog.dart';
 import '../widgets/solicitar_descuento_dialog.dart';
+import '../widgets/ticket_cotizacion.dart';
 import 'escanear_codigo_barra_screen.dart';
 
 /// Firma de la función que abre el escáner y devuelve el código detectado
@@ -295,6 +298,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     ),
                 onVaciar: () => _vaciar(context, ref, carrito),
                 onSolicitarDescuento: () => _solicitarDescuento(context, cajaSeleccionada.cajaId),
+                onGuardarCotizacion: () => _guardarCotizacion(context, cajaSeleccionada.cajaId),
+                onRescatarCotizacion: () => _rescatarCotizacion(context, cajaSeleccionada.sucursalId),
               ),
             ],
           );
@@ -361,6 +366,92 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           porcentaje: solicitado.porcentaje,
           monto: solicitado.monto,
         );
+  }
+
+  /// Guarda el carrito actual como Cotización e imprime el ticket — arma
+  /// el ticket con los datos que ya están en pantalla (no hace falta
+  /// volver a consultar al servidor, guardarCotizacion() ya vació el
+  /// carrito cuando se resuelve). Limpia Cliente y búsqueda igual que
+  /// tras un cobro, para no arrastrarlos a la siguiente venta.
+  Future<void> _guardarCotizacion(BuildContext context, String cajaId) async {
+    final carritoActual = ref.read(posCartProvider);
+    final cliente = ref.read(clienteSeleccionadoProvider);
+    final lineas = carritoActual.lineas
+        .map((l) => LineaCotizacionDetalle(
+              varianteProductoId: l.producto.varianteProductoId,
+              nombreProducto: l.producto.nombreProducto,
+              sku: l.producto.sku,
+              cantidad: l.cantidad,
+              precioUnitario: l.producto.precioVenta,
+              subtotal: l.subtotal,
+            ))
+        .toList();
+
+    final ventaId = await ref.read(posCartProvider.notifier).guardarCotizacion(
+          cajaId: cajaId,
+          clienteId: cliente?.id,
+        );
+    if (ventaId == null || !mounted) return;
+
+    ref.read(clienteSeleccionadoProvider.notifier).state = null;
+    _busquedaController.clear();
+    _buscar('');
+
+    await imprimirTicketCotizacion(CotizacionDetalle(
+      ventaId: ventaId,
+      clienteId: cliente?.id ?? '',
+      clienteNombre: cliente?.nombre ?? 'Cliente Genérico',
+      clienteRut: cliente?.rut,
+      total: carritoActual.totalConDescuento,
+      lineas: lineas,
+    ));
+  }
+
+  /// Rescata una Cotización guardada — si el carrito actual ya tiene
+  /// productos, pide confirmación antes de reemplazarlo (mismo criterio
+  /// que _vaciar: no descarta trabajo en curso en silencio).
+  Future<void> _rescatarCotizacion(BuildContext context, String sucursalId) async {
+    final elegida = await showDialog<CotizacionResumen>(
+      context: context,
+      builder: (_) => RescatarCotizacionDialog(sucursalId: sucursalId),
+    );
+    if (elegida == null || !mounted) return;
+
+    if (ref.read(posCartProvider).lineas.isNotEmpty) {
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('¿Reemplazar el carrito actual?'),
+          content: const Text(
+            'Ya tienes productos en el carrito. Rescatar esta Cotización descarta lo que llevas armado.',
+          ),
+          actions: [
+            TextButton(
+              key: const Key('confirmarRescatarCancelar'),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              key: const Key('confirmarRescatarConfirmar'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Reemplazar'),
+            ),
+          ],
+        ),
+      );
+      if (confirmar != true || !mounted) return;
+    }
+
+    final detalle = await ref.read(posCartProvider.notifier).rescatarCotizacion(elegida.ventaId);
+    if (detalle == null || !mounted) return;
+
+    ref.read(clienteSeleccionadoProvider.notifier).state = ClienteResumen(
+      id: detalle.clienteId,
+      rut: detalle.clienteRut,
+      nombre: detalle.clienteNombre,
+      email: null,
+      telefono: null,
+    );
   }
 
   /// Si ya se pidió un descuento para esta venta (Pendiente, Autorizado o
@@ -534,6 +625,8 @@ Future<void> _editarCantidad(BuildContext context, WidgetRef ref, LineaCarrito l
   ref.read(posCartProvider.notifier).cambiarCantidad(linea.producto.varianteProductoId, cantidad);
 }
 
+enum _AccionCotizacion { guardar, rescatar }
+
 class _PanelCarrito extends ConsumerWidget {
   const _PanelCarrito({
     required this.carrito,
@@ -543,6 +636,8 @@ class _PanelCarrito extends ConsumerWidget {
     required this.onCobrar,
     required this.onVaciar,
     required this.onSolicitarDescuento,
+    required this.onGuardarCotizacion,
+    required this.onRescatarCotizacion,
   });
 
   final PosCartState carrito;
@@ -552,6 +647,8 @@ class _PanelCarrito extends ConsumerWidget {
   final VoidCallback onCobrar;
   final VoidCallback onVaciar;
   final VoidCallback onSolicitarDescuento;
+  final VoidCallback onGuardarCotizacion;
+  final VoidCallback onRescatarCotizacion;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -713,12 +810,38 @@ class _PanelCarrito extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Tooltip(
-                          message: 'Próximamente',
-                          child: OutlinedButton(
-                            onPressed: null,
-                            style: _estiloBotonSecundario,
-                            child: const Text('Cotización', overflow: TextOverflow.ellipsis),
+                        child: PopupMenuButton<_AccionCotizacion>(
+                          key: const Key('posCotizacion'),
+                          enabled: !carrito.procesandoCotizacion,
+                          onSelected: (accion) => switch (accion) {
+                            _AccionCotizacion.guardar => onGuardarCotizacion(),
+                            _AccionCotizacion.rescatar => onRescatarCotizacion(),
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              key: const Key('cotizacionGuardarItem'),
+                              value: _AccionCotizacion.guardar,
+                              enabled: carrito.lineas.isNotEmpty,
+                              child: const Text('Guardar cotización'),
+                            ),
+                            const PopupMenuItem(
+                              key: Key('cotizacionRescatarItem'),
+                              value: _AccionCotizacion.rescatar,
+                              child: Text('Rescatar cotización'),
+                            ),
+                          ],
+                          child: IgnorePointer(
+                            child: OutlinedButton(
+                              onPressed: null,
+                              style: _estiloBotonSecundario,
+                              child: carrito.procesandoCotizacion
+                                  ? const SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Text('Cotización', overflow: TextOverflow.ellipsis),
+                            ),
                           ),
                         ),
                       ),

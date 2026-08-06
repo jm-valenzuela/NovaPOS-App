@@ -4,6 +4,7 @@ import 'package:novapos_app/features/customers/domain/customer_repository.dart';
 import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dart';
 import 'package:novapos_app/features/inventory/domain/inventory_repository.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
+import 'package:novapos_app/features/sales/domain/models/cotizacion.dart';
 import 'package:novapos_app/features/sales/domain/models/descuento_pendiente.dart';
 import 'package:novapos_app/features/sales/domain/models/detalle_descuento_pendiente.dart';
 import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
@@ -150,6 +151,40 @@ class FakeSalesRepository implements SalesRepository {
     ultimaVentaIdRechazada = ventaId;
     ultimoMotivoRechazo = motivo;
     if (errorAforzar != null) throw Exception(errorAforzar);
+  }
+
+  String? ultimaVentaIdMarcadaCotizacion;
+  List<CotizacionResumen> cotizacionesARetornar = [];
+  String? ultimaSucursalIdCotizacionesConsultada;
+  CotizacionDetalle? cotizacionDetalleARetornar;
+  String? ultimaVentaIdCotizacionConsultada;
+
+  @override
+  Future<void> marcarComoCotizacion(String ventaId) async {
+    ultimaVentaIdMarcadaCotizacion = ventaId;
+    if (errorAforzar != null) throw Exception(errorAforzar);
+  }
+
+  @override
+  Future<List<CotizacionResumen>> listarCotizaciones(String sucursalId) async {
+    ultimaSucursalIdCotizacionesConsultada = sucursalId;
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return cotizacionesARetornar;
+  }
+
+  @override
+  Future<CotizacionDetalle> obtenerCotizacion(String ventaId) async {
+    ultimaVentaIdCotizacionConsultada = ventaId;
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return cotizacionDetalleARetornar ??
+        CotizacionDetalle(
+          ventaId: ventaId,
+          clienteId: 'cliente-generico',
+          clienteNombre: 'Cliente Genérico',
+          clienteRut: null,
+          total: totalARetornar,
+          lineas: const [],
+        );
   }
 }
 

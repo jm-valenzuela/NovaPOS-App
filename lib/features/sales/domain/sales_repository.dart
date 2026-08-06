@@ -1,3 +1,4 @@
+import 'models/cotizacion.dart';
 import 'models/descuento_pendiente.dart';
 import 'models/detalle_descuento_pendiente.dart';
 import 'models/estado_descuento_venta.dart';
@@ -30,4 +31,13 @@ abstract class SalesRepository {
   Future<void> autorizarDescuentoGeneral(String ventaId);
 
   Future<void> rechazarDescuentoGeneral({required String ventaId, required String motivo});
+
+  /// El Cajero guarda el carrito actual como Cotización en vez de cobrarlo.
+  Future<void> marcarComoCotizacion(String ventaId);
+
+  /// "Rescatar cotización" en el POS — Cotizaciones vigentes de la Sucursal.
+  Future<List<CotizacionResumen>> listarCotizaciones(String sucursalId);
+
+  /// Detalle completo para rehidratar el carrito al rescatar una Cotización.
+  Future<CotizacionDetalle> obtenerCotizacion(String ventaId);
 }

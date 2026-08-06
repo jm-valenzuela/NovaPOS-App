@@ -23,6 +23,7 @@ import '../../../tenancy/domain/models/caja_resumen.dart';
 import '../../../tenancy/domain/tenancy_repository.dart';
 import '../../data/sales_repository_impl.dart';
 import '../../data/venta_api.dart';
+import '../../domain/models/cotizacion.dart';
 import '../../domain/models/linea_carrito.dart';
 import '../../domain/models/resumen_venta.dart';
 import '../../domain/models/venta_enums.dart';
@@ -239,6 +240,7 @@ class PosCartState {
     this.descuentoMonto,
     this.motivoRechazoDescuento,
     this.solicitandoDescuento = false,
+    this.procesandoCotizacion = false,
   });
 
   final List<LineaCarrito> lineas;
@@ -265,6 +267,10 @@ class PosCartState {
 
   final String? motivoRechazoDescuento;
   final bool solicitandoDescuento;
+
+  /// true mientras se guarda o se rescata una Cotización — deshabilita el
+  /// menú de Cotización en la UI para evitar doble-tap.
+  final bool procesandoCotizacion;
 
   bool get carritoBloqueado => ventaId != null;
 
@@ -299,6 +305,7 @@ class PosCartState {
     bool limpiarError = false,
     bool limpiarResumenCobrado = false,
     bool? solicitandoDescuento,
+    bool? procesandoCotizacion,
   }) {
     return PosCartState(
       lineas: lineas ?? this.lineas,
@@ -311,6 +318,7 @@ class PosCartState {
       descuentoMonto: descuentoMonto,
       motivoRechazoDescuento: motivoRechazoDescuento,
       solicitandoDescuento: solicitandoDescuento ?? this.solicitandoDescuento,
+      procesandoCotizacion: procesandoCotizacion ?? this.procesandoCotizacion,
     );
   }
 }
@@ -484,6 +492,85 @@ class PosCartController extends StateNotifier<PosCartState> {
       );
     } catch (_) {
       // Informativo — se reintenta en el próximo tick del poller.
+    }
+  }
+
+  /// Guarda el carrito actual como Cotización: crea la Venta y sus líneas
+  /// recién ahora si aún no existían (mismo patrón lazy que cobrar()/
+  /// solicitarDescuento()), la marca como Cotización y vacía el carrito
+  /// para que el Cajero pueda empezar una venta nueva — la Cotización
+  /// queda guardada en el servidor, disponible para "Rescatar" después.
+  /// Devuelve el VentaId (para imprimir el ticket) o null si falló.
+  Future<String?> guardarCotizacion({required String cajaId, String? clienteId}) async {
+    if (state.lineas.isEmpty) return null;
+
+    state = state.copyWith(procesandoCotizacion: true, limpiarError: true);
+    try {
+      var ventaId = state.ventaId;
+      if (ventaId == null) {
+        ventaId = await _salesRepository.crearVenta(cajaId: cajaId, clienteId: clienteId);
+
+        for (final linea in state.lineas) {
+          await _salesRepository.agregarLinea(
+            ventaId: ventaId,
+            varianteProductoId: linea.producto.varianteProductoId,
+            cantidad: linea.cantidad,
+          );
+        }
+      }
+
+      await _salesRepository.marcarComoCotizacion(ventaId);
+
+      state = const PosCartState();
+      return ventaId;
+    } catch (e) {
+      state = state.copyWith(procesandoCotizacion: false, error: e.toString());
+      return null;
+    }
+  }
+
+  /// Rescata una Cotización guardada: reemplaza el carrito actual por sus
+  /// líneas, con el carrito ya bloqueado (ventaId asignado) — igual que
+  /// cualquier Venta ya persistida, no se puede seguir agregando/quitando
+  /// líneas localmente (ver carritoBloqueado). El precio de cada línea es
+  /// el subtotal ya cotizado dividido por la cantidad (no el precio de
+  /// lista actual ni las reglas de descuento por volumen/promoción, que
+  /// no viajan en CotizacionDetalle), para que el Total mostrado coincida
+  /// exactamente con lo impreso al guardar la Cotización.
+  void cargarCotizacion(CotizacionDetalle detalle) {
+    final lineas = detalle.lineas
+        .map((linea) => LineaCarrito(
+              producto: ProductoVendible(
+                varianteProductoId: linea.varianteProductoId,
+                productoId: linea.varianteProductoId,
+                nombreProducto: linea.nombreProducto,
+                sku: linea.sku,
+                codigoBarras: null,
+                precioVenta: linea.subtotal / linea.cantidad,
+                unidadMedida: 0,
+              ),
+              cantidad: linea.cantidad,
+            ))
+        .toList();
+
+    state = PosCartState(lineas: lineas, ventaId: detalle.ventaId);
+  }
+
+  /// Trae del servidor una Cotización guardada y reemplaza el carrito
+  /// actual con su contenido (ver cargarCotizacion) — devuelve el detalle
+  /// para que quien llama también pueda actualizar el Cliente seleccionado
+  /// (estado aparte de PosCartState, ver clienteSeleccionadoProvider). Si
+  /// falla la consulta, se informa por el mismo canal de error que el
+  /// resto del carrito y el estado actual no se toca.
+  Future<CotizacionDetalle?> rescatarCotizacion(String ventaId) async {
+    state = state.copyWith(procesandoCotizacion: true, limpiarError: true);
+    try {
+      final detalle = await _salesRepository.obtenerCotizacion(ventaId);
+      cargarCotizacion(detalle);
+      return detalle;
+    } catch (e) {
+      state = state.copyWith(procesandoCotizacion: false, error: e.toString());
+      return null;
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
+import '../domain/models/cotizacion.dart';
 import '../domain/models/descuento_pendiente.dart';
 import '../domain/models/detalle_descuento_pendiente.dart';
 import '../domain/models/estado_descuento_venta.dart';
@@ -109,6 +110,35 @@ class VentaApi {
   Future<void> rechazarDescuento({required String ventaId, required String motivo}) async {
     try {
       await _client.dio.post('/ventas/$ventaId/descuento/rechazar', data: {'motivo': motivo});
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  /// El Cajero guarda el carrito actual como Cotización en vez de cobrarlo — sigue en Borrador.
+  Future<void> marcarComoCotizacion(String ventaId) async {
+    try {
+      await _client.dio.post('/ventas/$ventaId/cotizacion');
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  /// "Rescatar cotización" en el POS — Cotizaciones vigentes de la Sucursal de la Caja actual.
+  Future<List<CotizacionResumen>> listarCotizaciones(String sucursalId) async {
+    try {
+      final respuesta = await _client.dio.get('/ventas/cotizaciones', queryParameters: {'sucursalId': sucursalId});
+      final lista = respuesta.data as List<dynamic>;
+      return lista.map((json) => CotizacionResumen.fromJson(json as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<CotizacionDetalle> obtenerCotizacion(String ventaId) async {
+    try {
+      final respuesta = await _client.dio.get('/ventas/cotizaciones/$ventaId');
+      return CotizacionDetalle.fromJson(respuesta.data as Map<String, dynamic>);
     } on DioException catch (e) {
       ApiClient.lanzarError(e);
     }

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novapos_app/features/catalog/domain/models/clasificacion.dart';
 import 'package:novapos_app/features/catalog/presentation/providers/catalog_admin_providers.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
+import 'package:novapos_app/features/sales/domain/models/cotizacion.dart';
 import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart';
@@ -613,6 +614,122 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('¿Vaciar el carrito?'), findsNothing);
+    expect(find.byKey(const Key('posCarrito_variante-coca')), findsNothing);
+  });
+
+  Future<void> abrirMenuCotizacion(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('posCotizacion')));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('El menú de Cotización deshabilita "Guardar" con el carrito vacío y lo habilita con productos',
+      (tester) async {
+    await pumpPos(tester);
+
+    await abrirMenuCotizacion(tester);
+    expect(tester.widget<PopupMenuItem>(find.byKey(const Key('cotizacionGuardarItem'))).enabled, isFalse);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    await buscarYEsperar(tester, 'coca');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await abrirMenuCotizacion(tester);
+    expect(tester.widget<PopupMenuItem>(find.byKey(const Key('cotizacionGuardarItem'))).enabled, isTrue);
+  });
+
+  testWidgets('Rescatar cotización reemplaza el carrito con la Cotización elegida', (tester) async {
+    await pumpPos(tester);
+    fakeSales.cotizacionesARetornar = [
+      CotizacionResumen(
+        ventaId: 'venta-cot-1',
+        fechaVenta: DateTime(2026, 8, 1),
+        clienteId: 'cliente-juan',
+        clienteNombre: 'Juan Pérez',
+        cantidadLineas: 1,
+        total: 3000,
+      ),
+    ];
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-cot-1',
+      clienteId: 'cliente-juan',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: '76.123.456-0',
+      total: 3000,
+      lineas: [
+        LineaCotizacionDetalle(
+          varianteProductoId: 'variante-coca',
+          nombreProducto: 'Coca Cola 1.5L',
+          sku: 'COCA-15',
+          cantidad: 2,
+          precioUnitario: 1500,
+          subtotal: 3000,
+        ),
+      ],
+    );
+
+    await abrirMenuCotizacion(tester);
+    await tester.tap(find.byKey(const Key('cotizacionRescatarItem')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Juan Pérez'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cotizacionRescatable_venta-cot-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget);
+    expect(textoDe(tester, const Key('posTotal')), r'$3.000');
+  });
+
+  testWidgets('Rescatar con el carrito no vacío pide confirmar antes de reemplazarlo', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    await buscarYEsperar(tester, 'coca');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    fakeSales.cotizacionesARetornar = [
+      CotizacionResumen(
+        ventaId: 'venta-cot-1',
+        fechaVenta: DateTime(2026, 8, 1),
+        clienteId: 'cliente-juan',
+        clienteNombre: 'Juan Pérez',
+        cantidadLineas: 1,
+        total: 800,
+      ),
+    ];
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-cot-1',
+      clienteId: 'cliente-juan',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: null,
+      total: 800,
+      lineas: [
+        LineaCotizacionDetalle(
+          varianteProductoId: 'variante-pan',
+          nombreProducto: 'Pan Marraqueta',
+          sku: 'PAN-MARR',
+          cantidad: 1,
+          precioUnitario: 800,
+          subtotal: 800,
+        ),
+      ],
+    );
+
+    await abrirMenuCotizacion(tester);
+    await tester.tap(find.byKey(const Key('cotizacionRescatarItem')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cotizacionRescatable_venta-cot-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('¿Reemplazar el carrito actual?'), findsOneWidget);
+    expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget, reason: 'todavía no se reemplazó');
+
+    await tester.tap(find.byKey(const Key('confirmarRescatarConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('posCarrito_variante-pan')), findsOneWidget);
     expect(find.byKey(const Key('posCarrito_variante-coca')), findsNothing);
   });
 }
