@@ -120,7 +120,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       if (actual.resumenCobrado != null && previo?.resumenCobrado == null) {
         _mostrarVentaCobrada(actual.resumenCobrado!);
       }
-      if (actual.estadoDescuento != previo?.estadoDescuento) {
+      // Solo avisa si la resolución ocurrió en vivo (Pendiente → Autorizado/
+      // Rechazado, ver verificarEstadoDescuento) — al rescatar una Cotización
+      // que ya traía un descuento resuelto de antes, el estado también
+      // "cambia" (de sinSolicitar a Autorizado, por ejemplo), pero no es un
+      // evento que acabe de pasar, así que no corresponde el mismo aviso
+      // (bug real, reportado por el usuario: "la muestra como que en ese
+      // momento fue aprobada").
+      if (previo?.estadoDescuento == EstadoDescuentoGeneral.pendiente &&
+          actual.estadoDescuento != previo?.estadoDescuento) {
         if (actual.estadoDescuento == EstadoDescuentoGeneral.autorizado) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Descuento autorizado — ya puedes cobrar.'), backgroundColor: Colors.green),

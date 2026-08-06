@@ -886,6 +886,56 @@ void main() {
     expect(find.textContaining('Promoción aplicada'), findsNothing);
   });
 
+  testWidgets('Rescatar una cotización con un descuento ya Autorizado no muestra el aviso de "recién autorizado"', (tester) async {
+    await pumpPos(tester);
+    fakeSales.cotizacionesARetornar = [
+      CotizacionResumen(
+        ventaId: 'venta-cot-6',
+        numeroCotizacion: 'COT-20260806-006',
+        fechaVenta: DateTime(2026, 8, 1),
+        clienteId: 'cliente-juan',
+        clienteNombre: 'Juan Pérez',
+        cantidadLineas: 1,
+        total: 1350,
+      ),
+    ];
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-cot-6',
+      numeroCotizacion: 'COT-20260806-006',
+      clienteId: 'cliente-juan',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: '76.123.456-0',
+      subtotalLineas: 1500,
+      total: 1350,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.autorizado,
+      descuentoGeneralPorcentaje: 10,
+      descuentoGeneralMonto: null,
+      lineas: [
+        LineaCotizacionDetalle(
+          varianteProductoId: 'variante-coca',
+          nombreProducto: 'Coca Cola 1.5L',
+          sku: 'COCA-15',
+          cantidad: 1,
+          precioUnitario: 1500,
+          subtotal: 1500,
+        ),
+      ],
+    );
+
+    await abrirMenuCotizacion(tester);
+    await tester.tap(find.byKey(const Key('cotizacionRescatarItem')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cotizacionRescatable_venta-cot-6')));
+    await tester.pumpAndSettle();
+
+    // El descuento ya venía Autorizado desde antes (hecho histórico de la
+    // Cotización) — antes de este fix se mostraba el mismo SnackBar que
+    // cuando un Supervisor recién autoriza uno en vivo, dando la impresión
+    // de que acababa de pasar (bug real reportado por el usuario).
+    expect(find.byKey(const Key('posDescuentoAplicado')), findsOneWidget);
+    expect(find.text('Descuento autorizado — ya puedes cobrar.'), findsNothing);
+  });
+
   testWidgets('Rescatar con el carrito no vacío pide confirmar antes de reemplazarlo', (tester) async {
     await pumpPos(tester);
     fakeCatalog.resultadosARetornar = [productoCocaCola];
