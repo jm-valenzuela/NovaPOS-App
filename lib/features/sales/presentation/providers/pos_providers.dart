@@ -550,10 +550,21 @@ class PosCartController extends StateNotifier<PosCartState> {
                 unidadMedida: 0,
               ),
               cantidad: linea.cantidad,
+              porcentajeDescuentoVolumenHistorico: linea.porcentajeDescuentoAplicado,
+              montoDescuentoPromocionHistorico: linea.montoDescuentoPromocion,
             ))
         .toList();
 
-    state = PosCartState(lineas: lineas, ventaId: detalle.ventaId);
+    // El descuento general se reenvía tal cual vino del backend — sin esto,
+    // el Total mostrado al rescatar ignoraba silenciosamente un descuento
+    // ya Autorizado (bug real, ver README).
+    state = PosCartState(
+      lineas: lineas,
+      ventaId: detalle.ventaId,
+      estadoDescuento: detalle.estadoDescuentoGeneral,
+      descuentoPorcentaje: detalle.descuentoGeneralPorcentaje,
+      descuentoMonto: detalle.descuentoGeneralMonto,
+    );
   }
 
   /// Trae del servidor una Cotización guardada y reemplaza el carrito

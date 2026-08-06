@@ -368,24 +368,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         );
   }
 
-  /// Guarda el carrito actual como Cotización e imprime el ticket — arma
-  /// el ticket con los datos que ya están en pantalla (no hace falta
-  /// volver a consultar al servidor, guardarCotizacion() ya vació el
-  /// carrito cuando se resuelve). Limpia Cliente y búsqueda igual que
-  /// tras un cobro, para no arrastrarlos a la siguiente venta.
+  /// Guarda el carrito actual como Cotización e imprime el ticket. A
+  /// diferencia de antes, vuelve a consultar el detalle recién guardado
+  /// (en vez de reconstruirlo con lo que ya estaba en pantalla) porque el
+  /// backend recién ahí le asigna el NumeroCotizacion — el ticket necesita
+  /// ese número real, no algo estimado en el cliente. Limpia Cliente y
+  /// búsqueda igual que tras un cobro, para no arrastrarlos a la siguiente venta.
   Future<void> _guardarCotizacion(BuildContext context, String cajaId) async {
-    final carritoActual = ref.read(posCartProvider);
     final cliente = ref.read(clienteSeleccionadoProvider);
-    final lineas = carritoActual.lineas
-        .map((l) => LineaCotizacionDetalle(
-              varianteProductoId: l.producto.varianteProductoId,
-              nombreProducto: l.producto.nombreProducto,
-              sku: l.producto.sku,
-              cantidad: l.cantidad,
-              precioUnitario: l.producto.precioVenta,
-              subtotal: l.subtotal,
-            ))
-        .toList();
 
     final ventaId = await ref.read(posCartProvider.notifier).guardarCotizacion(
           cajaId: cajaId,
@@ -397,14 +387,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     _busquedaController.clear();
     _buscar('');
 
-    await imprimirTicketCotizacion(CotizacionDetalle(
-      ventaId: ventaId,
-      clienteId: cliente?.id ?? '',
-      clienteNombre: cliente?.nombre ?? 'Cliente Genérico',
-      clienteRut: cliente?.rut,
-      total: carritoActual.totalConDescuento,
-      lineas: lineas,
-    ));
+    final detalle = await ref.read(salesRepositoryProvider).obtenerCotizacion(ventaId);
+    await imprimirTicketCotizacion(detalle);
   }
 
   /// Rescata una Cotización guardada — si el carrito actual ya tiene

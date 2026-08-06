@@ -125,7 +125,23 @@ class CarritoLineaTile extends StatelessWidget {
                       ),
                     ],
                   ),
-                if (linea.aplicaDescuentoVolumen)
+                if (linea.porcentajeDescuentoVolumenHistorico != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '${_formatearPorcentaje(linea.porcentajeDescuentoVolumenHistorico!)}% dto. por volumen aplicado',
+                      style: const TextStyle(color: PosColors.stockOk, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  )
+                else if (linea.montoDescuentoPromocionHistorico != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      'Promoción aplicada (-${MonedaFormatter.formatear(linea.montoDescuentoPromocionHistorico!)})',
+                      style: const TextStyle(color: PosColors.stockOk, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  )
+                else if (linea.aplicaDescuentoVolumen)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(

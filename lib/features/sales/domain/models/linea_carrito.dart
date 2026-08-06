@@ -7,10 +7,28 @@ import '../../../catalog/domain/models/producto_vendible.dart';
 /// forma sana de soportar "agregar, quitar, cambiar cantidad" antes de
 /// confirmar.
 class LineaCarrito {
-  const LineaCarrito({required this.producto, required this.cantidad});
+  const LineaCarrito({
+    required this.producto,
+    required this.cantidad,
+    this.porcentajeDescuentoVolumenHistorico,
+    this.montoDescuentoPromocionHistorico,
+  });
 
   final ProductoVendible producto;
   final double cantidad;
+
+  /// Descuento por volumen ya aplicado a esta línea al rescatar una
+  /// Cotización guardada — hecho histórico del backend (LineaVenta.
+  /// PorcentajeDescuentoAplicado), no la regla vigente del catálogo (que
+  /// pudo cambiar desde que se guardó). Null en una línea armada en vivo.
+  final double? porcentajeDescuentoVolumenHistorico;
+
+  /// Igual que arriba, pero para una promoción por grupo (2x1, 6x5, etc.)
+  /// — se guarda solo el monto (LineaVenta.MontoDescuentoPromocion), no
+  /// los parámetros (N/%) del preset, que no son reconstruibles a partir
+  /// del monto solo, así que no se puede mostrar el mismo texto "2x1" que
+  /// en una línea en vivo, solo que hubo una promoción y cuánto descontó.
+  final double? montoDescuentoPromocionHistorico;
 
   /// true si esta línea alcanza el umbral del descuento por volumen del
   /// Producto — mismo criterio que Venta.AgregarLinea en el backend
@@ -49,6 +67,10 @@ class LineaCarrito {
     return subtotalConDescuentoVolumen - montoDescuentoPromocion;
   }
 
-  LineaCarrito copyWith({double? cantidad}) =>
-      LineaCarrito(producto: producto, cantidad: cantidad ?? this.cantidad);
+  LineaCarrito copyWith({double? cantidad}) => LineaCarrito(
+        producto: producto,
+        cantidad: cantidad ?? this.cantidad,
+        porcentajeDescuentoVolumenHistorico: porcentajeDescuentoVolumenHistorico,
+        montoDescuentoPromocionHistorico: montoDescuentoPromocionHistorico,
+      );
 }

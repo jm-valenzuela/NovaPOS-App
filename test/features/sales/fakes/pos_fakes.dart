@@ -182,7 +182,11 @@ class FakeSalesRepository implements SalesRepository {
           clienteId: 'cliente-generico',
           clienteNombre: 'Cliente Genérico',
           clienteRut: null,
+          subtotalLineas: totalARetornar,
           total: totalARetornar,
+          estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+          descuentoGeneralPorcentaje: null,
+          descuentoGeneralMonto: null,
           lineas: const [],
         );
   }

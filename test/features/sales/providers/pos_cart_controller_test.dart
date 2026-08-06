@@ -214,7 +214,11 @@ void main() {
       clienteId: 'cliente-juan',
       clienteNombre: 'Juan Pérez',
       clienteRut: '76.123.456-0',
+      subtotalLineas: 3000,
       total: 3000,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+      descuentoGeneralPorcentaje: null,
+      descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
           varianteProductoId: 'variante-coca',
@@ -236,6 +240,65 @@ void main() {
     expect(controller.state.lineas, hasLength(1));
     expect(controller.state.lineas.first.cantidad, 2);
     expect(controller.state.total, 3000);
+  });
+
+  test('rescatarCotizacion preserva un descuento general ya Autorizado', () async {
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-con-descuento',
+      clienteId: 'cliente-juan',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: '76.123.456-0',
+      subtotalLineas: 3000,
+      total: 2700,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.autorizado,
+      descuentoGeneralPorcentaje: 10,
+      descuentoGeneralMonto: null,
+      lineas: [
+        LineaCotizacionDetalle(
+          varianteProductoId: 'variante-coca',
+          nombreProducto: 'Coca Cola 1.5L',
+          sku: 'COCA-15',
+          cantidad: 2,
+          precioUnitario: 1500,
+          subtotal: 3000,
+        ),
+      ],
+    );
+
+    await controller.rescatarCotizacion('venta-con-descuento');
+
+    expect(controller.state.estadoDescuento, EstadoDescuentoGeneral.autorizado);
+    expect(controller.state.descuentoPorcentaje, 10);
+    expect(controller.state.totalConDescuento, 2700);
+  });
+
+  test('rescatarCotizacion preserva el descuento por línea para mostrarlo en el carrito', () async {
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-con-promo',
+      clienteId: 'cliente-juan',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: '76.123.456-0',
+      subtotalLineas: 19000,
+      total: 19000,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+      descuentoGeneralPorcentaje: null,
+      descuentoGeneralMonto: null,
+      lineas: [
+        LineaCotizacionDetalle(
+          varianteProductoId: 'variante-tornillo',
+          nombreProducto: 'Tornillo Autoperforante',
+          sku: 'TORN-001',
+          cantidad: 20,
+          precioUnitario: 1000,
+          subtotal: 19000,
+          porcentajeDescuentoAplicado: 5,
+        ),
+      ],
+    );
+
+    await controller.rescatarCotizacion('venta-con-promo');
+
+    expect(controller.state.lineas.first.porcentajeDescuentoVolumenHistorico, 5);
   });
 
   test('rescatarCotizacion informa el error si falla la consulta', () async {

@@ -55,7 +55,11 @@ class _RescatarCotizacionDialogState extends ConsumerState<RescatarCotizacionDia
                 final cotizacion = cotizaciones[index];
                 return ListTile(
                   key: Key('cotizacionRescatable_${cotizacion.ventaId}'),
-                  title: Text(cotizacion.clienteNombre),
+                  title: Text(
+                    cotizacion.numeroCotizacion != null
+                        ? '${cotizacion.numeroCotizacion} · ${cotizacion.clienteNombre}'
+                        : cotizacion.clienteNombre,
+                  ),
                   subtitle: Text(
                     '${DateFormat('dd-MM-yyyy HH:mm').format(cotizacion.fechaVenta.toLocal())} · '
                     '${cotizacion.cantidadLineas} ${cotizacion.cantidadLineas == 1 ? "producto" : "productos"}',

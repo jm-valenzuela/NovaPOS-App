@@ -16,7 +16,7 @@ Future<void> imprimirTicketCotizacion(CotizacionDetalle cotizacion) {
   final resumen = ResumenVenta.calcular(cotizacion.total);
 
   return Printing.layoutPdf(
-    name: 'Cotizacion-${cotizacion.ventaId.substring(0, 8)}',
+    name: cotizacion.numeroCotizacion ?? 'Cotizacion-${cotizacion.ventaId.substring(0, 8)}',
     format: const PdfPageFormat(8 * PdfPageFormat.cm, double.infinity, marginAll: 4 * PdfPageFormat.mm),
     onLayout: (pageFormat) async {
       final documento = pw.Document();
@@ -27,6 +27,8 @@ Future<void> imprimirTicketCotizacion(CotizacionDetalle cotizacion) {
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
               pw.Center(child: pw.Text('COTIZACIÓN', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14))),
+              if (cotizacion.numeroCotizacion != null)
+                pw.Center(child: pw.Text(cotizacion.numeroCotizacion!, style: const pw.TextStyle(fontSize: 10))),
               pw.SizedBox(height: 4),
               pw.Text('Cliente: ${cotizacion.clienteNombre}', style: const pw.TextStyle(fontSize: 9)),
               if (cotizacion.clienteRut != null) pw.Text('RUT: ${cotizacion.clienteRut}', style: const pw.TextStyle(fontSize: 9)),

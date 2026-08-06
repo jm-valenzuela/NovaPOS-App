@@ -645,6 +645,7 @@ void main() {
     fakeSales.cotizacionesARetornar = [
       CotizacionResumen(
         ventaId: 'venta-cot-1',
+        numeroCotizacion: 'COT-20260801-001',
         fechaVenta: DateTime(2026, 8, 1),
         clienteId: 'cliente-juan',
         clienteNombre: 'Juan Pérez',
@@ -654,10 +655,15 @@ void main() {
     ];
     fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
       ventaId: 'venta-cot-1',
+      numeroCotizacion: 'COT-20260801-001',
       clienteId: 'cliente-juan',
       clienteNombre: 'Juan Pérez',
       clienteRut: '76.123.456-0',
+      subtotalLineas: 3000,
       total: 3000,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+      descuentoGeneralPorcentaje: null,
+      descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
           varianteProductoId: 'variante-coca',
@@ -674,12 +680,58 @@ void main() {
     await tester.tap(find.byKey(const Key('cotizacionRescatarItem')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Juan Pérez'), findsOneWidget);
+    expect(find.text('COT-20260801-001 · Juan Pérez'), findsOneWidget);
     await tester.tap(find.byKey(const Key('cotizacionRescatable_venta-cot-1')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget);
     expect(textoDe(tester, const Key('posTotal')), r'$3.000');
+  });
+
+  testWidgets('Rescatar una cotización con descuento por volumen ya aplicado muestra la etiqueta en el carrito', (tester) async {
+    await pumpPos(tester);
+    fakeSales.cotizacionesARetornar = [
+      CotizacionResumen(
+        ventaId: 'venta-cot-2',
+        numeroCotizacion: 'COT-20260801-002',
+        fechaVenta: DateTime(2026, 8, 1),
+        clienteId: 'cliente-juan',
+        clienteNombre: 'Juan Pérez',
+        cantidadLineas: 1,
+        total: 19000,
+      ),
+    ];
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-cot-2',
+      numeroCotizacion: 'COT-20260801-002',
+      clienteId: 'cliente-juan',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: '76.123.456-0',
+      subtotalLineas: 19000,
+      total: 19000,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+      descuentoGeneralPorcentaje: null,
+      descuentoGeneralMonto: null,
+      lineas: [
+        LineaCotizacionDetalle(
+          varianteProductoId: 'variante-tornillo',
+          nombreProducto: 'Tornillo Autoperforante',
+          sku: 'TORN-001',
+          cantidad: 20,
+          precioUnitario: 1000,
+          subtotal: 19000,
+          porcentajeDescuentoAplicado: 5,
+        ),
+      ],
+    );
+
+    await abrirMenuCotizacion(tester);
+    await tester.tap(find.byKey(const Key('cotizacionRescatarItem')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cotizacionRescatable_venta-cot-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('5% dto. por volumen aplicado'), findsOneWidget);
   });
 
   testWidgets('Rescatar con el carrito no vacío pide confirmar antes de reemplazarlo', (tester) async {
@@ -704,7 +756,11 @@ void main() {
       clienteId: 'cliente-juan',
       clienteNombre: 'Juan Pérez',
       clienteRut: null,
+      subtotalLineas: 800,
       total: 800,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+      descuentoGeneralPorcentaje: null,
+      descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
           varianteProductoId: 'variante-pan',
