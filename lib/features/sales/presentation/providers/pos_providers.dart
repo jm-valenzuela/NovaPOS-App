@@ -556,6 +556,8 @@ class PosCartController extends StateNotifier<PosCartState> {
                 codigoBarras: null,
                 precioVenta: linea.precioUnitario,
                 unidadMedida: linea.unidadMedida.valor,
+                cantidadPorGrupoPromocion: linea.cantidadPorGrupoPromocion,
+                porcentajeDescuentoUnidadPromocion: linea.porcentajeDescuentoUnidadPromocion,
               ),
               cantidad: linea.cantidad,
               porcentajeDescuentoVolumenHistorico: linea.porcentajeDescuentoAplicado,

@@ -50,6 +50,8 @@ class LineaCotizacionDetalle {
     this.porcentajeDescuentoAplicado,
     this.montoDescuentoPromocion,
     this.unidadMedida = UnidadMedida.unidad,
+    this.cantidadPorGrupoPromocion,
+    this.porcentajeDescuentoUnidadPromocion,
   });
 
   factory LineaCotizacionDetalle.fromJson(Map<String, dynamic> json) => LineaCotizacionDetalle(
@@ -62,6 +64,8 @@ class LineaCotizacionDetalle {
         porcentajeDescuentoAplicado: (json['porcentajeDescuentoAplicado'] as num?)?.toDouble(),
         montoDescuentoPromocion: (json['montoDescuentoPromocion'] as num?)?.toDouble(),
         unidadMedida: UnidadMedida.desdeValor(json['unidadMedida'] as int? ?? 0),
+        cantidadPorGrupoPromocion: json['cantidadPorGrupoPromocion'] as int?,
+        porcentajeDescuentoUnidadPromocion: (json['porcentajeDescuentoUnidadPromocion'] as num?)?.toDouble(),
       );
 
   final String varianteProductoId;
@@ -73,6 +77,14 @@ class LineaCotizacionDetalle {
   final double? porcentajeDescuentoAplicado;
   final double? montoDescuentoPromocion;
   final UnidadMedida unidadMedida;
+
+  /// Preset de la promoción por grupo (2x1, 6x5, etc.) vigente en la
+  /// Variante al momento de rescatar — viene del catálogo, no de
+  /// LineaVenta (que solo guarda el Monto ya calculado), para que el
+  /// carrito rescatado pueda mostrar la misma etiqueta ("2x1 aplicado")
+  /// que se ve al agregar la línea en vivo, en vez de un texto genérico.
+  final int? cantidadPorGrupoPromocion;
+  final double? porcentajeDescuentoUnidadPromocion;
 }
 
 /// Espejo de CotizacionDetalle — detalle completo para rehidratar el

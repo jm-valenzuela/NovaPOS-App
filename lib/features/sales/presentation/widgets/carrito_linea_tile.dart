@@ -137,7 +137,7 @@ class CarritoLineaTile extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      'Promoción aplicada (-${MonedaFormatter.formatear(linea.montoDescuentoPromocionHistorico!)})',
+                      _etiquetaPromocionHistorica(linea),
                       style: const TextStyle(color: PosColors.stockOk, fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   )
@@ -175,3 +175,19 @@ class CarritoLineaTile extends StatelessWidget {
 
 String _formatearPorcentaje(double porcentaje) =>
     porcentaje.truncateToDouble() == porcentaje ? porcentaje.toInt().toString() : porcentaje.toString();
+
+/// Al rescatar, el preset (2x1, 4x3, etc.) viaja resuelto desde la
+/// Variante (ver LineaCotizacionDetalle.CantidadPorGrupoPromocion en el
+/// backend) — si sigue disponible, se muestra la misma etiqueta que en
+/// una línea en vivo, en vez del texto genérico "Promoción aplicada".
+/// El preset puede faltar si la Variante fue desactivada o cambió de
+/// promoción desde que se guardó la Cotización — ahí sí queda el texto
+/// genérico, con el Monto histórico real (nunca el preset actual).
+String _etiquetaPromocionHistorica(LineaCarrito linea) {
+  final cantidadPorGrupo = linea.producto.cantidadPorGrupoPromocion;
+  final porcentaje = linea.producto.porcentajeDescuentoUnidadPromocion;
+  if (cantidadPorGrupo != null && porcentaje != null) {
+    return '${PromocionGrupo.etiqueta(cantidadPorGrupo, porcentaje)} aplicado';
+  }
+  return 'Promoción aplicada (-${MonedaFormatter.formatear(linea.montoDescuentoPromocionHistorico!)})';
+}

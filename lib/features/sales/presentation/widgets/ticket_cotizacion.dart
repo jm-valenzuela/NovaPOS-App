@@ -3,6 +3,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../../catalog/domain/models/promocion_grupo.dart';
 import '../../domain/models/cotizacion.dart';
 import '../../domain/models/resumen_venta.dart';
 
@@ -57,8 +58,7 @@ Future<void> imprimirTicketCotizacion(CotizacionDetalle cotizacion) {
                   pw.Text('${_formatearCantidad(linea.porcentajeDescuentoAplicado!)}% dto. por volumen aplicado',
                       style: const pw.TextStyle(fontSize: 7, color: PdfColors.green700))
                 else if (linea.montoDescuentoPromocion != null)
-                  pw.Text('Promoción aplicada (-${MonedaFormatter.formatear(linea.montoDescuentoPromocion!)})',
-                      style: const pw.TextStyle(fontSize: 7, color: PdfColors.green700)),
+                  pw.Text(_etiquetaPromocion(linea), style: const pw.TextStyle(fontSize: 7, color: PdfColors.green700)),
                 pw.SizedBox(height: 4),
               ],
               pw.Divider(),
@@ -101,3 +101,15 @@ pw.Widget _filaResumen(String etiqueta, double monto, {bool negrita = false}) {
 }
 
 String _formatearCantidad(double cantidad) => cantidad.truncateToDouble() == cantidad ? cantidad.toInt().toString() : cantidad.toString();
+
+/// Mismo criterio que _etiquetaPromocionHistorica en CarritoLineaTile — si
+/// el preset (2x1, 4x3, etc.) sigue disponible, se imprime la misma
+/// etiqueta que se ve en el carrito, en vez del texto genérico.
+String _etiquetaPromocion(LineaCotizacionDetalle linea) {
+  final cantidadPorGrupo = linea.cantidadPorGrupoPromocion;
+  final porcentaje = linea.porcentajeDescuentoUnidadPromocion;
+  if (cantidadPorGrupo != null && porcentaje != null) {
+    return '${PromocionGrupo.etiqueta(cantidadPorGrupo, porcentaje)} aplicado';
+  }
+  return 'Promoción aplicada (-${MonedaFormatter.formatear(linea.montoDescuentoPromocion!)})';
+}
