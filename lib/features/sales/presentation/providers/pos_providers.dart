@@ -533,10 +533,14 @@ class PosCartController extends StateNotifier<PosCartState> {
   /// líneas, con el carrito ya bloqueado (ventaId asignado) — igual que
   /// cualquier Venta ya persistida, no se puede seguir agregando/quitando
   /// líneas localmente (ver carritoBloqueado). El precio de cada línea es
-  /// el subtotal ya cotizado dividido por la cantidad (no el precio de
-  /// lista actual ni las reglas de descuento por volumen/promoción, que
-  /// no viajan en CotizacionDetalle), para que el Total mostrado coincida
-  /// exactamente con lo impreso al guardar la Cotización.
+  /// el precioUnitario real guardado en la Cotización (no el precio de
+  /// lista actual, que puede haber cambiado desde entonces) — antes se
+  /// usaba subtotal/cantidad, un promedio ya rebajado que mostraba, ej.,
+  /// "$34.493" para un producto de $45.990 con "4x3" aplicado (bug real,
+  /// reportado tras comparar el carrito rescatado contra el ticket
+  /// impreso). LineaCarrito.subtotal ahora aplica el descuento histórico
+  /// directamente sobre este precio real, así que el Total sigue
+  /// coincidiendo exactamente con lo impreso al guardar.
   void cargarCotizacion(CotizacionDetalle detalle) {
     final lineas = detalle.lineas
         .map((linea) => LineaCarrito(
@@ -546,7 +550,7 @@ class PosCartController extends StateNotifier<PosCartState> {
                 nombreProducto: linea.nombreProducto,
                 sku: linea.sku,
                 codigoBarras: null,
-                precioVenta: linea.subtotal / linea.cantidad,
+                precioVenta: linea.precioUnitario,
                 unidadMedida: 0,
               ),
               cantidad: linea.cantidad,

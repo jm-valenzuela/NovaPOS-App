@@ -734,6 +734,56 @@ void main() {
     expect(find.text('5% dto. por volumen aplicado'), findsOneWidget);
   });
 
+  testWidgets('Rescatar una cotización con promoción por grupo muestra el precio unitario real, no el promedio', (tester) async {
+    await pumpPos(tester);
+    fakeSales.cotizacionesARetornar = [
+      CotizacionResumen(
+        ventaId: 'venta-cot-3',
+        numeroCotizacion: 'COT-20260801-003',
+        fechaVenta: DateTime(2026, 8, 1),
+        clienteId: 'cliente-juan',
+        clienteNombre: 'Juan Pérez',
+        cantidadLineas: 1,
+        total: 137970,
+      ),
+    ];
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-cot-3',
+      numeroCotizacion: 'COT-20260801-003',
+      clienteId: 'cliente-juan',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: '76.123.456-0',
+      subtotalLineas: 183960,
+      total: 137970,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+      descuentoGeneralPorcentaje: null,
+      descuentoGeneralMonto: null,
+      lineas: [
+        LineaCotizacionDetalle(
+          varianteProductoId: 'variante-neumatico',
+          nombreProducto: 'Neumático 175/65 R14',
+          sku: 'NEUM-001',
+          cantidad: 4,
+          precioUnitario: 45990,
+          subtotal: 137970,
+          montoDescuentoPromocion: 45990,
+        ),
+      ],
+    );
+
+    await abrirMenuCotizacion(tester);
+    await tester.tap(find.byKey(const Key('cotizacionRescatarItem')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cotizacionRescatable_venta-cot-3')));
+    await tester.pumpAndSettle();
+
+    // Antes de este fix se mostraba "x $34.493" (subtotal/cantidad, el
+    // promedio ya rebajado) en vez del precio real guardado en la Cotización.
+    expect(find.textContaining(r'x $45.990'), findsOneWidget);
+    expect(find.text('Promoción aplicada (-\$45.990)'), findsOneWidget);
+    expect(textoDe(tester, const Key('posTotal')), r'$137.970');
+  });
+
   testWidgets('Rescatar con el carrito no vacío pide confirmar antes de reemplazarlo', (tester) async {
     await pumpPos(tester);
     fakeCatalog.resultadosARetornar = [productoCocaCola];

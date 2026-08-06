@@ -59,7 +59,20 @@ class LineaCarrito {
 
   double get subtotalSinDescuento => producto.precioVenta * cantidad;
 
+  /// Si vienen campos históricos (línea rescatada de una Cotización), el
+  /// descuento real ya ocurrido manda sobre cualquier regla vigente del
+  /// catálogo — es lo que efectivamente se cobró, no una estimación nueva.
+  /// Sin esto, mostrar producto.precioVenta como el precio unitario real
+  /// (en vez del promedio subtotal/cantidad que se usaba antes) habría
+  /// duplicado el descuento fuera del Subtotal, inflando el Total.
   double get subtotal {
+    if (porcentajeDescuentoVolumenHistorico != null) {
+      return subtotalSinDescuento * (1 - porcentajeDescuentoVolumenHistorico! / 100);
+    }
+    if (montoDescuentoPromocionHistorico != null) {
+      return subtotalSinDescuento - montoDescuentoPromocionHistorico!;
+    }
+
     final porcentajeVolumen = producto.porcentajeDescuentoVolumen;
     final subtotalConDescuentoVolumen = (aplicaDescuentoVolumen && porcentajeVolumen != null)
         ? subtotalSinDescuento * (1 - porcentajeVolumen / 100)
