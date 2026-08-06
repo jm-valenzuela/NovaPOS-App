@@ -689,6 +689,85 @@ void main() {
     expect(textoDe(tester, const Key('posTotal')), r'$3.000');
   });
 
+  testWidgets('El diálogo de rescatar filtra por número de cotización', (tester) async {
+    await pumpPos(tester);
+    fakeSales.cotizacionesARetornar = [
+      CotizacionResumen(
+        ventaId: 'venta-cot-1',
+        numeroCotizacion: 'COT-20260801-001',
+        fechaVenta: DateTime(2026, 8, 1),
+        clienteId: 'cliente-juan',
+        clienteNombre: 'Juan Pérez',
+        cantidadLineas: 1,
+        total: 3000,
+      ),
+      CotizacionResumen(
+        ventaId: 'venta-cot-2',
+        numeroCotizacion: 'COT-20260802-005',
+        fechaVenta: DateTime(2026, 8, 2),
+        clienteId: 'cliente-maria',
+        clienteNombre: 'María González',
+        cantidadLineas: 1,
+        total: 5000,
+      ),
+    ];
+
+    await abrirMenuCotizacion(tester);
+    await tester.tap(find.byKey(const Key('cotizacionRescatarItem')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('COT-20260801-001 · Juan Pérez'), findsOneWidget);
+    expect(find.text('COT-20260802-005 · María González'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('cotizacionBuscarNumero')), '005');
+    await tester.pumpAndSettle();
+
+    expect(find.text('COT-20260801-001 · Juan Pérez'), findsNothing);
+    expect(find.text('COT-20260802-005 · María González'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('cotizacionBuscarNumero')), 'no-existe');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ninguna cotización coincide con la búsqueda.'), findsOneWidget);
+  });
+
+  testWidgets('El diálogo de rescatar muestra como máximo 10 cotizaciones, con o sin búsqueda', (tester) async {
+    await pumpPos(tester);
+    fakeSales.cotizacionesARetornar = List.generate(
+      15,
+      (i) => CotizacionResumen(
+        ventaId: 'venta-cot-$i',
+        numeroCotizacion: 'COT-20260806-${(i + 1).toString().padLeft(3, '0')}',
+        fechaVenta: DateTime(2026, 8, 6),
+        clienteId: 'cliente-generico',
+        clienteNombre: 'Cliente Genérico',
+        cantidadLineas: 1,
+        total: 1000,
+      ),
+    );
+
+    await abrirMenuCotizacion(tester);
+    await tester.tap(find.byKey(const Key('cotizacionRescatarItem')));
+    await tester.pumpAndSettle();
+
+    // El ListView es perezoso (solo construye lo visible), así que se
+    // desplaza hasta el final para confirmar que la última permitida
+    // (010, décima más reciente) existe, pero la 011 y la 015 no — si el
+    // tope no funcionara, seguirían apareciendo al hacer scroll.
+    final lista = find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable));
+    await tester.scrollUntilVisible(find.textContaining('COT-20260806-010'), 300, scrollable: lista);
+    expect(find.textContaining('COT-20260806-010'), findsOneWidget);
+    expect(find.textContaining('COT-20260806-011'), findsNothing);
+    expect(find.textContaining('COT-20260806-015'), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('cotizacionBuscarNumero')), 'COT-20260806');
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.textContaining('COT-20260806-010'), 300, scrollable: lista);
+
+    expect(find.textContaining('COT-20260806-010'), findsOneWidget);
+    expect(find.textContaining('COT-20260806-011'), findsNothing);
+  });
+
   testWidgets('Rescatar una cotización con descuento por volumen ya aplicado muestra la etiqueta en el carrito', (tester) async {
     await pumpPos(tester);
     fakeSales.cotizacionesARetornar = [
