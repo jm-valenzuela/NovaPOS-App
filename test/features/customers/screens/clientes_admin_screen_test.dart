@@ -73,4 +73,31 @@ void main() {
     final campoRut = tester.widget<TextField>(find.byKey(const Key('clienteRut')));
     expect(campoRut.enabled, isTrue);
   });
+
+  testWidgets('Alta sin RUT muestra error y no crea el Cliente', (tester) async {
+    await pumpClientes(tester);
+
+    await tester.tap(find.byKey(const Key('nuevoClienteBoton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('clienteNombre')), 'Empresa Nueva SpA');
+    await tester.tap(find.byKey(const Key('clienteGuardar')));
+    await tester.pump();
+
+    expect(find.text('El RUT es obligatorio.'), findsOneWidget);
+    expect(fakeCustomer.crearLlamado, isFalse);
+  });
+
+  testWidgets('Alta con RUT válido crea el Cliente', (tester) async {
+    await pumpClientes(tester);
+
+    await tester.tap(find.byKey(const Key('nuevoClienteBoton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('clienteRut')), '76.543.210-3');
+    await tester.enterText(find.byKey(const Key('clienteNombre')), 'Empresa Nueva SpA');
+    await tester.tap(find.byKey(const Key('clienteGuardar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCustomer.crearLlamado, isTrue);
+    expect(fakeCustomer.ultimoRutCreado, '76543210-3');
+  });
 }

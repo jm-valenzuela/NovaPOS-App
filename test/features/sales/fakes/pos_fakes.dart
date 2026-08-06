@@ -193,6 +193,8 @@ class FakeCustomerRepository implements CustomerRepository {
   String? ultimoTexto;
   String clienteIdARetornar = 'cliente-nuevo';
   String? ultimoClienteIdActualizado;
+  String? ultimoRutCreado;
+  bool crearLlamado = false;
 
   @override
   Future<List<ClienteResumen>> buscarClientes({String? texto}) async {
@@ -208,8 +210,11 @@ class FakeCustomerRepository implements CustomerRepository {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
-  }) async =>
-      clienteIdARetornar;
+  }) async {
+    crearLlamado = true;
+    ultimoRutCreado = rut;
+    return clienteIdARetornar;
+  }
 
   @override
   Future<void> actualizarCliente({

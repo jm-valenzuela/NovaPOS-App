@@ -5,9 +5,10 @@ import '../../../../core/utils/rut_validator.dart';
 import '../../domain/models/cliente_resumen.dart';
 import '../providers/customer_admin_providers.dart';
 
-/// Un solo diálogo para crear y editar — a diferencia de Proveedor, el Rut
-/// del Cliente es opcional (ver Cliente.cs: ventas de mostrador sin
-/// comprador identificado), y tampoco es editable una vez creado.
+/// Un solo diálogo para crear y editar. El Rut es obligatorio al registrar un
+/// Cliente aquí (a diferencia del dominio, que lo permite nulo solo para el
+/// Cliente Genérico sembrado automáticamente en UC-01 — ver Cliente.cs), y no
+/// es editable una vez creado.
 class ClienteFormDialog extends ConsumerStatefulWidget {
   const ClienteFormDialog({super.key, this.existente});
 
@@ -53,7 +54,7 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
               key: const Key('clienteRut'),
               controller: _rutController,
               enabled: !_esEdicion,
-              decoration: const InputDecoration(labelText: 'RUT (opcional)'),
+              decoration: const InputDecoration(labelText: 'RUT'),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -99,9 +100,15 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
     }
 
     final rutTexto = _rutController.text.trim();
-    if (!_esEdicion && rutTexto.isNotEmpty && !RutValidator.esValido(rutTexto)) {
-      setState(() => _error = 'El RUT no es válido.');
-      return;
+    if (!_esEdicion) {
+      if (rutTexto.isEmpty) {
+        setState(() => _error = 'El RUT es obligatorio.');
+        return;
+      }
+      if (!RutValidator.esValido(rutTexto)) {
+        setState(() => _error = 'El RUT no es válido.');
+        return;
+      }
     }
 
     // Cupo de crédito y plazo de pago no se editan desde este formulario — requieren
@@ -129,7 +136,7 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
             )
         : await ref.read(clientesAdminProvider.notifier).crear(
               nombre: nombre,
-              rut: rutTexto.isEmpty ? null : RutValidator.normalizarConGuion(rutTexto),
+              rut: RutValidator.normalizarConGuion(rutTexto),
               email: email,
               telefono: telefono,
               cupoCredito: cupoCredito,
