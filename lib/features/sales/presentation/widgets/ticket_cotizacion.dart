@@ -15,6 +15,15 @@ import '../../domain/models/resumen_venta.dart';
 Future<void> imprimirTicketCotizacion(CotizacionDetalle cotizacion) {
   final resumen = ResumenVenta.calcular(cotizacion.total);
 
+  // Monto real del descuento general aplicado — subtotalLineas siempre es el
+  // total sin descuento y total ya lo tiene restado (RecalcularTotal en el
+  // backend), así que la diferencia es el monto exacto, sin tener que volver
+  // a calcular porcentaje/monto fijo acá. 0 si nunca se autorizó ninguno.
+  final montoDescuentoAplicado = cotizacion.subtotalLineas - cotizacion.total;
+  final etiquetaDescuento = cotizacion.descuentoGeneralPorcentaje != null
+      ? 'Descuento (${_formatearCantidad(cotizacion.descuentoGeneralPorcentaje!)}%)'
+      : 'Descuento';
+
   return Printing.layoutPdf(
     name: cotizacion.numeroCotizacion ?? 'Cotizacion-${cotizacion.ventaId.substring(0, 8)}',
     format: const PdfPageFormat(8 * PdfPageFormat.cm, double.infinity, marginAll: 4 * PdfPageFormat.mm),
@@ -44,9 +53,26 @@ Future<void> imprimirTicketCotizacion(CotizacionDetalle cotizacion) {
                     pw.Text(MonedaFormatter.formatear(linea.subtotal), style: const pw.TextStyle(fontSize: 9)),
                   ],
                 ),
+                if (linea.porcentajeDescuentoAplicado != null)
+                  pw.Text('${_formatearCantidad(linea.porcentajeDescuentoAplicado!)}% dto. por volumen aplicado',
+                      style: const pw.TextStyle(fontSize: 7, color: PdfColors.green700))
+                else if (linea.montoDescuentoPromocion != null)
+                  pw.Text('Promoción aplicada (-${MonedaFormatter.formatear(linea.montoDescuentoPromocion!)})',
+                      style: const pw.TextStyle(fontSize: 7, color: PdfColors.green700)),
                 pw.SizedBox(height: 4),
               ],
               pw.Divider(),
+              if (montoDescuentoAplicado > 0) ...[
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(etiquetaDescuento, style: const pw.TextStyle(fontSize: 9, color: PdfColors.green700)),
+                    pw.Text('-${MonedaFormatter.formatear(montoDescuentoAplicado)}',
+                        style: const pw.TextStyle(fontSize: 9, color: PdfColors.green700)),
+                  ],
+                ),
+                pw.SizedBox(height: 2),
+              ],
               _filaResumen('Subtotal', resumen.neto),
               _filaResumen('IVA (19%)', resumen.iva),
               pw.SizedBox(height: 2),
