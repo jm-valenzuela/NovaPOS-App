@@ -54,8 +54,10 @@ class ProductoResultadoTile extends StatelessWidget {
                       MonedaFormatter.formatear(producto.precioVenta),
                       style: const TextStyle(
                         fontSize: 12,
-                        color: PosColors.precioTachado,
+                        color: PosColors.textMuted,
                         decoration: TextDecoration.lineThrough,
+                        decorationColor: PosColors.precioTachado,
+                        decorationThickness: 2,
                       ),
                     ),
                     Text(

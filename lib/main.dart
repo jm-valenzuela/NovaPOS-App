@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/printing/registrar_impresion_web.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/update/widgets/banner_actualizacion.dart';
 
 void main() {
   registrarImpresionWeb();
@@ -22,6 +23,7 @@ class NovaPosApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.claro,
       routerConfig: router,
+      builder: (context, child) => BannerActualizacion(child: child ?? const SizedBox.shrink()),
     );
   }
 }

@@ -76,9 +76,11 @@ class CarritoLineaTile extends StatelessWidget {
                           Text(
                             MonedaFormatter.formatear(linea.producto.precioVenta),
                             style: const TextStyle(
-                              color: PosColors.precioTachado,
+                              color: PosColors.textMuted,
                               fontSize: 11,
                               decoration: TextDecoration.lineThrough,
+                              decorationColor: PosColors.precioTachado,
+                              decorationThickness: 2,
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -135,9 +137,11 @@ class CarritoLineaTile extends StatelessWidget {
                         Text(
                           MonedaFormatter.formatear(linea.producto.precioVenta),
                           style: const TextStyle(
-                            color: PosColors.precioTachado,
+                            color: PosColors.textMuted,
                             fontSize: 11,
                             decoration: TextDecoration.lineThrough,
+                            decorationColor: PosColors.precioTachado,
+                            decorationThickness: 2,
                           ),
                         ),
                         const SizedBox(width: 4),
