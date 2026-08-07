@@ -201,6 +201,10 @@ class FakeCustomerRepository implements CustomerRepository {
   String? ultimoRutAsignado;
   String? ultimoClienteIdConRutAsignado;
   bool crearLlamado = false;
+  String? ultimoGiro;
+  String? ultimaDireccion;
+  String? ultimaComuna;
+  String? ultimaCiudad;
 
   @override
   Future<List<ClienteResumen>> buscarClientes({String? texto}) async {
@@ -216,9 +220,17 @@ class FakeCustomerRepository implements CustomerRepository {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
+    String? giro,
+    String? direccion,
+    String? comuna,
+    String? ciudad,
   }) async {
     crearLlamado = true;
     ultimoRutCreado = rut;
+    ultimoGiro = giro;
+    ultimaDireccion = direccion;
+    ultimaComuna = comuna;
+    ultimaCiudad = ciudad;
     return clienteIdARetornar;
   }
 
@@ -230,8 +242,16 @@ class FakeCustomerRepository implements CustomerRepository {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
+    String? giro,
+    String? direccion,
+    String? comuna,
+    String? ciudad,
   }) async {
     ultimoClienteIdActualizado = clienteId;
+    ultimoGiro = giro;
+    ultimaDireccion = direccion;
+    ultimaComuna = comuna;
+    ultimaCiudad = ciudad;
   }
 
   @override

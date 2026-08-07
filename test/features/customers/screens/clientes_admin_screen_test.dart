@@ -111,6 +111,71 @@ void main() {
     expect(fakeCustomer.ultimoRutCreado, '76543210-3');
   });
 
+  testWidgets('Alta con datos de Factura los envía junto con el Cliente', (tester) async {
+    await pumpClientes(tester);
+
+    await tester.tap(find.byKey(const Key('nuevoClienteBoton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('clienteRut')), '76.543.210-3');
+    await tester.enterText(find.byKey(const Key('clienteNombre')), 'Empresa Nueva SpA');
+    await tester.enterText(find.byKey(const Key('clienteGiro')), 'Venta al por menor');
+    await tester.enterText(find.byKey(const Key('clienteDireccion')), 'Av. Siempre Viva 123');
+    await tester.enterText(find.byKey(const Key('clienteComuna')), 'Providencia');
+    await tester.enterText(find.byKey(const Key('clienteCiudad')), 'Santiago');
+    await tester.tap(find.byKey(const Key('clienteGuardar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCustomer.crearLlamado, isTrue);
+    expect(fakeCustomer.ultimoGiro, 'Venta al por menor');
+    expect(fakeCustomer.ultimaDireccion, 'Av. Siempre Viva 123');
+    expect(fakeCustomer.ultimaComuna, 'Providencia');
+    expect(fakeCustomer.ultimaCiudad, 'Santiago');
+  });
+
+  testWidgets('Alta sin datos de Factura los envía como null (son opcionales)', (tester) async {
+    await pumpClientes(tester);
+
+    await tester.tap(find.byKey(const Key('nuevoClienteBoton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('clienteRut')), '76.543.210-3');
+    await tester.enterText(find.byKey(const Key('clienteNombre')), 'Empresa Nueva SpA');
+    await tester.tap(find.byKey(const Key('clienteGuardar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCustomer.crearLlamado, isTrue);
+    expect(fakeCustomer.ultimoGiro, isNull);
+    expect(fakeCustomer.ultimaDireccion, isNull);
+  });
+
+  testWidgets('Editar un Cliente precarga los datos de Factura ya guardados', (tester) async {
+    const clienteConFactura = ClienteResumen(
+      id: 'cliente-3',
+      rut: '12.345.678-5',
+      nombre: 'Factura SpA',
+      email: null,
+      telefono: null,
+      giro: 'Venta al por menor',
+      direccion: 'Av. Siempre Viva 123',
+      comuna: 'Providencia',
+      ciudad: 'Santiago',
+    );
+    fakeCustomer = FakeCustomerRepository()..resultadosARetornar = [clienteConFactura];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [customerRepositoryProvider.overrideWithValue(fakeCustomer)],
+      child: const MaterialApp(home: ClientesAdminScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.text('Factura SpA'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(find.byKey(const Key('clienteGiro'))).controller?.text, 'Venta al por menor');
+    expect(tester.widget<TextField>(find.byKey(const Key('clienteDireccion'))).controller?.text, 'Av. Siempre Viva 123');
+    expect(tester.widget<TextField>(find.byKey(const Key('clienteComuna'))).controller?.text, 'Providencia');
+    expect(tester.widget<TextField>(find.byKey(const Key('clienteCiudad'))).controller?.text, 'Santiago');
+  });
+
   testWidgets('Editar un Cliente sin RUT habilita el campo para completarlo', (tester) async {
     fakeCustomer = FakeCustomerRepository()..resultadosARetornar = [_clienteSinRut];
     await tester.pumpWidget(ProviderScope(

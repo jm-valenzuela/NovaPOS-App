@@ -50,9 +50,24 @@ class ClientesAdminController extends StateNotifier<ClientesAdminState> {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
+    String? giro,
+    String? direccion,
+    String? comuna,
+    String? ciudad,
   }) async {
     try {
-      await _repository.crearCliente(nombre: nombre, rut: rut, email: email, telefono: telefono, cupoCredito: cupoCredito, plazoPagoDias: plazoPagoDias);
+      await _repository.crearCliente(
+        nombre: nombre,
+        rut: rut,
+        email: email,
+        telefono: telefono,
+        cupoCredito: cupoCredito,
+        plazoPagoDias: plazoPagoDias,
+        giro: giro,
+        direccion: direccion,
+        comuna: comuna,
+        ciudad: ciudad,
+      );
       await cargar();
       return true;
     } catch (e) {
@@ -68,10 +83,24 @@ class ClientesAdminController extends StateNotifier<ClientesAdminState> {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
+    String? giro,
+    String? direccion,
+    String? comuna,
+    String? ciudad,
   }) async {
     try {
       await _repository.actualizarCliente(
-          clienteId: clienteId, nombre: nombre, email: email, telefono: telefono, cupoCredito: cupoCredito, plazoPagoDias: plazoPagoDias);
+        clienteId: clienteId,
+        nombre: nombre,
+        email: email,
+        telefono: telefono,
+        cupoCredito: cupoCredito,
+        plazoPagoDias: plazoPagoDias,
+        giro: giro,
+        direccion: direccion,
+        comuna: comuna,
+        ciudad: ciudad,
+      );
       await cargar();
       return true;
     } catch (e) {

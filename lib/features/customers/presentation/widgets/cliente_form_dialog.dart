@@ -25,6 +25,10 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
   late final _nombreController = TextEditingController(text: widget.existente?.nombre ?? '');
   late final _emailController = TextEditingController(text: widget.existente?.email ?? '');
   late final _telefonoController = TextEditingController(text: widget.existente?.telefono ?? '');
+  late final _giroController = TextEditingController(text: widget.existente?.giro ?? '');
+  late final _direccionController = TextEditingController(text: widget.existente?.direccion ?? '');
+  late final _comunaController = TextEditingController(text: widget.existente?.comuna ?? '');
+  late final _ciudadController = TextEditingController(text: widget.existente?.ciudad ?? '');
   bool _guardando = false;
   String? _error;
 
@@ -38,6 +42,10 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
     _nombreController.dispose();
     _emailController.dispose();
     _telefonoController.dispose();
+    _giroController.dispose();
+    _direccionController.dispose();
+    _comunaController.dispose();
+    _ciudadController.dispose();
     super.dispose();
   }
 
@@ -79,6 +87,48 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
               controller: _telefonoController,
               decoration: const InputDecoration(labelText: 'Teléfono (opcional)'),
               keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 4),
+            Text('Datos para Factura (opcional)', style: Theme.of(context).textTheme.labelLarge),
+            const Padding(
+              padding: EdgeInsets.only(top: 2, bottom: 8),
+              child: Text(
+                'Solo necesarios si este Cliente va a recibir una Factura en vez de Boleta.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+            TextField(
+              key: const Key('clienteGiro'),
+              controller: _giroController,
+              decoration: const InputDecoration(labelText: 'Giro'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('clienteDireccion'),
+              controller: _direccionController,
+              decoration: const InputDecoration(labelText: 'Dirección'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('clienteComuna'),
+                    controller: _comunaController,
+                    decoration: const InputDecoration(labelText: 'Comuna'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    key: const Key('clienteCiudad'),
+                    controller: _ciudadController,
+                    decoration: const InputDecoration(labelText: 'Ciudad'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -126,6 +176,10 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
     final plazoPagoDias = widget.existente?.plazoPagoDias ?? 0;
     final email = _emailController.text.trim().isEmpty ? null : _emailController.text.trim();
     final telefono = _telefonoController.text.trim().isEmpty ? null : _telefonoController.text.trim();
+    final giro = _giroController.text.trim().isEmpty ? null : _giroController.text.trim();
+    final direccion = _direccionController.text.trim().isEmpty ? null : _direccionController.text.trim();
+    final comuna = _comunaController.text.trim().isEmpty ? null : _comunaController.text.trim();
+    final ciudad = _ciudadController.text.trim().isEmpty ? null : _ciudadController.text.trim();
 
     setState(() {
       _guardando = true;
@@ -141,6 +195,10 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
             telefono: telefono,
             cupoCredito: cupoCredito,
             plazoPagoDias: plazoPagoDias,
+            giro: giro,
+            direccion: direccion,
+            comuna: comuna,
+            ciudad: ciudad,
           );
       if (exito && _rutFaltante && rutTexto.isNotEmpty) {
         exito = await ref.read(clientesAdminProvider.notifier).asignarRut(
@@ -156,6 +214,10 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
             telefono: telefono,
             cupoCredito: cupoCredito,
             plazoPagoDias: plazoPagoDias,
+            giro: giro,
+            direccion: direccion,
+            comuna: comuna,
+            ciudad: ciudad,
           );
     }
 

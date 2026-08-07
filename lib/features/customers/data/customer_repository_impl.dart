@@ -18,8 +18,23 @@ class CustomerRepositoryImpl implements CustomerRepository {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
+    String? giro,
+    String? direccion,
+    String? comuna,
+    String? ciudad,
   }) =>
-      _api.crearCliente(nombre: nombre, rut: rut, email: email, telefono: telefono, cupoCredito: cupoCredito, plazoPagoDias: plazoPagoDias);
+      _api.crearCliente(
+        nombre: nombre,
+        rut: rut,
+        email: email,
+        telefono: telefono,
+        cupoCredito: cupoCredito,
+        plazoPagoDias: plazoPagoDias,
+        giro: giro,
+        direccion: direccion,
+        comuna: comuna,
+        ciudad: ciudad,
+      );
 
   @override
   Future<void> actualizarCliente({
@@ -29,9 +44,23 @@ class CustomerRepositoryImpl implements CustomerRepository {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
+    String? giro,
+    String? direccion,
+    String? comuna,
+    String? ciudad,
   }) =>
       _api.actualizarCliente(
-          clienteId: clienteId, nombre: nombre, email: email, telefono: telefono, cupoCredito: cupoCredito, plazoPagoDias: plazoPagoDias);
+        clienteId: clienteId,
+        nombre: nombre,
+        email: email,
+        telefono: telefono,
+        cupoCredito: cupoCredito,
+        plazoPagoDias: plazoPagoDias,
+        giro: giro,
+        direccion: direccion,
+        comuna: comuna,
+        ciudad: ciudad,
+      );
 
   @override
   Future<void> asignarRutCliente({required String clienteId, required String rut}) =>

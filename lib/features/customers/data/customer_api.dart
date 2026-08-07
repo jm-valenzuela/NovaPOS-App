@@ -27,6 +27,10 @@ class CustomerApi {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
+    String? giro,
+    String? direccion,
+    String? comuna,
+    String? ciudad,
   }) async {
     try {
       final respuesta = await _client.dio.post('/clientes', data: {
@@ -36,6 +40,10 @@ class CustomerApi {
         'telefono': telefono,
         'cupoCredito': cupoCredito,
         'plazoPagoDias': plazoPagoDias,
+        'giro': giro,
+        'direccion': direccion,
+        'comuna': comuna,
+        'ciudad': ciudad,
       });
       return respuesta.data['id'] as String;
     } on DioException catch (e) {
@@ -50,6 +58,10 @@ class CustomerApi {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
+    String? giro,
+    String? direccion,
+    String? comuna,
+    String? ciudad,
   }) async {
     try {
       await _client.dio.put('/clientes/$clienteId', data: {
@@ -58,6 +70,10 @@ class CustomerApi {
         'telefono': telefono,
         'cupoCredito': cupoCredito,
         'plazoPagoDias': plazoPagoDias,
+        'giro': giro,
+        'direccion': direccion,
+        'comuna': comuna,
+        'ciudad': ciudad,
       });
     } on DioException catch (e) {
       ApiClient.lanzarError(e);

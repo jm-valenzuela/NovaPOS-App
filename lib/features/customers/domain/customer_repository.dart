@@ -10,6 +10,10 @@ abstract class CustomerRepository {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
+    String? giro,
+    String? direccion,
+    String? comuna,
+    String? ciudad,
   });
 
   Future<void> actualizarCliente({
@@ -19,6 +23,10 @@ abstract class CustomerRepository {
     String? telefono,
     double cupoCredito = 0,
     int plazoPagoDias = 0,
+    String? giro,
+    String? direccion,
+    String? comuna,
+    String? ciudad,
   });
 
   /// Completa el Rut de un Cliente que quedó sin uno (ej. creado antes de que el alta lo exigiera) — falla si ya tiene uno.
