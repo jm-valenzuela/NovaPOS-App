@@ -501,6 +501,8 @@ void main() {
 
     expect(textoDe(tester, const Key('posTotal')), r'$399.990');
     expect(find.text('Oferta aplicada'), findsOneWidget);
+    expect(find.text(r'$500.000'), findsWidgets);
+    expect(find.text(r'x $399.990'), findsOneWidget);
   });
 
   testWidgets('Solicitar un descuento crea la Venta, agrega las líneas y muestra el aviso de pendiente', (tester) async {

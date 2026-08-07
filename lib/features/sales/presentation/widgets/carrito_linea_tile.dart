@@ -72,9 +72,24 @@ class CarritoLineaTile extends StatelessWidget {
                         ),
                         const Icon(Icons.edit, size: 13, color: PosColors.accent),
                         const SizedBox(width: 4),
+                        if (linea.producto.ofertaVigente) ...[
+                          Text(
+                            MonedaFormatter.formatear(linea.producto.precioVenta),
+                            style: const TextStyle(
+                              color: PosColors.textMuted,
+                              fontSize: 11,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
                         Text(
                           'x ${MonedaFormatter.formatear(linea.producto.precioEfectivo)}/${unidad.abreviatura}',
-                          style: const TextStyle(color: PosColors.textMuted, fontSize: 12),
+                          style: TextStyle(
+                            color: linea.producto.ofertaVigente ? PosColors.accent : PosColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: linea.producto.ofertaVigente ? FontWeight.w600 : FontWeight.normal,
+                          ),
                         ),
                       ],
                     ),
@@ -116,10 +131,25 @@ class CarritoLineaTile extends StatelessWidget {
                         onPressed: bloqueado ? null : () => onCambiarCantidad(linea.cantidad + 1),
                       ),
                       const SizedBox(width: 4),
+                      if (linea.producto.ofertaVigente) ...[
+                        Text(
+                          MonedaFormatter.formatear(linea.producto.precioVenta),
+                          style: const TextStyle(
+                            color: PosColors.textMuted,
+                            fontSize: 11,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       Flexible(
                         child: Text(
                           'x ${MonedaFormatter.formatear(linea.producto.precioEfectivo)}',
-                          style: const TextStyle(color: PosColors.textMuted, fontSize: 12),
+                          style: TextStyle(
+                            color: linea.producto.ofertaVigente ? PosColors.accent : PosColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: linea.producto.ofertaVigente ? FontWeight.w600 : FontWeight.normal,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
