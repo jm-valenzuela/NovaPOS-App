@@ -36,6 +36,13 @@ class CarritoLineaTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unidad = linea.producto.unidad;
+    // Vigente (línea en vivo) u ofertaAplicadaHistorico (línea rescatada de
+    // una Cotización, ver PosCartController.cargarCotizacion) — en ambos
+    // casos se resalta el precio en acento y se tacha el precio normal si
+    // se conoce (precioNormalHistorico puede venir null si la Variante fue
+    // desactivada desde que se guardó la Cotización).
+    final muestraOferta = linea.producto.ofertaVigente || linea.ofertaAplicadaHistorico;
+    final precioTachado = linea.producto.ofertaVigente ? linea.producto.precioVenta : linea.precioNormalHistorico;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -72,9 +79,9 @@ class CarritoLineaTile extends StatelessWidget {
                         ),
                         const Icon(Icons.edit, size: 13, color: PosColors.accent),
                         const SizedBox(width: 4),
-                        if (linea.producto.ofertaVigente) ...[
+                        if (precioTachado != null) ...[
                           Text(
-                            MonedaFormatter.formatear(linea.producto.precioVenta),
+                            MonedaFormatter.formatear(precioTachado),
                             style: const TextStyle(
                               color: PosColors.textMuted,
                               fontSize: 11,
@@ -88,9 +95,9 @@ class CarritoLineaTile extends StatelessWidget {
                         Text(
                           'x ${MonedaFormatter.formatear(linea.producto.precioEfectivo)}/${unidad.abreviatura}',
                           style: TextStyle(
-                            color: linea.producto.ofertaVigente ? PosColors.accent : PosColors.textMuted,
+                            color: muestraOferta ? PosColors.accent : PosColors.textMuted,
                             fontSize: 12,
-                            fontWeight: linea.producto.ofertaVigente ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: muestraOferta ? FontWeight.w600 : FontWeight.normal,
                           ),
                         ),
                       ],
@@ -133,9 +140,9 @@ class CarritoLineaTile extends StatelessWidget {
                         onPressed: bloqueado ? null : () => onCambiarCantidad(linea.cantidad + 1),
                       ),
                       const SizedBox(width: 4),
-                      if (linea.producto.ofertaVigente) ...[
+                      if (precioTachado != null) ...[
                         Text(
-                          MonedaFormatter.formatear(linea.producto.precioVenta),
+                          MonedaFormatter.formatear(precioTachado),
                           style: const TextStyle(
                             color: PosColors.textMuted,
                             fontSize: 11,
@@ -150,9 +157,9 @@ class CarritoLineaTile extends StatelessWidget {
                         child: Text(
                           'x ${MonedaFormatter.formatear(linea.producto.precioEfectivo)}',
                           style: TextStyle(
-                            color: linea.producto.ofertaVigente ? PosColors.accent : PosColors.textMuted,
+                            color: muestraOferta ? PosColors.accent : PosColors.textMuted,
                             fontSize: 12,
-                            fontWeight: linea.producto.ofertaVigente ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: muestraOferta ? FontWeight.w600 : FontWeight.normal,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),

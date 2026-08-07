@@ -49,8 +49,21 @@ Future<void> imprimirTicketCotizacion(CotizacionDetalle cotizacion) {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('${_formatearCantidad(linea.cantidad)} x ${MonedaFormatter.formatear(linea.precioUnitario)}',
-                        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                    pw.Row(
+                      children: [
+                        if (linea.precioOferta != null && linea.precioOferta == linea.precioUnitario && linea.precioVenta != null) ...[
+                          pw.Text(MonedaFormatter.formatear(linea.precioVenta!),
+                              style: const pw.TextStyle(
+                                fontSize: 7,
+                                color: PdfColors.grey500,
+                                decoration: pw.TextDecoration.lineThrough,
+                              )),
+                          pw.SizedBox(width: 3),
+                        ],
+                        pw.Text('${_formatearCantidad(linea.cantidad)} x ${MonedaFormatter.formatear(linea.precioUnitario)}',
+                            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                      ],
+                    ),
                     pw.Text(MonedaFormatter.formatear(linea.subtotal), style: const pw.TextStyle(fontSize: 9)),
                   ],
                 ),

@@ -55,6 +55,7 @@ class LineaCotizacionDetalle {
     this.precioOferta,
     this.ofertaDesde,
     this.ofertaHasta,
+    this.precioVenta,
   });
 
   factory LineaCotizacionDetalle.fromJson(Map<String, dynamic> json) => LineaCotizacionDetalle(
@@ -72,6 +73,7 @@ class LineaCotizacionDetalle {
         precioOferta: (json['precioOferta'] as num?)?.toDouble(),
         ofertaDesde: json['ofertaDesde'] == null ? null : DateTime.parse(json['ofertaDesde'] as String),
         ofertaHasta: json['ofertaHasta'] == null ? null : DateTime.parse(json['ofertaHasta'] as String),
+        precioVenta: (json['precioVenta'] as num?)?.toDouble(),
       );
 
   final String varianteProductoId;
@@ -100,6 +102,12 @@ class LineaCotizacionDetalle {
   final double? precioOferta;
   final DateTime? ofertaDesde;
   final DateTime? ofertaHasta;
+
+  /// Precio normal de la Variante (sin Oferta), también vigente del
+  /// catálogo — para mostrar tachado junto al precio efectivo cuando
+  /// `precioOferta == precioUnitario`, mismo criterio que las líneas
+  /// agregadas en vivo (ver `ProductoVendible.precioVenta`).
+  final double? precioVenta;
 }
 
 /// Espejo de CotizacionDetalle — detalle completo para rehidratar el

@@ -563,6 +563,8 @@ class PosCartController extends StateNotifier<PosCartState> {
               porcentajeDescuentoVolumenHistorico: linea.porcentajeDescuentoAplicado,
               montoDescuentoPromocionHistorico: linea.montoDescuentoPromocion,
               ofertaAplicadaHistorico: linea.precioOferta != null && linea.precioOferta == linea.precioUnitario,
+              precioNormalHistorico:
+                  (linea.precioOferta != null && linea.precioOferta == linea.precioUnitario) ? linea.precioVenta : null,
             ))
         .toList();
 

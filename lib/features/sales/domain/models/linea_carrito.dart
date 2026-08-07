@@ -13,6 +13,7 @@ class LineaCarrito {
     this.porcentajeDescuentoVolumenHistorico,
     this.montoDescuentoPromocionHistorico,
     this.ofertaAplicadaHistorico = false,
+    this.precioNormalHistorico,
   });
 
   final ProductoVendible producto;
@@ -35,12 +36,16 @@ class LineaCarrito {
   /// la Variante al rescatar una Cotización — hecho histórico (LineaVenta.
   /// PrecioUnitario no distingue si vino de una Oferta o del precio
   /// normal), no la vigencia actual de la Oferta (que puede haber
-  /// cambiado o vencido desde que se guardó). Sin precio "normal" que
-  /// mostrar tachado en este caso (LineaCotizacionDetalle no lo trae),
-  /// solo el indicador de texto — mismo criterio que
-  /// montoDescuentoPromocionHistorico, que tampoco reconstruye una
-  /// comparación visual completa.
+  /// cambiado o vencido desde que se guardó).
   final bool ofertaAplicadaHistorico;
+
+  /// Precio normal de la Variante (sin Oferta) al momento de rescatar —
+  /// solo para mostrarlo tachado junto al precio ya cobrado, nunca se usa
+  /// en el cálculo del Subtotal (que sigue basado en producto.precioVenta,
+  /// que para una línea histórica ya es el precio real cobrado). Null si
+  /// ofertaAplicadaHistorico es false, o si la Variante fue desactivada
+  /// desde que se guardó la Cotización.
+  final double? precioNormalHistorico;
 
   /// true si esta línea alcanza el umbral del descuento por volumen del
   /// Producto — mismo criterio que Venta.AgregarLinea en el backend
@@ -102,5 +107,6 @@ class LineaCarrito {
         porcentajeDescuentoVolumenHistorico: porcentajeDescuentoVolumenHistorico,
         montoDescuentoPromocionHistorico: montoDescuentoPromocionHistorico,
         ofertaAplicadaHistorico: ofertaAplicadaHistorico,
+        precioNormalHistorico: precioNormalHistorico,
       );
 }

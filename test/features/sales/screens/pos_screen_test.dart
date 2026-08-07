@@ -872,6 +872,7 @@ void main() {
           precioUnitario: 399990,
           subtotal: 399990,
           precioOferta: 399990,
+          precioVenta: 500000,
         ),
       ],
     );
@@ -883,6 +884,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Oferta aplicada'), findsOneWidget);
+    expect(find.text(r'$500.000'), findsOneWidget);
   });
 
   testWidgets('Rescatar una cotización con promoción por grupo muestra el precio unitario real, no el promedio', (tester) async {
