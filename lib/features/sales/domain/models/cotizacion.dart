@@ -52,6 +52,9 @@ class LineaCotizacionDetalle {
     this.unidadMedida = UnidadMedida.unidad,
     this.cantidadPorGrupoPromocion,
     this.porcentajeDescuentoUnidadPromocion,
+    this.precioOferta,
+    this.ofertaDesde,
+    this.ofertaHasta,
   });
 
   factory LineaCotizacionDetalle.fromJson(Map<String, dynamic> json) => LineaCotizacionDetalle(
@@ -66,6 +69,9 @@ class LineaCotizacionDetalle {
         unidadMedida: UnidadMedida.desdeValor(json['unidadMedida'] as int? ?? 0),
         cantidadPorGrupoPromocion: json['cantidadPorGrupoPromocion'] as int?,
         porcentajeDescuentoUnidadPromocion: (json['porcentajeDescuentoUnidadPromocion'] as num?)?.toDouble(),
+        precioOferta: (json['precioOferta'] as num?)?.toDouble(),
+        ofertaDesde: json['ofertaDesde'] == null ? null : DateTime.parse(json['ofertaDesde'] as String),
+        ofertaHasta: json['ofertaHasta'] == null ? null : DateTime.parse(json['ofertaHasta'] as String),
       );
 
   final String varianteProductoId;
@@ -85,6 +91,15 @@ class LineaCotizacionDetalle {
   /// que se ve al agregar la línea en vivo, en vez de un texto genérico.
   final int? cantidadPorGrupoPromocion;
   final double? porcentajeDescuentoUnidadPromocion;
+
+  /// Igual criterio que arriba, pero para el precio de oferta — viene del
+  /// catálogo vigente (no de LineaVenta, que no distingue si su
+  /// PrecioUnitario vino de una Oferta o del precio normal), para que el
+  /// carrito rescatado y el ticket impreso puedan mostrar el mismo
+  /// indicador ("Oferta aplicada") que se ve al agregar la línea en vivo.
+  final double? precioOferta;
+  final DateTime? ofertaDesde;
+  final DateTime? ofertaHasta;
 }
 
 /// Espejo de CotizacionDetalle — detalle completo para rehidratar el

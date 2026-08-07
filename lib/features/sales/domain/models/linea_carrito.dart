@@ -12,6 +12,7 @@ class LineaCarrito {
     required this.cantidad,
     this.porcentajeDescuentoVolumenHistorico,
     this.montoDescuentoPromocionHistorico,
+    this.ofertaAplicadaHistorico = false,
   });
 
   final ProductoVendible producto;
@@ -29,6 +30,17 @@ class LineaCarrito {
   /// del monto solo, así que no se puede mostrar el mismo texto "2x1" que
   /// en una línea en vivo, solo que hubo una promoción y cuánto descontó.
   final double? montoDescuentoPromocionHistorico;
+
+  /// true si el PrecioUnitario ya cobrado coincide con el PrecioOferta de
+  /// la Variante al rescatar una Cotización — hecho histórico (LineaVenta.
+  /// PrecioUnitario no distingue si vino de una Oferta o del precio
+  /// normal), no la vigencia actual de la Oferta (que puede haber
+  /// cambiado o vencido desde que se guardó). Sin precio "normal" que
+  /// mostrar tachado en este caso (LineaCotizacionDetalle no lo trae),
+  /// solo el indicador de texto — mismo criterio que
+  /// montoDescuentoPromocionHistorico, que tampoco reconstruye una
+  /// comparación visual completa.
+  final bool ofertaAplicadaHistorico;
 
   /// true si esta línea alcanza el umbral del descuento por volumen del
   /// Producto — mismo criterio que Venta.AgregarLinea en el backend
@@ -89,5 +101,6 @@ class LineaCarrito {
         cantidad: cantidad ?? this.cantidad,
         porcentajeDescuentoVolumenHistorico: porcentajeDescuentoVolumenHistorico,
         montoDescuentoPromocionHistorico: montoDescuentoPromocionHistorico,
+        ofertaAplicadaHistorico: ofertaAplicadaHistorico,
       );
 }

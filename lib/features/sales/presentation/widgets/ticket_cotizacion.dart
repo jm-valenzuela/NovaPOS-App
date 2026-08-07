@@ -58,7 +58,9 @@ Future<void> imprimirTicketCotizacion(CotizacionDetalle cotizacion) {
                   pw.Text('${_formatearCantidad(linea.porcentajeDescuentoAplicado!)}% dto. por volumen aplicado',
                       style: const pw.TextStyle(fontSize: 7, color: PdfColors.green700))
                 else if (linea.montoDescuentoPromocion != null)
-                  pw.Text(_etiquetaPromocion(linea), style: const pw.TextStyle(fontSize: 7, color: PdfColors.green700)),
+                  pw.Text(_etiquetaPromocion(linea), style: const pw.TextStyle(fontSize: 7, color: PdfColors.green700))
+                else if (linea.precioOferta != null && linea.precioOferta == linea.precioUnitario)
+                  pw.Text('Oferta aplicada', style: const pw.TextStyle(fontSize: 7, color: PdfColors.green700)),
                 pw.SizedBox(height: 4),
               ],
               pw.Divider(),

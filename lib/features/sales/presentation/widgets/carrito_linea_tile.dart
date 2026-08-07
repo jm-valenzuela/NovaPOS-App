@@ -171,6 +171,14 @@ class CarritoLineaTile extends StatelessWidget {
                       style: const TextStyle(color: PosColors.stockOk, fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   )
+                else if (linea.ofertaAplicadaHistorico)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Text(
+                      'Oferta aplicada',
+                      style: TextStyle(color: PosColors.accent, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  )
                 else if (linea.aplicaDescuentoVolumen)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),

@@ -839,6 +839,52 @@ void main() {
     expect(find.text('5% dto. por volumen aplicado'), findsOneWidget);
   });
 
+  testWidgets('Rescatar una cotización con oferta ya aplicada muestra "Oferta aplicada" en el carrito', (tester) async {
+    await pumpPos(tester);
+    fakeSales.cotizacionesARetornar = [
+      CotizacionResumen(
+        ventaId: 'venta-cot-oferta',
+        numeroCotizacion: 'COT-20260807-002',
+        fechaVenta: DateTime(2026, 8, 7),
+        clienteId: 'cliente-generico',
+        clienteNombre: 'Cliente Genérico',
+        cantidadLineas: 1,
+        total: 399990,
+      ),
+    ];
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-cot-oferta',
+      numeroCotizacion: 'COT-20260807-002',
+      clienteId: 'cliente-generico',
+      clienteNombre: 'Cliente Genérico',
+      clienteRut: '66666666-6',
+      subtotalLineas: 399990,
+      total: 399990,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+      descuentoGeneralPorcentaje: null,
+      descuentoGeneralMonto: null,
+      lineas: [
+        LineaCotizacionDetalle(
+          varianteProductoId: 'variante-oferta',
+          nombreProducto: 'TV Test Oferta E2E',
+          sku: 'TV-55-4K',
+          cantidad: 1,
+          precioUnitario: 399990,
+          subtotal: 399990,
+          precioOferta: 399990,
+        ),
+      ],
+    );
+
+    await abrirMenuCotizacion(tester);
+    await tester.tap(find.byKey(const Key('cotizacionRescatarItem')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cotizacionRescatable_venta-cot-oferta')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Oferta aplicada'), findsOneWidget);
+  });
+
   testWidgets('Rescatar una cotización con promoción por grupo muestra el precio unitario real, no el promedio', (tester) async {
     await pumpPos(tester);
     fakeSales.cotizacionesARetornar = [
