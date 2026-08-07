@@ -14,6 +14,9 @@ class ProductoVendible {
     this.porcentajeDescuentoVolumen,
     this.cantidadPorGrupoPromocion,
     this.porcentajeDescuentoUnidadPromocion,
+    this.precioOferta,
+    this.ofertaDesde,
+    this.ofertaHasta,
   });
 
   factory ProductoVendible.fromJson(Map<String, dynamic> json) => ProductoVendible(
@@ -28,6 +31,9 @@ class ProductoVendible {
         porcentajeDescuentoVolumen: (json['porcentajeDescuentoVolumen'] as num?)?.toDouble(),
         cantidadPorGrupoPromocion: json['cantidadPorGrupoPromocion'] as int?,
         porcentajeDescuentoUnidadPromocion: (json['porcentajeDescuentoUnidadPromocion'] as num?)?.toDouble(),
+        precioOferta: (json['precioOferta'] as num?)?.toDouble(),
+        ofertaDesde: json['ofertaDesde'] == null ? null : DateTime.parse(json['ofertaDesde'] as String),
+        ofertaHasta: json['ofertaHasta'] == null ? null : DateTime.parse(json['ofertaHasta'] as String),
       );
 
   final String varianteProductoId;
@@ -50,5 +56,28 @@ class ProductoVendible {
   final int? cantidadPorGrupoPromocion;
   final double? porcentajeDescuentoUnidadPromocion;
 
+  /// Precio de oferta vigente solo dentro de [ofertaDesde, ofertaHasta]
+  /// (ambos inclusive) — mutuamente excluyente con las promociones de
+  /// arriba (ver VarianteProducto.ValidarPromocionesNoSeSuperponen en el
+  /// backend). Todos null si la Variante no tiene oferta configurada.
+  final double? precioOferta;
+  final DateTime? ofertaDesde;
+  final DateTime? ofertaHasta;
+
   UnidadMedida get unidad => UnidadMedida.desdeValor(unidadMedida);
+
+  /// Evaluación en el reloj del dispositivo, solo para mostrar el precio en
+  /// pantalla — el cargo real siempre se resuelve en el servidor
+  /// (VarianteProducto.PrecioVigente), que no confía en la hora del
+  /// cliente para una decisión con impacto financiero.
+  bool get ofertaVigente {
+    if (precioOferta == null || ofertaDesde == null || ofertaHasta == null) return false;
+    final hoy = DateTime.now();
+    final hoySoloFecha = DateTime(hoy.year, hoy.month, hoy.day);
+    return !hoySoloFecha.isBefore(ofertaDesde!) && !hoySoloFecha.isAfter(ofertaHasta!);
+  }
+
+  /// Precio a usar para mostrar/calcular en el carrito — precioOferta si
+  /// está vigente hoy, precioVenta en cualquier otro caso.
+  double get precioEfectivo => ofertaVigente ? precioOferta! : precioVenta;
 }

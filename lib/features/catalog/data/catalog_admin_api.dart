@@ -140,6 +140,9 @@ class CatalogAdminApi {
     double? porcentajeDescuentoVolumen,
     int? cantidadPorGrupoPromocion,
     double? porcentajeDescuentoUnidadPromocion,
+    double? precioOferta,
+    DateTime? ofertaDesde,
+    DateTime? ofertaHasta,
   }) async {
     try {
       final respuesta = await _client.dio.post('/catalogo/productos', data: {
@@ -158,6 +161,9 @@ class CatalogAdminApi {
         'porcentajeDescuentoVolumen': porcentajeDescuentoVolumen,
         'cantidadPorGrupoPromocion': cantidadPorGrupoPromocion,
         'porcentajeDescuentoUnidadPromocion': porcentajeDescuentoUnidadPromocion,
+        'precioOferta': precioOferta,
+        'ofertaDesde': _formatearFecha(ofertaDesde),
+        'ofertaHasta': _formatearFecha(ofertaHasta),
       });
       return CrearProductoResultado(
         productoId: respuesta.data['productoId'] as String,
@@ -215,6 +221,9 @@ class CatalogAdminApi {
     double? porcentajeDescuentoVolumen,
     int? cantidadPorGrupoPromocion,
     double? porcentajeDescuentoUnidadPromocion,
+    double? precioOferta,
+    DateTime? ofertaDesde,
+    DateTime? ofertaHasta,
   }) async {
     try {
       await _client.dio.put('/catalogo/variantes/$varianteProductoId', data: {
@@ -228,6 +237,9 @@ class CatalogAdminApi {
         'porcentajeDescuentoVolumen': porcentajeDescuentoVolumen,
         'cantidadPorGrupoPromocion': cantidadPorGrupoPromocion,
         'porcentajeDescuentoUnidadPromocion': porcentajeDescuentoUnidadPromocion,
+        'precioOferta': precioOferta,
+        'ofertaDesde': _formatearFecha(ofertaDesde),
+        'ofertaHasta': _formatearFecha(ofertaHasta),
       });
     } on DioException catch (e) {
       ApiClient.lanzarError(e);
@@ -261,3 +273,6 @@ class CatalogAdminApi {
     }
   }
 }
+
+/// "yyyy-MM-dd" — formato que System.Text.Json enlaza a DateOnly en el backend.
+String? _formatearFecha(DateTime? fecha) => fecha?.toIso8601String().split('T').first;

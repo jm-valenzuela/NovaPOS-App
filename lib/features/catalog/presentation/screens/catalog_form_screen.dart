@@ -5,6 +5,7 @@ import '../../domain/models/unidad_medida.dart';
 import '../providers/catalog_admin_providers.dart';
 import '../providers/catalog_form_providers.dart';
 import '../widgets/clasificacion_cascade.dart';
+import '../widgets/oferta_field.dart';
 import '../widgets/promocion_grupo_field.dart';
 
 /// Crea un Producto y su primera Variante juntos (mismo criterio que
@@ -31,6 +32,7 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
   final _cantidadMinimaDescuentoController = TextEditingController();
   final _porcentajeDescuentoController = TextEditingController();
   PromocionGrupoValor _promocionGrupo = const PromocionGrupoValor();
+  OfertaValor _oferta = const OfertaValor();
   int _unidadMedida = 0;
 
   @override
@@ -178,6 +180,15 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
               ),
               const SizedBox(height: 12),
               PromocionGrupoField(onChanged: (valor) => _promocionGrupo = valor),
+              const SizedBox(height: 20),
+              Text('Precio de oferta (opcional)', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Precio rebajado válido solo dentro del rango de fechas — no se combina con el descuento por volumen ni la promoción por grupo de arriba.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              OfertaField(onChanged: (valor) => _oferta = valor),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -226,6 +237,13 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
       return;
     }
 
+    if (_oferta.precioOferta != null && (cantidadVolumen != null || _promocionGrupo.cantidadPorGrupo != null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No puedes combinar el precio de oferta con el descuento por volumen ni la promoción por grupo — elige solo uno.')),
+      );
+      return;
+    }
+
     ref.read(catalogFormProvider.notifier).crearProducto(
           nombre: _nombreController.text.trim(),
           descripcion: _descripcionController.text.trim().isEmpty ? null : _descripcionController.text.trim(),
@@ -240,6 +258,9 @@ class _CatalogFormScreenState extends ConsumerState<CatalogFormScreen> {
           porcentajeDescuentoVolumen: porcentajeVolumen,
           cantidadPorGrupoPromocion: _promocionGrupo.cantidadPorGrupo,
           porcentajeDescuentoUnidadPromocion: _promocionGrupo.porcentajeDescuentoUnidad,
+          precioOferta: _oferta.precioOferta,
+          ofertaDesde: _oferta.ofertaDesde,
+          ofertaHasta: _oferta.ofertaHasta,
         );
   }
 }

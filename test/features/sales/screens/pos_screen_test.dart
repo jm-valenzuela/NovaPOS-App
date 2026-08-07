@@ -480,6 +480,29 @@ void main() {
     expect(find.textContaining('5% dto. por volumen aplicado'), findsOneWidget);
   });
 
+  testWidgets('Un producto con oferta vigente muestra el badge y el precio de oferta en la tarjeta', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoOferta];
+
+    await buscarYEsperar(tester, 'televisor');
+
+    expect(find.text('Oferta'), findsOneWidget);
+    expect(find.text(r'$399.990'), findsOneWidget);
+  });
+
+  testWidgets('Agregar un producto con oferta vigente cobra el precio de oferta y muestra "Oferta aplicada" en el carrito', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoOferta];
+
+    await buscarYEsperar(tester, 'televisor');
+
+    await tester.tap(find.byKey(const Key('posResultado_variante-oferta')));
+    await tester.pump();
+
+    expect(textoDe(tester, const Key('posTotal')), r'$399.990');
+    expect(find.text('Oferta aplicada'), findsOneWidget);
+  });
+
   testWidgets('Solicitar un descuento crea la Venta, agrega las líneas y muestra el aviso de pendiente', (tester) async {
     await pumpPos(tester);
     fakeCatalog.resultadosARetornar = [productoCocaCola];

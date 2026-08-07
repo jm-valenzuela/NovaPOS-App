@@ -5,6 +5,7 @@ import '../../domain/models/producto_admin.dart';
 import '../../domain/models/unidad_medida.dart';
 import '../providers/catalog_admin_providers.dart';
 import 'etiqueta_codigo_barras.dart';
+import 'oferta_field.dart';
 import 'promocion_grupo_field.dart';
 
 /// A diferencia de EditarProductoDialog, no depende de CatalogFormController
@@ -33,6 +34,7 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
   late final _porcentajeDescuentoController =
       TextEditingController(text: widget.variante.porcentajeDescuentoVolumen?.toString() ?? '');
   PromocionGrupoValor _promocionGrupo = const PromocionGrupoValor();
+  OfertaValor _oferta = const OfertaValor();
   late int _unidadMedida = widget.variante.unidadMedida;
   late bool _tieneCodigoPersistido = widget.variante.codigoBarras != null;
   bool _guardando = false;
@@ -164,6 +166,15 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
               porcentajeDescuentoUnidadInicial: widget.variante.porcentajeDescuentoUnidadPromocion,
               onChanged: (valor) => _promocionGrupo = valor,
             ),
+            const SizedBox(height: 12),
+            Text('Precio de oferta (opcional)', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 4),
+            OfertaField(
+              precioOfertaInicial: widget.variante.precioOferta,
+              ofertaDesdeInicial: widget.variante.ofertaDesde,
+              ofertaHastaInicial: widget.variante.ofertaHasta,
+              onChanged: (valor) => _oferta = valor,
+            ),
           ],
         ),
       ),
@@ -199,6 +210,11 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
       return;
     }
 
+    if (_oferta.precioOferta != null && (cantidadMinimaTexto.isNotEmpty || _promocionGrupo.cantidadPorGrupo != null)) {
+      setState(() => _error = 'No puedes combinar el precio de oferta con el descuento por volumen ni la promoción por grupo — elige solo uno.');
+      return;
+    }
+
     setState(() {
       _guardando = true;
       _error = null;
@@ -217,6 +233,9 @@ class _EditarVarianteDialogState extends ConsumerState<EditarVarianteDialog> {
             porcentajeDescuentoVolumen: double.tryParse(porcentajeTexto),
             cantidadPorGrupoPromocion: _promocionGrupo.cantidadPorGrupo,
             porcentajeDescuentoUnidadPromocion: _promocionGrupo.porcentajeDescuentoUnidad,
+            precioOferta: _oferta.precioOferta,
+            ofertaDesde: _oferta.ofertaDesde,
+            ofertaHasta: _oferta.ofertaHasta,
           );
 
       if (!mounted) return;

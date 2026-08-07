@@ -121,6 +121,9 @@ class FakeCatalogAdminRepository implements CatalogAdminRepository {
     double? porcentajeDescuentoVolumen,
     int? cantidadPorGrupoPromocion,
     double? porcentajeDescuentoUnidadPromocion,
+    double? precioOferta,
+    DateTime? ofertaDesde,
+    DateTime? ofertaHasta,
   }) async {
     _fallarSiCorresponde();
     return resultadoCrear;
@@ -169,6 +172,9 @@ class FakeCatalogAdminRepository implements CatalogAdminRepository {
     double? porcentajeDescuentoVolumen,
     int? cantidadPorGrupoPromocion,
     double? porcentajeDescuentoUnidadPromocion,
+    double? precioOferta,
+    DateTime? ofertaDesde,
+    DateTime? ofertaHasta,
   }) async {
     _fallarSiCorresponde();
     ultimaActualizacionVariante = {

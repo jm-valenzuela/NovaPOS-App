@@ -305,6 +305,21 @@ const productoGaseosaPromo = ProductoVendible(
   porcentajeDescuentoUnidadPromocion: 100,
 );
 
+/// Rango de fechas deliberadamente amplio para que la oferta esté siempre
+/// vigente sin importar cuándo corra el test.
+final productoOferta = ProductoVendible(
+  varianteProductoId: 'variante-oferta',
+  productoId: 'producto-oferta',
+  nombreProducto: 'Televisor 55" 4K',
+  sku: 'TV-55-4K',
+  codigoBarras: null,
+  precioVenta: 500000,
+  unidadMedida: 0,
+  precioOferta: 399990,
+  ofertaDesde: DateTime(2020, 1, 1),
+  ofertaHasta: DateTime(2099, 12, 31),
+);
+
 const cajaUnica = CajaResumen(
   cajaId: 'caja-1',
   codigoCaja: 'CAJA-01',

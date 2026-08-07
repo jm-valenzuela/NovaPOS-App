@@ -45,13 +45,43 @@ class ProductoResultadoTile extends StatelessWidget {
               const SizedBox(height: 2),
               Text(producto.sku, style: const TextStyle(fontSize: 12, color: PosColors.textMuted)),
               const SizedBox(height: 8),
-              Text(
-                producto.unidad.esPesable
-                    ? '${MonedaFormatter.formatear(producto.precioVenta)}/${producto.unidad.abreviatura}'
-                    : MonedaFormatter.formatear(producto.precioVenta),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              if (producto.cantidadMinimaDescuentoVolumen != null)
+              if (producto.ofertaVigente)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      MonedaFormatter.formatear(producto.precioVenta),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: PosColors.textMuted,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                    Text(
+                      producto.unidad.esPesable
+                          ? '${MonedaFormatter.formatear(producto.precioEfectivo)}/${producto.unidad.abreviatura}'
+                          : MonedaFormatter.formatear(producto.precioEfectivo),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: PosColors.accent),
+                    ),
+                  ],
+                )
+              else
+                Text(
+                  producto.unidad.esPesable
+                      ? '${MonedaFormatter.formatear(producto.precioVenta)}/${producto.unidad.abreviatura}'
+                      : MonedaFormatter.formatear(producto.precioVenta),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              if (producto.ofertaVigente)
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Text(
+                    'Oferta',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: PosColors.accent),
+                  ),
+                )
+              else if (producto.cantidadMinimaDescuentoVolumen != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(

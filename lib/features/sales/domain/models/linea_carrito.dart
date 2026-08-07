@@ -57,7 +57,11 @@ class LineaCarrito {
     return gruposCompletosPromocion * producto.precioVenta * (porcentaje / 100);
   }
 
-  double get subtotalSinDescuento => producto.precioVenta * cantidad;
+  /// Usa precioEfectivo (Oferta si está vigente hoy, PrecioVenta si no) —
+  /// Oferta es mutuamente excluyente con el descuento por volumen y la
+  /// promoción por grupo (ver ValidarPromocionesNoSeSuperponen en el
+  /// backend), así que nunca se combinan.
+  double get subtotalSinDescuento => producto.precioEfectivo * cantidad;
 
   /// Si vienen campos históricos (línea rescatada de una Cotización), el
   /// descuento real ya ocurrido manda sobre cualquier regla vigente del

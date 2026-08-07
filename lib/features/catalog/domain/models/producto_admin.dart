@@ -61,6 +61,9 @@ class VarianteAdmin {
     this.porcentajeDescuentoVolumen,
     this.cantidadPorGrupoPromocion,
     this.porcentajeDescuentoUnidadPromocion,
+    this.precioOferta,
+    this.ofertaDesde,
+    this.ofertaHasta,
   });
 
   factory VarianteAdmin.fromJson(Map<String, dynamic> json) => VarianteAdmin(
@@ -77,6 +80,9 @@ class VarianteAdmin {
         porcentajeDescuentoVolumen: (json['porcentajeDescuentoVolumen'] as num?)?.toDouble(),
         cantidadPorGrupoPromocion: json['cantidadPorGrupoPromocion'] as int?,
         porcentajeDescuentoUnidadPromocion: (json['porcentajeDescuentoUnidadPromocion'] as num?)?.toDouble(),
+        precioOferta: (json['precioOferta'] as num?)?.toDouble(),
+        ofertaDesde: json['ofertaDesde'] == null ? null : DateTime.parse(json['ofertaDesde'] as String),
+        ofertaHasta: json['ofertaHasta'] == null ? null : DateTime.parse(json['ofertaHasta'] as String),
       );
 
   final String varianteProductoId;
@@ -92,4 +98,10 @@ class VarianteAdmin {
   final double? porcentajeDescuentoVolumen;
   final int? cantidadPorGrupoPromocion;
   final double? porcentajeDescuentoUnidadPromocion;
+
+  /// Mutuamente excluyente con los dos campos de arriba (ver
+  /// VarianteProducto.ValidarPromocionesNoSeSuperponen en el backend).
+  final double? precioOferta;
+  final DateTime? ofertaDesde;
+  final DateTime? ofertaHasta;
 }

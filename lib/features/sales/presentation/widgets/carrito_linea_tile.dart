@@ -73,7 +73,7 @@ class CarritoLineaTile extends StatelessWidget {
                         const Icon(Icons.edit, size: 13, color: PosColors.accent),
                         const SizedBox(width: 4),
                         Text(
-                          'x ${MonedaFormatter.formatear(linea.producto.precioVenta)}/${unidad.abreviatura}',
+                          'x ${MonedaFormatter.formatear(linea.producto.precioEfectivo)}/${unidad.abreviatura}',
                           style: const TextStyle(color: PosColors.textMuted, fontSize: 12),
                         ),
                       ],
@@ -118,7 +118,7 @@ class CarritoLineaTile extends StatelessWidget {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          'x ${MonedaFormatter.formatear(linea.producto.precioVenta)}',
+                          'x ${MonedaFormatter.formatear(linea.producto.precioEfectivo)}',
                           style: const TextStyle(color: PosColors.textMuted, fontSize: 12),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -155,6 +155,14 @@ class CarritoLineaTile extends StatelessWidget {
                     child: Text(
                       '${PromocionGrupo.etiqueta(linea.producto.cantidadPorGrupoPromocion!, linea.producto.porcentajeDescuentoUnidadPromocion!)} aplicado',
                       style: const TextStyle(color: PosColors.stockOk, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  )
+                else if (linea.producto.ofertaVigente)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Text(
+                      'Oferta aplicada',
+                      style: TextStyle(color: PosColors.accent, fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   ),
               ],

@@ -226,6 +226,9 @@ class CatalogFormController extends StateNotifier<CatalogFormState> {
     double? porcentajeDescuentoVolumen,
     int? cantidadPorGrupoPromocion,
     double? porcentajeDescuentoUnidadPromocion,
+    double? precioOferta,
+    DateTime? ofertaDesde,
+    DateTime? ofertaHasta,
   }) async {
     if (!state.clasificacionCompleta) return;
 
@@ -247,6 +250,9 @@ class CatalogFormController extends StateNotifier<CatalogFormState> {
         porcentajeDescuentoVolumen: porcentajeDescuentoVolumen,
         cantidadPorGrupoPromocion: cantidadPorGrupoPromocion,
         porcentajeDescuentoUnidadPromocion: porcentajeDescuentoUnidadPromocion,
+        precioOferta: precioOferta,
+        ofertaDesde: ofertaDesde,
+        ofertaHasta: ofertaHasta,
       );
       state = state.copyWith(guardando: false, resultado: resultado);
     } catch (e) {
