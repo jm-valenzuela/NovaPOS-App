@@ -1,5 +1,7 @@
 import '../domain/customer_repository.dart';
 import '../domain/models/cliente_resumen.dart';
+import '../domain/models/plazo_pago.dart';
+import '../domain/models/solicitud_credito_pendiente.dart';
 import 'customer_api.dart';
 
 class CustomerRepositoryImpl implements CustomerRepository {
@@ -17,7 +19,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
     String? email,
     String? telefono,
     double cupoCredito = 0,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
     String? giro,
     String? direccion,
     String? comuna,
@@ -29,7 +31,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
         email: email,
         telefono: telefono,
         cupoCredito: cupoCredito,
-        plazoPagoDias: plazoPagoDias,
+        plazoPagoId: plazoPagoId,
         giro: giro,
         direccion: direccion,
         comuna: comuna,
@@ -43,7 +45,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
     String? email,
     String? telefono,
     double cupoCredito = 0,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
     String? giro,
     String? direccion,
     String? comuna,
@@ -55,7 +57,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
         email: email,
         telefono: telefono,
         cupoCredito: cupoCredito,
-        plazoPagoDias: plazoPagoDias,
+        plazoPagoId: plazoPagoId,
         giro: giro,
         direccion: direccion,
         comuna: comuna,
@@ -65,4 +67,31 @@ class CustomerRepositoryImpl implements CustomerRepository {
   @override
   Future<void> asignarRutCliente({required String clienteId, required String rut}) =>
       _api.asignarRutCliente(clienteId: clienteId, rut: rut);
+
+  @override
+  Future<void> solicitarCreditoCliente({required String clienteId, required double cupoSolicitado, String? plazoPagoIdSolicitado}) =>
+      _api.solicitarCreditoCliente(clienteId: clienteId, cupoSolicitado: cupoSolicitado, plazoPagoIdSolicitado: plazoPagoIdSolicitado);
+
+  @override
+  Future<void> autorizarCreditoCliente(String clienteId) => _api.autorizarCreditoCliente(clienteId);
+
+  @override
+  Future<void> rechazarCreditoCliente({required String clienteId, required String motivo}) =>
+      _api.rechazarCreditoCliente(clienteId: clienteId, motivo: motivo);
+
+  @override
+  Future<List<SolicitudCreditoPendiente>> listarSolicitudesCreditoPendientes() => _api.listarSolicitudesCreditoPendientes();
+
+  @override
+  Future<String> crearPlazoPago({required String nombre, required List<int> diasCuotas}) =>
+      _api.crearPlazoPago(nombre: nombre, diasCuotas: diasCuotas);
+
+  @override
+  Future<List<PlazoPago>> listarPlazosPago() => _api.listarPlazosPago();
+
+  @override
+  Future<void> activarPlazoPago(String plazoPagoId) => _api.activarPlazoPago(plazoPagoId);
+
+  @override
+  Future<void> desactivarPlazoPago(String plazoPagoId) => _api.desactivarPlazoPago(plazoPagoId);
 }

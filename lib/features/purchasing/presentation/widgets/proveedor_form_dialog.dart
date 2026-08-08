@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/rut_validator.dart';
+import '../../domain/models/plazo_pago.dart';
 import '../../domain/models/proveedor.dart';
 import '../providers/purchasing_providers.dart';
 
@@ -22,7 +23,7 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
   late final _nombreController = TextEditingController(text: widget.existente?.nombre ?? '');
   late final _emailController = TextEditingController(text: widget.existente?.email ?? '');
   late final _telefonoController = TextEditingController(text: widget.existente?.telefono ?? '');
-  late final _plazoPagoController = TextEditingController(text: (widget.existente?.plazoPagoDias ?? 0).toString());
+  late String? _plazoPagoIdSeleccionado = widget.existente?.plazoPagoId;
   bool _guardando = false;
   String? _error;
 
@@ -34,7 +35,6 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
     _nombreController.dispose();
     _emailController.dispose();
     _telefonoController.dispose();
-    _plazoPagoController.dispose();
     super.dispose();
   }
 
@@ -78,11 +78,10 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 12),
-            TextField(
-              key: const Key('proveedorPlazoPago'),
-              controller: _plazoPagoController,
-              decoration: const InputDecoration(labelText: 'Plazo de pago (días)'),
-              keyboardType: TextInputType.number,
+            _SelectorPlazoPago(
+              plazos: ref.watch(plazosPagoProveedorProvider).plazos,
+              seleccionado: _plazoPagoIdSeleccionado,
+              onChanged: (id) => setState(() => _plazoPagoIdSeleccionado = id),
             ),
           ],
         ),
@@ -107,7 +106,6 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
       return;
     }
 
-    final plazoPagoDias = int.tryParse(_plazoPagoController.text.trim()) ?? 0;
     final email = _emailController.text.trim().isEmpty ? null : _emailController.text.trim();
     final telefono = _telefonoController.text.trim().isEmpty ? null : _telefonoController.text.trim();
 
@@ -122,9 +120,9 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
               nombre: nombre,
               email: email,
               telefono: telefono,
-              plazoPagoDias: plazoPagoDias,
+              plazoPagoId: _plazoPagoIdSeleccionado,
             )
-        : await _crear(nombre, email, telefono, plazoPagoDias);
+        : await _crear(nombre, email, telefono);
 
     if (!mounted) return;
     if (exito) {
@@ -137,7 +135,7 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
     }
   }
 
-  Future<bool> _crear(String nombre, String? email, String? telefono, int plazoPagoDias) async {
+  Future<bool> _crear(String nombre, String? email, String? telefono) async {
     final rut = _rutController.text.trim();
     if (!RutValidator.esValido(rut)) {
       setState(() {
@@ -152,7 +150,53 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
           nombre: nombre,
           email: email,
           telefono: telefono,
-          plazoPagoDias: plazoPagoDias,
+          plazoPagoId: _plazoPagoIdSeleccionado,
         );
+  }
+}
+
+/// Dropdown de Plazos de Pago activos — mismo criterio que el de Clientes,
+/// vacío ("Inmediato") es un valor válido, ver Proveedor.PlazoPagoId.
+class _SelectorPlazoPago extends StatelessWidget {
+  const _SelectorPlazoPago({required this.plazos, required this.seleccionado, required this.onChanged});
+
+  final List<PlazoPago> plazos;
+  final String? seleccionado;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final activos = plazos.where((p) => p.activo).toList();
+    final yaCubierto = seleccionado == null || activos.any((p) => p.id == seleccionado);
+
+    // Si el Plazo seleccionado no está entre los activos (fue desactivado, o
+    // el catálogo todavía no termina de cargar), igual hay que darle un
+    // ítem — si no, DropdownButtonFormField revienta porque su `value` no
+    // coincidiría con ningún `item`.
+    PlazoPago? seleccionadoFueraDeLista;
+    if (!yaCubierto) {
+      for (final p in plazos) {
+        if (p.id == seleccionado) {
+          seleccionadoFueraDeLista = p;
+          break;
+        }
+      }
+    }
+
+    return DropdownButtonFormField<String?>(
+      key: const Key('proveedorPlazoPago'),
+      value: seleccionado,
+      decoration: const InputDecoration(labelText: 'Plazo de pago'),
+      items: [
+        const DropdownMenuItem<String?>(value: null, child: Text('Inmediato')),
+        for (final plazo in activos) DropdownMenuItem<String?>(value: plazo.id, child: Text(plazo.nombre)),
+        if (!yaCubierto)
+          DropdownMenuItem<String?>(
+            value: seleccionado,
+            child: Text(seleccionadoFueraDeLista != null ? '${seleccionadoFueraDeLista.nombre} (inactivo)' : 'Cargando...'),
+          ),
+      ],
+      onChanged: onChanged,
+    );
   }
 }

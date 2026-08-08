@@ -6,6 +6,7 @@ import '../../data/purchasing_repository_impl.dart';
 import '../../domain/models/discrepancia.dart';
 import '../../domain/models/documento_recibido.dart';
 import '../../domain/models/orden_compra.dart';
+import '../../domain/models/plazo_pago.dart';
 import '../../domain/models/proveedor.dart';
 import '../../domain/models/purchasing_enums.dart';
 import '../../domain/purchasing_repository.dart';
@@ -58,9 +59,9 @@ class ProveedoresController extends StateNotifier<ProveedoresState> {
     }
   }
 
-  Future<bool> crear({required String rut, required String nombre, String? email, String? telefono, int plazoPagoDias = 0}) async {
+  Future<bool> crear({required String rut, required String nombre, String? email, String? telefono, String? plazoPagoId}) async {
     try {
-      await _repository.crearProveedor(rut: rut, nombre: nombre, email: email, telefono: telefono, plazoPagoDias: plazoPagoDias);
+      await _repository.crearProveedor(rut: rut, nombre: nombre, email: email, telefono: telefono, plazoPagoId: plazoPagoId);
       await cargar();
       return true;
     } catch (e) {
@@ -74,10 +75,10 @@ class ProveedoresController extends StateNotifier<ProveedoresState> {
     required String nombre,
     String? email,
     String? telefono,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
   }) async {
     try {
-      await _repository.actualizarProveedor(proveedorId: proveedorId, nombre: nombre, email: email, telefono: telefono, plazoPagoDias: plazoPagoDias);
+      await _repository.actualizarProveedor(proveedorId: proveedorId, nombre: nombre, email: email, telefono: telefono, plazoPagoId: plazoPagoId);
       await cargar();
       return true;
     } catch (e) {
@@ -359,4 +360,69 @@ class DiscrepanciasController extends StateNotifier<DiscrepanciasState> {
 
 final discrepanciasProvider = StateNotifierProvider.autoDispose<DiscrepanciasController, DiscrepanciasState>((ref) {
   return DiscrepanciasController(ref.watch(purchasingRepositoryProvider));
+});
+
+// ---------------------------------------------------------------------------
+// Plazos de Pago (Proveedores)
+// ---------------------------------------------------------------------------
+
+class PlazosPagoProveedorState {
+  const PlazosPagoProveedorState({this.plazos = const [], this.cargando = false, this.error});
+
+  final List<PlazoPago> plazos;
+  final bool cargando;
+  final String? error;
+
+  PlazosPagoProveedorState copyWith({List<PlazoPago>? plazos, bool? cargando, String? error, bool limpiarError = false}) {
+    return PlazosPagoProveedorState(
+      plazos: plazos ?? this.plazos,
+      cargando: cargando ?? this.cargando,
+      error: limpiarError ? null : (error ?? this.error),
+    );
+  }
+}
+
+/// Catálogo de Plazos de Pago de Proveedores — espejo de PlazosPagoController
+/// en Customers, mismo criterio de mantención separada.
+class PlazosPagoProveedorController extends StateNotifier<PlazosPagoProveedorState> {
+  PlazosPagoProveedorController(this._repository) : super(const PlazosPagoProveedorState()) {
+    cargar();
+  }
+
+  final PurchasingRepository _repository;
+
+  Future<void> cargar() async {
+    state = state.copyWith(cargando: true, limpiarError: true);
+    try {
+      final plazos = await _repository.listarPlazosPago();
+      state = state.copyWith(plazos: plazos, cargando: false);
+    } catch (e) {
+      state = state.copyWith(cargando: false, error: e.toString());
+    }
+  }
+
+  Future<bool> crear({required String nombre, required List<int> diasCuotas}) async {
+    try {
+      await _repository.crearPlazoPago(nombre: nombre, diasCuotas: diasCuotas);
+      await cargar();
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
+  Future<void> activar(String plazoPagoId) async {
+    await _repository.activarPlazoPago(plazoPagoId);
+    await cargar();
+  }
+
+  Future<void> desactivar(String plazoPagoId) async {
+    await _repository.desactivarPlazoPago(plazoPagoId);
+    await cargar();
+  }
+}
+
+final plazosPagoProveedorProvider = StateNotifierProvider.autoDispose<PlazosPagoProveedorController, PlazosPagoProveedorState>((ref) {
+  return PlazosPagoProveedorController(ref.watch(purchasingRepositoryProvider));
 });

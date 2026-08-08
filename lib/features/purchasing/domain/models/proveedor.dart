@@ -8,7 +8,7 @@ class ProveedorResumen {
     required this.nombre,
     required this.email,
     required this.telefono,
-    required this.plazoPagoDias,
+    this.plazoPagoId,
   });
 
   factory ProveedorResumen.fromJson(Map<String, dynamic> json) => ProveedorResumen(
@@ -17,7 +17,7 @@ class ProveedorResumen {
         nombre: json['nombre'] as String,
         email: json['email'] as String?,
         telefono: json['telefono'] as String?,
-        plazoPagoDias: json['plazoPagoDias'] as int,
+        plazoPagoId: json['plazoPagoId'] as String?,
       );
 
   final String id;
@@ -25,5 +25,7 @@ class ProveedorResumen {
   final String nombre;
   final String? email;
   final String? telefono;
-  final int plazoPagoDias;
+
+  /// Referencia al catálogo de Plazos de Pago (ver PlazoPago) — null significa vencimiento inmediato.
+  final String? plazoPagoId;
 }

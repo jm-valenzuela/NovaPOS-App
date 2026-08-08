@@ -1,6 +1,7 @@
 import 'models/discrepancia.dart';
 import 'models/documento_recibido.dart';
 import 'models/orden_compra.dart';
+import 'models/plazo_pago.dart';
 import 'models/proveedor.dart';
 import 'models/purchasing_enums.dart';
 
@@ -11,7 +12,7 @@ abstract class PurchasingRepository {
     required String nombre,
     String? email,
     String? telefono,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
   });
 
   Future<void> actualizarProveedor({
@@ -19,7 +20,7 @@ abstract class PurchasingRepository {
     required String nombre,
     String? email,
     String? telefono,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
   });
 
   Future<List<ProveedorResumen>> buscarProveedores({String? texto});
@@ -62,4 +63,13 @@ abstract class PurchasingRepository {
   Future<List<Discrepancia>> listarDiscrepancias({EstadoDiscrepancia? estado});
 
   Future<void> resolverDiscrepancia({required String discrepanciaId, required String motivo});
+
+  // Catálogo de Plazos de Pago (Proveedores) — ver PlazosPagoProveedorScreen.
+  Future<String> crearPlazoPago({required String nombre, required List<int> diasCuotas});
+
+  Future<List<PlazoPago>> listarPlazosPago();
+
+  Future<void> activarPlazoPago(String plazoPagoId);
+
+  Future<void> desactivarPlazoPago(String plazoPagoId);
 }

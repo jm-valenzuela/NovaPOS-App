@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../domain/models/cliente_resumen.dart';
 import '../providers/customer_admin_providers.dart';
 import '../widgets/cliente_form_dialog.dart';
+import '../widgets/solicitar_credito_dialog.dart';
 
 class ClientesAdminScreen extends ConsumerStatefulWidget {
   const ClientesAdminScreen({super.key});
@@ -26,7 +28,17 @@ class _ClientesAdminScreenState extends ConsumerState<ClientesAdminScreen> {
     final estado = ref.watch(clientesAdminProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Clientes')),
+      appBar: AppBar(
+        title: const Text('Clientes'),
+        actions: [
+          IconButton(
+            key: const Key('irAPlazosPagoBoton'),
+            icon: const Icon(Icons.schedule_outlined),
+            tooltip: 'Plazos de Pago',
+            onPressed: () => context.push('/clientes/plazos-pago'),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         key: const Key('nuevoClienteBoton'),
         onPressed: () => _abrirFormulario(context),
@@ -65,8 +77,28 @@ class _ClientesAdminScreenState extends ConsumerState<ClientesAdminScreen> {
                           return ListTile(
                             key: Key('cliente_${cliente.id}'),
                             title: Text(cliente.nombre),
-                            subtitle: Text(cliente.rut ?? 'Sin RUT'),
-                            trailing: const Icon(Icons.edit_outlined),
+                            subtitle: Text(
+                              cliente.tieneSolicitudCreditoPendiente
+                                  ? '${cliente.rut ?? 'Sin RUT'} · Crédito pendiente de autorización'
+                                  : cliente.rut ?? 'Sin RUT',
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  key: Key('clienteSolicitarCredito_${cliente.id}'),
+                                  icon: const Icon(Icons.request_quote_outlined),
+                                  tooltip: 'Solicitar Cupo de Crédito',
+                                  onPressed: cliente.tieneSolicitudCreditoPendiente
+                                      ? null
+                                      : () => showDialog<void>(
+                                            context: context,
+                                            builder: (_) => SolicitarCreditoDialog(cliente: cliente),
+                                          ),
+                                ),
+                                const Icon(Icons.edit_outlined),
+                              ],
+                            ),
                             onTap: () => _abrirFormulario(context, existente: cliente),
                           );
                         },

@@ -1,6 +1,7 @@
 import '../domain/models/discrepancia.dart';
 import '../domain/models/documento_recibido.dart';
 import '../domain/models/orden_compra.dart';
+import '../domain/models/plazo_pago.dart';
 import '../domain/models/proveedor.dart';
 import '../domain/models/purchasing_enums.dart';
 import '../domain/purchasing_repository.dart';
@@ -12,8 +13,8 @@ class PurchasingRepositoryImpl implements PurchasingRepository {
   final PurchasingApi _api;
 
   @override
-  Future<String> crearProveedor({required String rut, required String nombre, String? email, String? telefono, int plazoPagoDias = 0}) =>
-      _api.crearProveedor(rut: rut, nombre: nombre, email: email, telefono: telefono, plazoPagoDias: plazoPagoDias);
+  Future<String> crearProveedor({required String rut, required String nombre, String? email, String? telefono, String? plazoPagoId}) =>
+      _api.crearProveedor(rut: rut, nombre: nombre, email: email, telefono: telefono, plazoPagoId: plazoPagoId);
 
   @override
   Future<void> actualizarProveedor({
@@ -21,9 +22,9 @@ class PurchasingRepositoryImpl implements PurchasingRepository {
     required String nombre,
     String? email,
     String? telefono,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
   }) =>
-      _api.actualizarProveedor(proveedorId: proveedorId, nombre: nombre, email: email, telefono: telefono, plazoPagoDias: plazoPagoDias);
+      _api.actualizarProveedor(proveedorId: proveedorId, nombre: nombre, email: email, telefono: telefono, plazoPagoId: plazoPagoId);
 
   @override
   Future<List<ProveedorResumen>> buscarProveedores({String? texto}) => _api.buscarProveedores(texto: texto);
@@ -86,4 +87,17 @@ class PurchasingRepositoryImpl implements PurchasingRepository {
   @override
   Future<void> resolverDiscrepancia({required String discrepanciaId, required String motivo}) =>
       _api.resolverDiscrepancia(discrepanciaId: discrepanciaId, motivo: motivo);
+
+  @override
+  Future<String> crearPlazoPago({required String nombre, required List<int> diasCuotas}) =>
+      _api.crearPlazoPago(nombre: nombre, diasCuotas: diasCuotas);
+
+  @override
+  Future<List<PlazoPago>> listarPlazosPago() => _api.listarPlazosPago();
+
+  @override
+  Future<void> activarPlazoPago(String plazoPagoId) => _api.activarPlazoPago(plazoPagoId);
+
+  @override
+  Future<void> desactivarPlazoPago(String plazoPagoId) => _api.desactivarPlazoPago(plazoPagoId);
 }

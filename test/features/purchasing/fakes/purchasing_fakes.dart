@@ -1,6 +1,7 @@
 import 'package:novapos_app/features/purchasing/domain/models/discrepancia.dart';
 import 'package:novapos_app/features/purchasing/domain/models/documento_recibido.dart';
 import 'package:novapos_app/features/purchasing/domain/models/orden_compra.dart';
+import 'package:novapos_app/features/purchasing/domain/models/plazo_pago.dart';
 import 'package:novapos_app/features/purchasing/domain/models/proveedor.dart';
 import 'package:novapos_app/features/purchasing/domain/models/purchasing_enums.dart';
 import 'package:novapos_app/features/purchasing/domain/purchasing_repository.dart';
@@ -12,6 +13,8 @@ class FakePurchasingRepository implements PurchasingRepository {
   String? ultimoTextoBuscado;
   String proveedorIdARetornar = 'proveedor-nuevo';
   String? ultimoProveedorIdActualizado;
+  String? ultimoPlazoPagoIdCreado;
+  String? ultimoPlazoPagoIdActualizado;
 
   String ordenCompraIdARetornar = 'orden-nueva';
   List<OrdenCompraResumenListado> ordenesARetornar = [];
@@ -28,15 +31,17 @@ class FakePurchasingRepository implements PurchasingRepository {
   String? ultimaDiscrepanciaResuelta;
 
   @override
-  Future<String> crearProveedor({required String rut, required String nombre, String? email, String? telefono, int plazoPagoDias = 0}) async {
+  Future<String> crearProveedor({required String rut, required String nombre, String? email, String? telefono, String? plazoPagoId}) async {
     if (errorAforzar != null) throw Exception(errorAforzar);
+    ultimoPlazoPagoIdCreado = plazoPagoId;
     return proveedorIdARetornar;
   }
 
   @override
-  Future<void> actualizarProveedor({required String proveedorId, required String nombre, String? email, String? telefono, int plazoPagoDias = 0}) async {
+  Future<void> actualizarProveedor({required String proveedorId, required String nombre, String? email, String? telefono, String? plazoPagoId}) async {
     if (errorAforzar != null) throw Exception(errorAforzar);
     ultimoProveedorIdActualizado = proveedorId;
+    ultimoPlazoPagoIdActualizado = plazoPagoId;
   }
 
   @override
@@ -131,5 +136,36 @@ class FakePurchasingRepository implements PurchasingRepository {
   Future<void> resolverDiscrepancia({required String discrepanciaId, required String motivo}) async {
     if (errorAforzar != null) throw Exception(errorAforzar);
     ultimaDiscrepanciaResuelta = discrepanciaId;
+  }
+
+  List<PlazoPago> plazosPagoARetornar = [];
+  String? ultimoNombrePlazoPagoCreado;
+  List<int>? ultimasDiasCuotasCreadas;
+  String plazoPagoIdARetornar = 'plazo-nuevo';
+  String? ultimoPlazoPagoIdActivado;
+  String? ultimoPlazoPagoIdDesactivado;
+
+  @override
+  Future<String> crearPlazoPago({required String nombre, required List<int> diasCuotas}) async {
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    ultimoNombrePlazoPagoCreado = nombre;
+    ultimasDiasCuotasCreadas = diasCuotas;
+    return plazoPagoIdARetornar;
+  }
+
+  @override
+  Future<List<PlazoPago>> listarPlazosPago() async {
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return plazosPagoARetornar;
+  }
+
+  @override
+  Future<void> activarPlazoPago(String plazoPagoId) async {
+    ultimoPlazoPagoIdActivado = plazoPagoId;
+  }
+
+  @override
+  Future<void> desactivarPlazoPago(String plazoPagoId) async {
+    ultimoPlazoPagoIdDesactivado = plazoPagoId;
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../sales/presentation/providers/pos_providers.dart' show customerRepositoryProvider;
 import '../../domain/customer_repository.dart';
 import '../../domain/models/cliente_resumen.dart';
+import '../../domain/models/plazo_pago.dart';
 
 class ClientesAdminState {
   const ClientesAdminState({this.clientes = const [], this.cargando = false, this.error});
@@ -49,7 +50,7 @@ class ClientesAdminController extends StateNotifier<ClientesAdminState> {
     String? email,
     String? telefono,
     double cupoCredito = 0,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
     String? giro,
     String? direccion,
     String? comuna,
@@ -62,7 +63,7 @@ class ClientesAdminController extends StateNotifier<ClientesAdminState> {
         email: email,
         telefono: telefono,
         cupoCredito: cupoCredito,
-        plazoPagoDias: plazoPagoDias,
+        plazoPagoId: plazoPagoId,
         giro: giro,
         direccion: direccion,
         comuna: comuna,
@@ -82,7 +83,7 @@ class ClientesAdminController extends StateNotifier<ClientesAdminState> {
     String? email,
     String? telefono,
     double cupoCredito = 0,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
     String? giro,
     String? direccion,
     String? comuna,
@@ -95,7 +96,7 @@ class ClientesAdminController extends StateNotifier<ClientesAdminState> {
         email: email,
         telefono: telefono,
         cupoCredito: cupoCredito,
-        plazoPagoDias: plazoPagoDias,
+        plazoPagoId: plazoPagoId,
         giro: giro,
         direccion: direccion,
         comuna: comuna,
@@ -120,8 +121,90 @@ class ClientesAdminController extends StateNotifier<ClientesAdminState> {
       return false;
     }
   }
+
+  /// Dispara la evaluación de Cupo de Crédito — no lo otorga de inmediato,
+  /// ver SolicitarCreditoDialog. Deja que el error se propague (el diálogo
+  /// lo muestra inline) en vez de guardarlo en el estado de la lista.
+  Future<void> solicitarCredito({
+    required String clienteId,
+    required double cupoSolicitado,
+    String? plazoPagoIdSolicitado,
+  }) async {
+    await _repository.solicitarCreditoCliente(
+      clienteId: clienteId,
+      cupoSolicitado: cupoSolicitado,
+      plazoPagoIdSolicitado: plazoPagoIdSolicitado,
+    );
+    await cargar();
+  }
 }
 
 final clientesAdminProvider = StateNotifierProvider.autoDispose<ClientesAdminController, ClientesAdminState>((ref) {
   return ClientesAdminController(ref.watch(customerRepositoryProvider));
+});
+
+// ---------------------------------------------------------------------------
+// Plazos de Pago (Clientes)
+// ---------------------------------------------------------------------------
+
+class PlazosPagoState {
+  const PlazosPagoState({this.plazos = const [], this.cargando = false, this.error});
+
+  final List<PlazoPago> plazos;
+  final bool cargando;
+  final String? error;
+
+  PlazosPagoState copyWith({List<PlazoPago>? plazos, bool? cargando, String? error, bool limpiarError = false}) {
+    return PlazosPagoState(
+      plazos: plazos ?? this.plazos,
+      cargando: cargando ?? this.cargando,
+      error: limpiarError ? null : (error ?? this.error),
+    );
+  }
+}
+
+/// Catálogo de Plazos de Pago de Clientes — mantención propia, separada del
+/// alta/edición de Clientes (ver ClienteFormDialog, que solo elige de la
+/// lista ya cargada acá).
+class PlazosPagoController extends StateNotifier<PlazosPagoState> {
+  PlazosPagoController(this._repository) : super(const PlazosPagoState()) {
+    cargar();
+  }
+
+  final CustomerRepository _repository;
+
+  Future<void> cargar() async {
+    state = state.copyWith(cargando: true, limpiarError: true);
+    try {
+      final plazos = await _repository.listarPlazosPago();
+      state = state.copyWith(plazos: plazos, cargando: false);
+    } catch (e) {
+      state = state.copyWith(cargando: false, error: e.toString());
+    }
+  }
+
+  Future<bool> crear({required String nombre, required List<int> diasCuotas}) async {
+    try {
+      await _repository.crearPlazoPago(nombre: nombre, diasCuotas: diasCuotas);
+      await cargar();
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
+  Future<void> activar(String plazoPagoId) async {
+    await _repository.activarPlazoPago(plazoPagoId);
+    await cargar();
+  }
+
+  Future<void> desactivar(String plazoPagoId) async {
+    await _repository.desactivarPlazoPago(plazoPagoId);
+    await cargar();
+  }
+}
+
+final plazosPagoProvider = StateNotifierProvider.autoDispose<PlazosPagoController, PlazosPagoState>((ref) {
+  return PlazosPagoController(ref.watch(customerRepositoryProvider));
 });

@@ -2,6 +2,8 @@ import 'package:novapos_app/features/catalog/domain/catalog_repository.dart';
 import 'package:novapos_app/features/catalog/domain/models/producto_vendible.dart';
 import 'package:novapos_app/features/customers/domain/customer_repository.dart';
 import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dart';
+import 'package:novapos_app/features/customers/domain/models/plazo_pago.dart';
+import 'package:novapos_app/features/customers/domain/models/solicitud_credito_pendiente.dart';
 import 'package:novapos_app/features/inventory/domain/inventory_repository.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
 import 'package:novapos_app/features/sales/domain/models/cotizacion.dart';
@@ -208,6 +210,8 @@ class FakeCustomerRepository implements CustomerRepository {
   String? ultimoNombreCreado;
   String? ultimoEmailCreado;
   String? ultimoTelefonoCreado;
+  String? ultimoPlazoPagoIdCreado;
+  String? ultimoPlazoPagoIdActualizado;
   String? errorAlCrear;
 
   @override
@@ -223,7 +227,7 @@ class FakeCustomerRepository implements CustomerRepository {
     String? email,
     String? telefono,
     double cupoCredito = 0,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
     String? giro,
     String? direccion,
     String? comuna,
@@ -239,6 +243,7 @@ class FakeCustomerRepository implements CustomerRepository {
     ultimoNombreCreado = nombre;
     ultimoEmailCreado = email;
     ultimoTelefonoCreado = telefono;
+    ultimoPlazoPagoIdCreado = plazoPagoId;
     return clienteIdARetornar;
   }
 
@@ -249,7 +254,7 @@ class FakeCustomerRepository implements CustomerRepository {
     String? email,
     String? telefono,
     double cupoCredito = 0,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
     String? giro,
     String? direccion,
     String? comuna,
@@ -260,12 +265,73 @@ class FakeCustomerRepository implements CustomerRepository {
     ultimaDireccion = direccion;
     ultimaComuna = comuna;
     ultimaCiudad = ciudad;
+    ultimoPlazoPagoIdActualizado = plazoPagoId;
   }
 
   @override
   Future<void> asignarRutCliente({required String clienteId, required String rut}) async {
     ultimoClienteIdConRutAsignado = clienteId;
     ultimoRutAsignado = rut;
+  }
+
+  List<SolicitudCreditoPendiente> solicitudesCreditoPendientesARetornar = [];
+  String? ultimoClienteIdSolicitudCredito;
+  double? ultimoCupoSolicitado;
+  String? ultimoPlazoPagoIdSolicitado;
+  String? ultimoClienteIdCreditoAutorizado;
+  String? ultimoClienteIdCreditoRechazado;
+  String? ultimoMotivoRechazoCredito;
+
+  @override
+  Future<void> solicitarCreditoCliente({
+    required String clienteId,
+    required double cupoSolicitado,
+    String? plazoPagoIdSolicitado,
+  }) async {
+    ultimoClienteIdSolicitudCredito = clienteId;
+    ultimoCupoSolicitado = cupoSolicitado;
+    ultimoPlazoPagoIdSolicitado = plazoPagoIdSolicitado;
+  }
+
+  @override
+  Future<void> autorizarCreditoCliente(String clienteId) async {
+    ultimoClienteIdCreditoAutorizado = clienteId;
+  }
+
+  @override
+  Future<void> rechazarCreditoCliente({required String clienteId, required String motivo}) async {
+    ultimoClienteIdCreditoRechazado = clienteId;
+    ultimoMotivoRechazoCredito = motivo;
+  }
+
+  @override
+  Future<List<SolicitudCreditoPendiente>> listarSolicitudesCreditoPendientes() async => solicitudesCreditoPendientesARetornar;
+
+  List<PlazoPago> plazosPagoARetornar = [];
+  String? ultimoNombrePlazoPagoCreado;
+  List<int>? ultimasDiasCuotasCreadas;
+  String plazoPagoIdARetornar = 'plazo-nuevo';
+  String? ultimoPlazoPagoIdActivado;
+  String? ultimoPlazoPagoIdDesactivado;
+
+  @override
+  Future<String> crearPlazoPago({required String nombre, required List<int> diasCuotas}) async {
+    ultimoNombrePlazoPagoCreado = nombre;
+    ultimasDiasCuotasCreadas = diasCuotas;
+    return plazoPagoIdARetornar;
+  }
+
+  @override
+  Future<List<PlazoPago>> listarPlazosPago() async => plazosPagoARetornar;
+
+  @override
+  Future<void> activarPlazoPago(String plazoPagoId) async {
+    ultimoPlazoPagoIdActivado = plazoPagoId;
+  }
+
+  @override
+  Future<void> desactivarPlazoPago(String plazoPagoId) async {
+    ultimoPlazoPagoIdDesactivado = plazoPagoId;
   }
 }
 

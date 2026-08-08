@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:novapos_app/features/purchasing/domain/models/plazo_pago.dart';
 import 'package:novapos_app/features/purchasing/domain/models/proveedor.dart';
 import 'package:novapos_app/features/purchasing/presentation/providers/purchasing_providers.dart';
 import 'package:novapos_app/features/purchasing/presentation/screens/proveedores_screen.dart';
@@ -14,14 +15,23 @@ const _proveedorDistribuidora = ProveedorResumen(
   nombre: 'Distribuidora Central',
   email: 'contacto@dc.cl',
   telefono: '+56221111111',
-  plazoPagoDias: 30,
+  plazoPagoId: 'plazo-1',
 );
 
 void main() {
   late FakePurchasingRepository fakePurchasing;
 
+  const plazo30Dias = PlazoPago(
+    id: 'plazo-30',
+    nombre: '30 días',
+    activo: true,
+    cuotas: [CuotaPlazoPago(numeroCuota: 1, diasVencimiento: 30)],
+  );
+
   Future<void> pumpProveedores(WidgetTester tester) async {
-    fakePurchasing = FakePurchasingRepository()..proveedoresARetornar = [_proveedorDistribuidora];
+    fakePurchasing = FakePurchasingRepository()
+      ..proveedoresARetornar = [_proveedorDistribuidora]
+      ..plazosPagoARetornar = [plazo30Dias];
 
     await tester.pumpWidget(ProviderScope(
       overrides: [purchasingRepositoryProvider.overrideWithValue(fakePurchasing)],
@@ -56,6 +66,23 @@ void main() {
     expect(find.text('Nuevo Proveedor'), findsOneWidget);
     final campoRut = tester.widget<TextField>(find.byKey(const Key('proveedorRut')));
     expect(campoRut.enabled, isTrue);
+  });
+
+  testWidgets('Alta seleccionando un Plazo de Pago del catálogo lo envía junto con el Proveedor', (tester) async {
+    await pumpProveedores(tester);
+
+    await tester.tap(find.byKey(const Key('nuevoProveedorBoton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('proveedorRut')), '76.543.210-3');
+    await tester.enterText(find.byKey(const Key('proveedorNombre')), 'Proveedor Nuevo SpA');
+    await tester.tap(find.byKey(const Key('proveedorPlazoPago')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('30 días').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('proveedorGuardar')));
+    await tester.pumpAndSettle();
+
+    expect(fakePurchasing.ultimoPlazoPagoIdCreado, 'plazo-30');
   });
 
   testWidgets('Tocar un Proveedor abre el formulario de edición con el RUT deshabilitado y precargado', (tester) async {

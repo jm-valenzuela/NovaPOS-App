@@ -4,6 +4,7 @@ import '../../../core/network/api_client.dart';
 import '../domain/models/discrepancia.dart';
 import '../domain/models/documento_recibido.dart';
 import '../domain/models/orden_compra.dart';
+import '../domain/models/plazo_pago.dart';
 import '../domain/models/proveedor.dart';
 import '../domain/models/purchasing_enums.dart';
 
@@ -17,7 +18,7 @@ class PurchasingApi {
     required String nombre,
     String? email,
     String? telefono,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
   }) async {
     try {
       final respuesta = await _client.dio.post('/proveedores', data: {
@@ -25,7 +26,7 @@ class PurchasingApi {
         'nombre': nombre,
         'email': email,
         'telefono': telefono,
-        'plazoPagoDias': plazoPagoDias,
+        'plazoPagoId': plazoPagoId,
       });
       return respuesta.data['id'] as String;
     } on DioException catch (e) {
@@ -38,14 +39,14 @@ class PurchasingApi {
     required String nombre,
     String? email,
     String? telefono,
-    int plazoPagoDias = 0,
+    String? plazoPagoId,
   }) async {
     try {
       await _client.dio.put('/proveedores/$proveedorId', data: {
         'nombre': nombre,
         'email': email,
         'telefono': telefono,
-        'plazoPagoDias': plazoPagoDias,
+        'plazoPagoId': plazoPagoId,
       });
     } on DioException catch (e) {
       ApiClient.lanzarError(e);
@@ -180,6 +181,44 @@ class PurchasingApi {
   Future<void> resolverDiscrepancia({required String discrepanciaId, required String motivo}) async {
     try {
       await _client.dio.post('/discrepancias-documentos-recibidos/$discrepanciaId/resolver', data: {'motivo': motivo});
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<String> crearPlazoPago({required String nombre, required List<int> diasCuotas}) async {
+    try {
+      final respuesta = await _client.dio.post('/proveedores/plazos-pago', data: {
+        'nombre': nombre,
+        'diasCuotas': diasCuotas,
+      });
+      return respuesta.data['id'] as String;
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<List<PlazoPago>> listarPlazosPago() async {
+    try {
+      final respuesta = await _client.dio.get('/proveedores/plazos-pago');
+      final lista = respuesta.data as List<dynamic>;
+      return lista.map((json) => PlazoPago.fromJson(json as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<void> activarPlazoPago(String plazoPagoId) async {
+    try {
+      await _client.dio.post('/proveedores/plazos-pago/$plazoPagoId/activar');
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<void> desactivarPlazoPago(String plazoPagoId) async {
+    try {
+      await _client.dio.post('/proveedores/plazos-pago/$plazoPagoId/desactivar');
     } on DioException catch (e) {
       ApiClient.lanzarError(e);
     }

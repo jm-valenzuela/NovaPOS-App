@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../customers/presentation/providers/solicitudes_credito_pendientes_providers.dart';
 import '../../../sales/presentation/providers/descuentos_pendientes_providers.dart';
 
 /// Menú principal post-login — el resto de las pantallas (Inventario,
@@ -27,6 +28,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// existe y no molesta si se llama sin tener el permiso, pero evitamos
   /// el llamado innecesario igual.
   Timer? _pollDescuentosPendientes;
+  Timer? _pollSolicitudesCredito;
 
   @override
   void initState() {
@@ -36,11 +38,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.read(descuentosPendientesProvider.notifier).cargar();
       }
     });
+    _pollSolicitudesCredito = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (ref.read(authControllerProvider).sesion?.tienePermiso('customers.clientes.autorizarcredito') ?? false) {
+        ref.read(solicitudesCreditoPendientesProvider.notifier).cargar();
+      }
+    });
   }
 
   @override
   void dispose() {
     _pollDescuentosPendientes?.cancel();
+    _pollSolicitudesCredito?.cancel();
     super.dispose();
   }
 
@@ -56,6 +64,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // tarjeta (ej. un Cajero sin el permiso).
     final cantidadDescuentosPendientes =
         tieneAutorizarDescuentos ? ref.watch(descuentosPendientesProvider).pendientes.length : 0;
+    final tieneAutorizarCredito = sesion?.tienePermiso('customers.clientes.autorizarcredito') ?? false;
+    final cantidadSolicitudesCreditoPendientes =
+        tieneAutorizarCredito ? ref.watch(solicitudesCreditoPendientesProvider).pendientes.length : 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -145,6 +156,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       subtitle: const Text('Crear y editar Clientes'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push('/clientes'),
+                    ),
+                  ),
+                ],
+                if (tieneAutorizarCredito) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    child: ListTile(
+                      key: const Key('homeCreditoPendienteCard'),
+                      leading: const Icon(Icons.request_quote_outlined, size: 32),
+                      title: const Text('Cupo de Crédito'),
+                      subtitle: const Text('Autorizar o rechazar solicitudes de crédito de Clientes'),
+                      trailing: cantidadSolicitudesCreditoPendientes > 0
+                          ? Badge(
+                              key: const Key('badgeCreditoPendiente'),
+                              label: Text('$cantidadSolicitudesCreditoPendientes'),
+                              child: const Icon(Icons.chevron_right),
+                            )
+                          : const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/clientes/credito-pendientes'),
                     ),
                   ),
                 ],

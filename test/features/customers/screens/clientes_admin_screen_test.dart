@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dart';
+import 'package:novapos_app/features/customers/domain/models/plazo_pago.dart';
 import 'package:novapos_app/features/customers/presentation/screens/clientes_admin_screen.dart';
 import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart' show customerRepositoryProvider;
 
@@ -15,7 +16,7 @@ const _clienteJuan = ClienteResumen(
   email: 'juan@correo.cl',
   telefono: null,
   cupoCredito: 100000,
-  plazoPagoDias: 30,
+  plazoPagoId: 'plazo-1',
 );
 
 const _clienteSinRut = ClienteResumen(
@@ -25,14 +26,32 @@ const _clienteSinRut = ClienteResumen(
   email: null,
   telefono: null,
   cupoCredito: 0,
-  plazoPagoDias: 0,
+);
+
+const _clienteConCreditoPendiente = ClienteResumen(
+  id: 'cliente-4',
+  rut: '76.123.456-0',
+  nombre: 'Empresa Credito Pendiente',
+  email: null,
+  telefono: null,
+  cupoCredito: 0,
+  estadoSolicitudCredito: 1,
 );
 
 void main() {
   late FakeCustomerRepository fakeCustomer;
 
+  const plazo30Dias = PlazoPago(
+    id: 'plazo-30',
+    nombre: '30 días',
+    activo: true,
+    cuotas: [CuotaPlazoPago(numeroCuota: 1, diasVencimiento: 30)],
+  );
+
   Future<void> pumpClientes(WidgetTester tester) async {
-    fakeCustomer = FakeCustomerRepository()..resultadosARetornar = [_clienteJuan];
+    fakeCustomer = FakeCustomerRepository()
+      ..resultadosARetornar = [_clienteJuan]
+      ..plazosPagoARetornar = [plazo30Dias];
 
     await tester.pumpWidget(ProviderScope(
       overrides: [customerRepositoryProvider.overrideWithValue(fakeCustomer)],
@@ -109,6 +128,25 @@ void main() {
 
     expect(fakeCustomer.crearLlamado, isTrue);
     expect(fakeCustomer.ultimoRutCreado, '76543210-3');
+    expect(fakeCustomer.ultimoPlazoPagoIdCreado, isNull);
+  });
+
+  testWidgets('Alta seleccionando un Plazo de Pago del catálogo lo envía junto con el Cliente', (tester) async {
+    await pumpClientes(tester);
+
+    await tester.tap(find.byKey(const Key('nuevoClienteBoton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('clienteRut')), '76.543.210-3');
+    await tester.enterText(find.byKey(const Key('clienteNombre')), 'Empresa Nueva SpA');
+    await tester.tap(find.byKey(const Key('clientePlazoPago')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('30 días').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('clienteGuardar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCustomer.crearLlamado, isTrue);
+    expect(fakeCustomer.ultimoPlazoPagoIdCreado, 'plazo-30');
   });
 
   testWidgets('Alta con datos de Factura los envía junto con el Cliente', (tester) async {
@@ -210,5 +248,61 @@ void main() {
 
     expect(fakeCustomer.ultimoClienteIdConRutAsignado, 'cliente-2');
     expect(fakeCustomer.ultimoRutAsignado, '76543210-3');
+  });
+
+  testWidgets('Solicitar Cupo de Crédito con datos válidos llama al repositorio', (tester) async {
+    await pumpClientes(tester);
+
+    await tester.tap(find.byKey(const Key('clienteSolicitarCredito_cliente-1')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('solicitarCreditoCupo')), '500000');
+    await tester.tap(find.byKey(const Key('solicitarCreditoConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCustomer.ultimoClienteIdSolicitudCredito, 'cliente-1');
+    expect(fakeCustomer.ultimoCupoSolicitado, 500000);
+    expect(fakeCustomer.ultimoPlazoPagoIdSolicitado, isNull);
+  });
+
+  testWidgets('Solicitar Cupo de Crédito con cupo inválido muestra error y no llama al repositorio', (tester) async {
+    await pumpClientes(tester);
+
+    await tester.tap(find.byKey(const Key('clienteSolicitarCredito_cliente-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('solicitarCreditoConfirmar')));
+    await tester.pump();
+
+    expect(find.textContaining('Ingresa un cupo válido'), findsOneWidget);
+    expect(fakeCustomer.ultimoClienteIdSolicitudCredito, isNull);
+  });
+
+  testWidgets('Un Cliente sin RUT no permite solicitar Cupo de Crédito', (tester) async {
+    fakeCustomer = FakeCustomerRepository()..resultadosARetornar = [_clienteSinRut];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [customerRepositoryProvider.overrideWithValue(fakeCustomer)],
+      child: const MaterialApp(home: ClientesAdminScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('clienteSolicitarCredito_cliente-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('no tiene RUT registrado'), findsOneWidget);
+    expect(find.byKey(const Key('solicitarCreditoConfirmar')), findsNothing);
+  });
+
+  testWidgets('Un Cliente con solicitud de crédito ya Pendiente deshabilita el botón', (tester) async {
+    fakeCustomer = FakeCustomerRepository()..resultadosARetornar = [_clienteConCreditoPendiente];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [customerRepositoryProvider.overrideWithValue(fakeCustomer)],
+      child: const MaterialApp(home: ClientesAdminScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.textContaining('Crédito pendiente de autorización'), findsOneWidget);
+    final boton = tester.widget<IconButton>(find.byKey(const Key('clienteSolicitarCredito_cliente-4')));
+    expect(boton.onPressed, isNull);
   });
 }
