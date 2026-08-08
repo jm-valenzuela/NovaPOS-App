@@ -19,6 +19,7 @@ import '../providers/pos_providers.dart';
 import '../theme/pos_colors.dart';
 import '../widgets/cantidad_pesable_dialog.dart';
 import '../widgets/carrito_linea_tile.dart';
+import '../widgets/checkout_dialog.dart';
 import '../widgets/producto_resultado_tile.dart';
 import '../widgets/rescatar_cotizacion_dialog.dart';
 import '../widgets/selector_cliente_dialog.dart';
@@ -300,10 +301,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 clienteSeleccionado: clienteSeleccionado,
                 stockPorVariante: busqueda.stock,
                 onElegirCliente: () => _elegirCliente(context),
-                onCobrar: () => ref.read(posCartProvider.notifier).cobrar(
-                      cajaId: cajaSeleccionada.cajaId,
-                      clienteId: ref.read(clienteSeleccionadoProvider)?.id,
-                    ),
+                onCobrar: () => _cobrar(context, cajaSeleccionada.cajaId, carrito.totalConDescuento),
                 onVaciar: () => _vaciar(context, ref, carrito),
                 onSolicitarDescuento: () => _solicitarDescuento(context, cajaSeleccionada.cajaId),
                 onGuardarCotizacion: () => _guardarCotizacion(context, cajaSeleccionada.cajaId),
@@ -360,6 +358,27 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     );
     if (cantidad == null || !mounted) return;
     ref.read(posCartProvider.notifier).agregarProducto(producto, cantidad: cantidad);
+  }
+
+  /// Abre CheckoutDialog para que el Cajero elija Boleta/Factura y (si es
+  /// al Contado, único camino hoy — ver PosCartController.cobrar) el medio
+  /// de pago, antes de confirmar la Venta.
+  Future<void> _cobrar(BuildContext context, String cajaId, double total) async {
+    final resultado = await showDialog<ResultadoCheckout>(
+      context: context,
+      builder: (_) => CheckoutDialog(
+        total: total,
+        formaPago: FormaPago.contado,
+        clienteSeleccionado: ref.read(clienteSeleccionadoProvider),
+      ),
+    );
+    if (resultado == null || !mounted) return;
+    await ref.read(posCartProvider.notifier).cobrar(
+          cajaId: cajaId,
+          clienteId: ref.read(clienteSeleccionadoProvider)?.id,
+          tipoDocumento: resultado.tipoDocumento,
+          pagos: resultado.pagos,
+        );
   }
 
   Future<void> _solicitarDescuento(BuildContext context, String cajaId) async {

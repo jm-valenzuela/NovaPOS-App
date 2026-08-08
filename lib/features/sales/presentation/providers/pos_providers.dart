@@ -25,6 +25,7 @@ import '../../data/sales_repository_impl.dart';
 import '../../data/venta_api.dart';
 import '../../domain/models/cotizacion.dart';
 import '../../domain/models/linea_carrito.dart';
+import '../../domain/models/pago_input.dart';
 import '../../domain/models/resumen_venta.dart';
 import '../../domain/models/venta_enums.dart';
 import '../../domain/sales_repository.dart';
@@ -397,7 +398,16 @@ class PosCartController extends StateNotifier<PosCartState> {
   /// en Borrador en el servidor sin las líneas restantes — se informa el
   /// error y el carrito local NO se vacía, para que el Cajero pueda
   /// reintentar sin volver a tipear todo.
-  Future<void> cobrar({required String cajaId, String? clienteId}) async {
+  /// tipoDocumento/pagos vienen del CheckoutDialog, mostrado antes de
+  /// llamar acá — ver PosScreen. crearVenta hoy hardcodea FormaPago.contado
+  /// (no hay selector de Crédito en el POS todavía), así que pagos siempre
+  /// se espera no vacío.
+  Future<void> cobrar({
+    required String cajaId,
+    String? clienteId,
+    required TipoDocumento tipoDocumento,
+    required List<PagoInput> pagos,
+  }) async {
     if (state.lineas.isEmpty) return;
     if (state.estadoDescuento == EstadoDescuentoGeneral.pendiente) return;
 
@@ -416,7 +426,7 @@ class PosCartController extends StateNotifier<PosCartState> {
         }
       }
 
-      final resumen = await _salesRepository.confirmarVenta(ventaId);
+      final resumen = await _salesRepository.confirmarVenta(ventaId: ventaId, tipoDocumento: tipoDocumento, pagos: pagos);
 
       state = PosCartState(resumenCobrado: resumen);
     } catch (e) {

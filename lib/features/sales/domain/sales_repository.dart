@@ -2,7 +2,9 @@ import 'models/cotizacion.dart';
 import 'models/descuento_pendiente.dart';
 import 'models/detalle_descuento_pendiente.dart';
 import 'models/estado_descuento_venta.dart';
+import 'models/pago_input.dart';
 import 'models/resumen_venta.dart';
+import 'models/venta_enums.dart';
 
 /// Contrato para el flujo de cobro del POS — Crear Venta, agregar cada
 /// línea, confirmar. El carrito en sí es estado de cliente puro (ver
@@ -12,7 +14,14 @@ abstract class SalesRepository {
 
   Future<void> agregarLinea({required String ventaId, required String varianteProductoId, required double cantidad});
 
-  Future<ResumenVenta> confirmarVenta(String ventaId);
+  /// tipoDocumento: Boleta o Factura, elegido por el Cajero (ver
+  /// CheckoutDialog). pagos: obligatorio y no vacío si la Venta es al
+  /// Contado (soporta pago mixto); vacío si es a Crédito.
+  Future<ResumenVenta> confirmarVenta({
+    required String ventaId,
+    required TipoDocumento tipoDocumento,
+    required List<PagoInput> pagos,
+  });
 
   /// El Cajero pide el descuento — porcentaje y monto son mutuamente
   /// excluyentes, mandar exactamente uno de los dos.

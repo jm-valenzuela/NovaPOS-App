@@ -5,6 +5,7 @@ import '../domain/models/cotizacion.dart';
 import '../domain/models/descuento_pendiente.dart';
 import '../domain/models/detalle_descuento_pendiente.dart';
 import '../domain/models/estado_descuento_venta.dart';
+import '../domain/models/pago_input.dart';
 import '../domain/models/resumen_venta.dart';
 import '../domain/models/venta_enums.dart';
 
@@ -47,9 +48,16 @@ class VentaApi {
     }
   }
 
-  Future<ResumenVenta> confirmar(String ventaId) async {
+  Future<ResumenVenta> confirmar({
+    required String ventaId,
+    required TipoDocumento tipoDocumento,
+    required List<PagoInput> pagos,
+  }) async {
     try {
-      final respuesta = await _client.dio.post('/ventas/$ventaId/confirmar');
+      final respuesta = await _client.dio.post('/ventas/$ventaId/confirmar', data: {
+        'tipoDocumentoSolicitado': tipoDocumento.valorApi,
+        'pagos': pagos.map((p) => p.toJson()).toList(),
+      });
       return ResumenVenta.fromJson(respuesta.data as Map<String, dynamic>);
     } on DioException catch (e) {
       ApiClient.lanzarError(e);

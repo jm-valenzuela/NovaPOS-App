@@ -17,6 +17,8 @@ import '../../features/purchasing/presentation/screens/orden_compra_detalle_scre
 import '../../features/purchasing/presentation/screens/ordenes_compra_screen.dart';
 import '../../features/purchasing/presentation/screens/plazos_pago_proveedor_screen.dart';
 import '../../features/purchasing/presentation/screens/proveedores_screen.dart';
+import '../../features/receivables/presentation/screens/cobranzas_screen.dart';
+import '../../features/receivables/presentation/screens/detalle_cuenta_cliente_screen.dart';
 import '../../features/sales/presentation/screens/descuentos_pendientes_screen.dart';
 import '../../features/sales/presentation/screens/pos_screen.dart';
 
@@ -58,6 +60,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/clientes/credito-pendientes', builder: (context, state) => const SolicitudesCreditoPendientesScreen()),
       GoRoute(path: '/clientes/plazos-pago', builder: (context, state) => const PlazosPagoScreen()),
+      GoRoute(path: '/clientes/cobranzas', builder: (context, state) => const CobranzasScreen()),
+      GoRoute(
+        path: '/clientes/cobranzas/:id',
+        builder: (context, state) => DetalleCuentaClienteScreen(clienteId: state.pathParameters['id']!),
+      ),
       GoRoute(path: '/compras', builder: (context, state) => const ComprasHubScreen()),
       GoRoute(path: '/compras/proveedores', builder: (context, state) => const ProveedoresScreen()),
       GoRoute(path: '/compras/proveedores/plazos-pago', builder: (context, state) => const PlazosPagoProveedorScreen()),

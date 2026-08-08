@@ -10,6 +10,7 @@ import 'package:novapos_app/features/sales/domain/models/cotizacion.dart';
 import 'package:novapos_app/features/sales/domain/models/descuento_pendiente.dart';
 import 'package:novapos_app/features/sales/domain/models/detalle_descuento_pendiente.dart';
 import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
+import 'package:novapos_app/features/sales/domain/models/pago_input.dart';
 import 'package:novapos_app/features/sales/domain/models/resumen_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/domain/sales_repository.dart';
@@ -81,8 +82,17 @@ class FakeSalesRepository implements SalesRepository {
     if (errorAforzar != null) throw Exception(errorAforzar);
   }
 
+  TipoDocumento? ultimoTipoDocumento;
+  List<PagoInput>? ultimosPagos;
+
   @override
-  Future<ResumenVenta> confirmarVenta(String ventaId) async {
+  Future<ResumenVenta> confirmarVenta({
+    required String ventaId,
+    required TipoDocumento tipoDocumento,
+    required List<PagoInput> pagos,
+  }) async {
+    ultimoTipoDocumento = tipoDocumento;
+    ultimosPagos = pagos;
     if (errorAforzar != null) throw Exception(errorAforzar);
     return ResumenVenta.calcular(totalARetornar);
   }

@@ -69,6 +69,18 @@ void main() {
     await tester.pump(); // deja resolver el Future de listarStock (si hay Bodega resuelta)
   }
 
+  /// Toca "Cobrar", que ahora abre CheckoutDialog (Boleta por defecto,
+  /// Contado siempre pide medio de pago) — completa un único pago en
+  /// Efectivo por el Total exacto del carrito y confirma.
+  Future<void> cobrarConfirmando(WidgetTester tester, double totalCarrito) async {
+    await tester.tap(find.byKey(const Key('posCobrar')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('checkoutMonto_0')), totalCarrito.toStringAsFixed(0));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('checkoutConfirmar')));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('Con una sola Caja, la selecciona automáticamente y muestra la búsqueda', (tester) async {
     await pumpPos(tester);
 
@@ -126,8 +138,7 @@ void main() {
     await tester.tap(find.byKey(const Key('cantidadPesableConfirmar')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('posCobrar')));
-    await tester.pumpAndSettle();
+    await cobrarConfirmando(tester, 1900); // 1500 (coca) + 400 (0.5kg de pan a $800)
 
     expect(fakeSales.vecesCrearLlamado, 1);
     expect(fakeSales.ultimoCajaId, 'caja-1');
@@ -148,8 +159,7 @@ void main() {
     await buscarYEsperar(tester, 'a');
     await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('posCobrar')));
-    await tester.pumpAndSettle();
+    await cobrarConfirmando(tester, 1500);
 
     await tester.tap(find.text('Nueva Venta'));
     await tester.pumpAndSettle();
@@ -166,8 +176,7 @@ void main() {
     await buscarYEsperar(tester, 'a');
     await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('posCobrar')));
-    await tester.pumpAndSettle();
+    await cobrarConfirmando(tester, 1500);
 
     expect(find.textContaining('No se pudo conectar'), findsOneWidget);
     expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget, reason: 'el carrito se conserva para reintentar');
@@ -251,8 +260,7 @@ void main() {
     await buscarYEsperar(tester, 'a');
     await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('posCobrar')));
-    await tester.pumpAndSettle();
+    await cobrarConfirmando(tester, 1500);
 
     expect(fakeSales.ultimoClienteId, 'cliente-juan');
   });

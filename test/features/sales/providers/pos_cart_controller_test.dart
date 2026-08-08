@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:novapos_app/features/sales/domain/models/cotizacion.dart';
 import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
+import 'package:novapos_app/features/sales/domain/models/pago_input.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart';
 
@@ -42,7 +43,7 @@ void main() {
   test('cobrar mientras el descuento está Pendiente no confirma nada', () async {
     await controller.solicitarDescuento(cajaId: 'caja-1', porcentaje: 10);
 
-    await controller.cobrar(cajaId: 'caja-1');
+    await controller.cobrar(cajaId: 'caja-1', tipoDocumento: TipoDocumento.boleta, pagos: const []);
 
     expect(controller.state.resumenCobrado, isNull);
     expect(controller.state.estadoDescuento, EstadoDescuentoGeneral.pendiente);
@@ -91,7 +92,11 @@ void main() {
     await controller.verificarEstadoDescuento();
     fakeSales.totalARetornar = 2700;
 
-    await controller.cobrar(cajaId: 'caja-1');
+    await controller.cobrar(
+      cajaId: 'caja-1',
+      tipoDocumento: TipoDocumento.boleta,
+      pagos: const [PagoInput(medioPago: MedioPago.efectivo, monto: 2700)],
+    );
 
     expect(fakeSales.vecesCrearLlamado, 1);
     expect(controller.state.resumenCobrado, isNotNull);

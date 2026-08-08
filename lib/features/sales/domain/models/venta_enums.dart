@@ -37,3 +37,40 @@ enum EstadoDescuentoGeneral {
   static EstadoDescuentoGeneral desdeValor(int valor) =>
       EstadoDescuentoGeneral.values.firstWhere((e) => e.valorApi == valor, orElse: () => EstadoDescuentoGeneral.sinSolicitar);
 }
+
+/// Espejo de TipoDteExterno en NovaPOS.Domain.Sales — el Cajero elige uno de
+/// estos dos al confirmar (ya no se infiere automático según el RUT del
+/// Cliente). Los valores son los códigos reales del SII (33/39), igual
+/// criterio que el backend.
+enum TipoDocumento {
+  boleta(39),
+  factura(33);
+
+  const TipoDocumento(this.valorApi);
+
+  final int valorApi;
+
+  String get etiqueta => switch (this) {
+        TipoDocumento.boleta => 'Boleta',
+        TipoDocumento.factura => 'Factura',
+      };
+}
+
+/// Espejo de MedioPago en NovaPOS.Domain.Sales / NovaPOS.Domain.Receivables
+/// — un solo enum Dart compartido entre Sales y Receivables (a diferencia
+/// del backend, acá no hay restricción de ADR-007 sobre duplicar tipos).
+enum MedioPago {
+  efectivo(0),
+  tarjetaDebito(1),
+  tarjetaCredito(2);
+
+  const MedioPago(this.valorApi);
+
+  final int valorApi;
+
+  String get etiqueta => switch (this) {
+        MedioPago.efectivo => 'Efectivo',
+        MedioPago.tarjetaDebito => 'Tarjeta Débito',
+        MedioPago.tarjetaCredito => 'Tarjeta Crédito',
+      };
+}

@@ -2,6 +2,7 @@ import '../domain/models/cotizacion.dart';
 import '../domain/models/descuento_pendiente.dart';
 import '../domain/models/detalle_descuento_pendiente.dart';
 import '../domain/models/estado_descuento_venta.dart';
+import '../domain/models/pago_input.dart';
 import '../domain/models/resumen_venta.dart';
 import '../domain/models/venta_enums.dart';
 import '../domain/sales_repository.dart';
@@ -25,7 +26,12 @@ class SalesRepositoryImpl implements SalesRepository {
       _api.agregarLinea(ventaId: ventaId, varianteProductoId: varianteProductoId, cantidad: cantidad);
 
   @override
-  Future<ResumenVenta> confirmarVenta(String ventaId) => _api.confirmar(ventaId);
+  Future<ResumenVenta> confirmarVenta({
+    required String ventaId,
+    required TipoDocumento tipoDocumento,
+    required List<PagoInput> pagos,
+  }) =>
+      _api.confirmar(ventaId: ventaId, tipoDocumento: tipoDocumento, pagos: pagos);
 
   @override
   Future<void> solicitarDescuentoGeneral({required String ventaId, double? porcentaje, double? monto}) =>
