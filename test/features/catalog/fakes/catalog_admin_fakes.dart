@@ -159,6 +159,39 @@ class FakeCatalogAdminRepository implements CatalogAdminRepository {
     productosDesactivados.add(productoId);
   }
 
+  String idVarianteCreada = 'variante-nueva';
+  Map<String, dynamic>? ultimaCreacionVariante;
+
+  @override
+  Future<String> crearVariante({
+    required String productoId,
+    required String sku,
+    required double precioVenta,
+    required int unidadMedida,
+    String? codigoBarras,
+    String? color,
+    String? talla,
+    String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
+    int? cantidadPorGrupoPromocion,
+    double? porcentajeDescuentoUnidadPromocion,
+    double? precioOferta,
+    DateTime? ofertaDesde,
+    DateTime? ofertaHasta,
+  }) async {
+    _fallarSiCorresponde();
+    ultimaCreacionVariante = {
+      'productoId': productoId,
+      'sku': sku,
+      'precioVenta': precioVenta,
+      'unidadMedida': unidadMedida,
+      'color': color,
+      'talla': talla,
+    };
+    return idVarianteCreada;
+  }
+
   @override
   Future<void> actualizarVariante({
     required String varianteProductoId,

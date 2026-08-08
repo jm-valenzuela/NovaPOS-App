@@ -5,6 +5,7 @@ import '../../../../core/utils/moneda_formatter.dart';
 import '../../domain/models/clasificacion.dart';
 import '../../domain/models/producto_admin.dart';
 import '../providers/catalog_admin_providers.dart';
+import '../widgets/crear_variante_dialog.dart';
 import '../widgets/editar_producto_dialog.dart';
 import '../widgets/editar_variante_dialog.dart';
 import '../widgets/etiqueta_codigo_barras.dart';
@@ -178,11 +179,27 @@ class _ProductoTile extends ConsumerWidget {
             builder: (_) => EditarProductoDialog(producto: producto),
           ),
         ),
-        children: producto.variantes.isEmpty
-            ? [const Padding(padding: EdgeInsets.all(12), child: Text('Sin Variantes'))]
-            : producto.variantes
-                .map((variante) => _VarianteTile(variante: variante, nombreProducto: producto.nombre))
-                .toList(),
+        children: [
+          if (producto.variantes.isEmpty)
+            const Padding(padding: EdgeInsets.all(12), child: Text('Sin Variantes'))
+          else
+            ...producto.variantes.map((variante) => _VarianteTile(variante: variante, nombreProducto: producto.nombre)),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: Key('catalogoAgregarVariante_${producto.productoId}'),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Agregar Variante'),
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => CrearVarianteDialog(productoId: producto.productoId, nombreProducto: producto.nombre),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

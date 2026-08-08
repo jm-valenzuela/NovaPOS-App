@@ -6,6 +6,7 @@ import 'package:novapos_app/features/catalog/domain/models/clasificacion.dart';
 import 'package:novapos_app/features/catalog/presentation/providers/catalog_admin_providers.dart';
 import 'package:novapos_app/features/catalog/presentation/screens/catalog_form_screen.dart';
 import 'package:novapos_app/features/catalog/presentation/screens/productos_admin_screen.dart';
+import 'package:novapos_app/features/catalog/presentation/widgets/crear_variante_dialog.dart';
 
 import '../fakes/catalog_admin_fakes.dart';
 
@@ -219,6 +220,20 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('Sin resultados'), findsOneWidget);
+  });
+
+  testWidgets('"Agregar Variante" abre el diálogo de creación para ese Producto', (tester) async {
+    fake = FakeCatalogAdminRepository()..productos = [productoPoleraAdmin];
+    await pumpPantalla(tester);
+
+    await tester.tap(find.byKey(const Key('catalogoProducto_producto-polera')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('catalogoAgregarVariante_producto-polera')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CrearVarianteDialog), findsOneWidget);
+    expect(find.text('Nueva Variante (Polera Nike Dri-Fit)'), findsOneWidget);
   });
 
   testWidgets('Sin Departamentos, no muestra la fila de tabs', (tester) async {

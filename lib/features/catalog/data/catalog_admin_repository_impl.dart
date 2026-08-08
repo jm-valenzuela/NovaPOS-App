@@ -103,6 +103,42 @@ class CatalogAdminRepositoryImpl implements CatalogAdminRepository {
   Future<void> desactivarProducto(String productoId) => _api.desactivarProducto(productoId);
 
   @override
+  Future<String> crearVariante({
+    required String productoId,
+    required String sku,
+    required double precioVenta,
+    required int unidadMedida,
+    String? codigoBarras,
+    String? color,
+    String? talla,
+    String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
+    int? cantidadPorGrupoPromocion,
+    double? porcentajeDescuentoUnidadPromocion,
+    double? precioOferta,
+    DateTime? ofertaDesde,
+    DateTime? ofertaHasta,
+  }) =>
+      _api.crearVariante(
+        productoId: productoId,
+        sku: sku,
+        precioVenta: precioVenta,
+        unidadMedida: unidadMedida,
+        codigoBarras: codigoBarras,
+        color: color,
+        talla: talla,
+        ubicacionFisica: ubicacionFisica,
+        cantidadMinimaDescuentoVolumen: cantidadMinimaDescuentoVolumen,
+        porcentajeDescuentoVolumen: porcentajeDescuentoVolumen,
+        cantidadPorGrupoPromocion: cantidadPorGrupoPromocion,
+        porcentajeDescuentoUnidadPromocion: porcentajeDescuentoUnidadPromocion,
+        precioOferta: precioOferta,
+        ofertaDesde: ofertaDesde,
+        ofertaHasta: ofertaHasta,
+      );
+
+  @override
   Future<void> actualizarVariante({
     required String varianteProductoId,
     required double precioVenta,

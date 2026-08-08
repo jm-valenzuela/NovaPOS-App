@@ -54,6 +54,27 @@ abstract class CatalogAdminRepository {
   Future<void> activarProducto(String productoId);
   Future<void> desactivarProducto(String productoId);
 
+  /// Agrega una Variante adicional (ej. otro color/talla) a un Producto ya
+  /// existente — a diferencia de crearProducto, no crea clasificación ni
+  /// Producto nuevo, solo la Variante.
+  Future<String> crearVariante({
+    required String productoId,
+    required String sku,
+    required double precioVenta,
+    required int unidadMedida,
+    String? codigoBarras,
+    String? color,
+    String? talla,
+    String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
+    int? cantidadPorGrupoPromocion,
+    double? porcentajeDescuentoUnidadPromocion,
+    double? precioOferta,
+    DateTime? ofertaDesde,
+    DateTime? ofertaHasta,
+  });
+
   Future<void> actualizarVariante({
     required String varianteProductoId,
     required double precioVenta,

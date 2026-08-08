@@ -73,6 +73,52 @@ class ProductosAdminController extends StateNotifier<ProductosAdminState> {
     }
   }
 
+  /// Agrega una Variante adicional a un Producto ya existente (ej. otro
+  /// color/talla). Devuelve true si tuvo éxito, para que el diálogo sepa
+  /// cerrarse — el error queda en state.error para mostrarlo si falla.
+  Future<bool> crearVariante({
+    required String productoId,
+    required String sku,
+    required double precioVenta,
+    required int unidadMedida,
+    String? codigoBarras,
+    String? color,
+    String? talla,
+    String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
+    int? cantidadPorGrupoPromocion,
+    double? porcentajeDescuentoUnidadPromocion,
+    double? precioOferta,
+    DateTime? ofertaDesde,
+    DateTime? ofertaHasta,
+  }) async {
+    try {
+      await _repository.crearVariante(
+        productoId: productoId,
+        sku: sku,
+        precioVenta: precioVenta,
+        unidadMedida: unidadMedida,
+        codigoBarras: codigoBarras,
+        color: color,
+        talla: talla,
+        ubicacionFisica: ubicacionFisica,
+        cantidadMinimaDescuentoVolumen: cantidadMinimaDescuentoVolumen,
+        porcentajeDescuentoVolumen: porcentajeDescuentoVolumen,
+        cantidadPorGrupoPromocion: cantidadPorGrupoPromocion,
+        porcentajeDescuentoUnidadPromocion: porcentajeDescuentoUnidadPromocion,
+        precioOferta: precioOferta,
+        ofertaDesde: ofertaDesde,
+        ofertaHasta: ofertaHasta,
+      );
+      await cargar();
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
   Future<void> alternarVariante(VarianteAdmin variante) async {
     try {
       if (variante.activa) {

@@ -209,6 +209,50 @@ class CatalogAdminApi {
     }
   }
 
+  /// Agrega una Variante adicional (ej. otro color/talla) a un Producto ya
+  /// existente — a diferencia de crearProducto, no crea clasificación ni
+  /// Producto nuevo, solo la Variante.
+  Future<String> crearVariante({
+    required String productoId,
+    required String sku,
+    required double precioVenta,
+    required int unidadMedida,
+    String? codigoBarras,
+    String? color,
+    String? talla,
+    String? ubicacionFisica,
+    int? cantidadMinimaDescuentoVolumen,
+    double? porcentajeDescuentoVolumen,
+    int? cantidadPorGrupoPromocion,
+    double? porcentajeDescuentoUnidadPromocion,
+    double? precioOferta,
+    DateTime? ofertaDesde,
+    DateTime? ofertaHasta,
+  }) async {
+    try {
+      final respuesta = await _client.dio.post('/catalogo/variantes', data: {
+        'productoId': productoId,
+        'sku': sku,
+        'precioVenta': precioVenta,
+        'unidadMedida': unidadMedida,
+        'codigoBarras': codigoBarras,
+        'color': color,
+        'talla': talla,
+        'ubicacionFisica': ubicacionFisica,
+        'cantidadMinimaDescuentoVolumen': cantidadMinimaDescuentoVolumen,
+        'porcentajeDescuentoVolumen': porcentajeDescuentoVolumen,
+        'cantidadPorGrupoPromocion': cantidadPorGrupoPromocion,
+        'porcentajeDescuentoUnidadPromocion': porcentajeDescuentoUnidadPromocion,
+        'precioOferta': precioOferta,
+        'ofertaDesde': _formatearFecha(ofertaDesde),
+        'ofertaHasta': _formatearFecha(ofertaHasta),
+      });
+      return respuesta.data['id'] as String;
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
   Future<void> actualizarVariante({
     required String varianteProductoId,
     required double precioVenta,

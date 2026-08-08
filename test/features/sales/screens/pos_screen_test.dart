@@ -278,6 +278,49 @@ void main() {
     expect(find.text('Cliente Genérico'), findsOneWidget);
   });
 
+  testWidgets('"Nuevo Cliente" desde el selector lo crea y lo deja elegido', (tester) async {
+    await pumpPos(tester);
+    fakeCustomer.clienteIdARetornar = 'cliente-recien-creado';
+
+    await tester.tap(find.byKey(const Key('posCliente')));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('selectorClienteNuevo')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('nuevoClientePosRut')), '12345678-5');
+    await tester.enterText(find.byKey(const Key('nuevoClientePosNombre')), 'María López');
+    await tester.tap(find.byKey(const Key('nuevoClientePosGuardar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCustomer.crearLlamado, isTrue);
+    expect(fakeCustomer.ultimoNombreCreado, 'María López');
+    expect(fakeCustomer.ultimoRutCreado, '12345678-5');
+    expect(find.text('María López'), findsOneWidget);
+  });
+
+  testWidgets('"Nuevo Cliente" con RUT inválido muestra error y no llama al repositorio', (tester) async {
+    await pumpPos(tester);
+
+    await tester.tap(find.byKey(const Key('posCliente')));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('selectorClienteNuevo')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('nuevoClientePosRut')), '12345678-9');
+    await tester.enterText(find.byKey(const Key('nuevoClientePosNombre')), 'María López');
+    await tester.tap(find.byKey(const Key('nuevoClientePosGuardar')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('RUT no es válido'), findsOneWidget);
+    expect(fakeCustomer.crearLlamado, isFalse);
+  });
+
   testWidgets('Escanear un código con coincidencia exacta lo agrega directo al carrito', (tester) async {
     await pumpPos(tester, escanearCodigoBarra: (_) async => productoCocaCola.codigoBarras);
     fakeCatalog.resultadosARetornar = [productoCocaCola];

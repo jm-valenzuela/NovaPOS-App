@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../customers/domain/models/cliente_resumen.dart';
 import '../providers/pos_providers.dart';
+import 'nuevo_cliente_pos_dialog.dart';
 
 /// Devuelve el ClienteResumen elegido, o null (= "Cliente Genérico",
 /// mismo criterio que usa el backend cuando CrearVentaCommand no recibe
@@ -30,6 +32,18 @@ class _SelectorClienteDialogState extends ConsumerState<SelectorClienteDialog> {
   void dispose() {
     _busquedaController.dispose();
     super.dispose();
+  }
+
+  /// Abre el alta rápida y, si se creó un Cliente, cierra este selector con
+  /// ese Cliente ya elegido — evita un segundo paso de "ahora búscalo y
+  /// tócalo en la lista".
+  Future<void> _crearCliente(BuildContext context) async {
+    final creado = await showDialog<ClienteResumen>(
+      context: context,
+      builder: (_) => const NuevoClientePosDialog(),
+    );
+    if (creado == null || !context.mounted) return;
+    Navigator.of(context).pop(creado);
   }
 
   @override
@@ -84,6 +98,11 @@ class _SelectorClienteDialogState extends ConsumerState<SelectorClienteDialog> {
           key: const Key('selectorClienteCancelar'),
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
+        ),
+        TextButton(
+          key: const Key('selectorClienteNuevo'),
+          onPressed: () => _crearCliente(context),
+          child: const Text('Nuevo Cliente'),
         ),
         TextButton(
           key: const Key('selectorClienteGenerico'),
