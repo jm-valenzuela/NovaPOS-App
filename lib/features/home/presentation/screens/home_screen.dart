@@ -60,6 +60,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final tieneCompras = (sesion?.tienePermiso('purchasing.ordenescompra.gestionar') ?? false) ||
         (sesion?.tienePermiso('purchasing.proveedores.gestionar') ?? false);
     final tieneInventario = sesion?.tienePermiso('inventory.stock.ver') ?? false;
+    final tieneReportes = sesion?.tienePermiso('reporting.reportes.ver') ?? false;
     // Solo se observa el provider si hay permiso — evita el llamado inicial
     // a listarDescuentosPendientes() para Usuarios que ni siquiera ven la
     // tarjeta (ej. un Cajero sin el permiso).
@@ -202,6 +203,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       subtitle: const Text('Ajustes, Traslados y Tarjeta de Existencia'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push('/inventario'),
+                    ),
+                  ),
+                ],
+                if (tieneReportes) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    child: ListTile(
+                      key: const Key('homeFlujoCajaCard'),
+                      leading: const Icon(Icons.query_stats_outlined, size: 32),
+                      title: const Text('Flujo de Caja'),
+                      subtitle: const Text('Ingresos y egresos por período'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/reportes/flujo-caja'),
                     ),
                   ),
                 ],

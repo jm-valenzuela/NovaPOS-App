@@ -27,6 +27,7 @@ import '../../features/purchasing/presentation/screens/plazos_pago_proveedor_scr
 import '../../features/purchasing/presentation/screens/proveedores_screen.dart';
 import '../../features/receivables/presentation/screens/cobranzas_screen.dart';
 import '../../features/receivables/presentation/screens/detalle_cuenta_cliente_screen.dart';
+import '../../features/reporting/presentation/screens/flujo_caja_screen.dart';
 import '../../features/sales/presentation/screens/descuentos_pendientes_screen.dart';
 import '../../features/sales/presentation/screens/pos_screen.dart';
 
@@ -98,6 +99,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(path: '/compras/discrepancias', builder: (context, state) => const DiscrepanciasScreen()),
+      GoRoute(path: '/reportes/flujo-caja', builder: (context, state) => const FlujoCajaScreen()),
       GoRoute(path: '/inventario', builder: (context, state) => const InventarioHubScreen()),
       GoRoute(path: '/inventario/ajustes', builder: (context, state) => const AjustesInventarioScreen()),
       GoRoute(
