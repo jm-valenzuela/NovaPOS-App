@@ -59,6 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final tieneClientes = sesion?.tienePermiso('customers.clientes.gestionar') ?? false;
     final tieneCompras = (sesion?.tienePermiso('purchasing.ordenescompra.gestionar') ?? false) ||
         (sesion?.tienePermiso('purchasing.proveedores.gestionar') ?? false);
+    final tieneInventario = sesion?.tienePermiso('inventory.stock.ver') ?? false;
     // Solo se observa el provider si hay permiso — evita el llamado inicial
     // a listarDescuentosPendientes() para Usuarios que ni siquiera ven la
     // tarjeta (ej. un Cajero sin el permiso).
@@ -188,6 +189,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       subtitle: const Text('Proveedores, Órdenes de Compra y discrepancias'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push('/compras'),
+                    ),
+                  ),
+                ],
+                if (tieneInventario) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    child: ListTile(
+                      key: const Key('homeInventarioCard'),
+                      leading: const Icon(Icons.warehouse_outlined, size: 32),
+                      title: const Text('Inventario'),
+                      subtitle: const Text('Ajustes, Traslados y Tarjeta de Existencia'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/inventario'),
                     ),
                   ),
                 ],

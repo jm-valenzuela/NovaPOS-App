@@ -1,3 +1,4 @@
+import '../domain/models/bodega_resumen.dart';
 import '../domain/models/bodega_venta.dart';
 import '../domain/models/caja_resumen.dart';
 import '../domain/tenancy_repository.dart';
@@ -13,4 +14,7 @@ class TenancyRepositoryImpl implements TenancyRepository {
 
   @override
   Future<BodegaVenta?> obtenerBodegaVenta(String sucursalId) => _api.obtenerBodegaVenta(sucursalId);
+
+  @override
+  Future<List<BodegaResumen>> listarBodegas() => _api.listarBodegas();
 }

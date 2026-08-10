@@ -5,7 +5,11 @@ import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dar
 import 'package:novapos_app/features/customers/domain/models/plazo_pago.dart';
 import 'package:novapos_app/features/customers/domain/models/solicitud_credito_pendiente.dart';
 import 'package:novapos_app/features/inventory/domain/inventory_repository.dart';
+import 'package:novapos_app/features/inventory/domain/models/inventory_enums.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
+import 'package:novapos_app/features/inventory/domain/models/tarjeta_existencia.dart';
+import 'package:novapos_app/features/inventory/domain/models/toma_inventario.dart';
+import 'package:novapos_app/features/inventory/domain/models/traslado_inventario.dart';
 import 'package:novapos_app/features/sales/domain/models/cotizacion.dart';
 import 'package:novapos_app/features/sales/domain/models/descuento_pendiente.dart';
 import 'package:novapos_app/features/sales/domain/models/detalle_descuento_pendiente.dart';
@@ -14,6 +18,7 @@ import 'package:novapos_app/features/sales/domain/models/pago_input.dart';
 import 'package:novapos_app/features/sales/domain/models/resumen_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/domain/sales_repository.dart';
+import 'package:novapos_app/features/tenancy/domain/models/bodega_resumen.dart';
 import 'package:novapos_app/features/tenancy/domain/models/bodega_venta.dart';
 import 'package:novapos_app/features/tenancy/domain/models/caja_resumen.dart';
 import 'package:novapos_app/features/tenancy/domain/tenancy_repository.dart';
@@ -36,12 +41,16 @@ class FakeCatalogRepository implements CatalogRepository {
 class FakeTenancyRepository implements TenancyRepository {
   List<CajaResumen> cajasARetornar = [];
   BodegaVenta? bodegaVentaARetornar;
+  List<BodegaResumen> bodegasARetornar = [];
 
   @override
   Future<List<CajaResumen>> listarCajas() async => cajasARetornar;
 
   @override
   Future<BodegaVenta?> obtenerBodegaVenta(String sucursalId) async => bodegaVentaARetornar;
+
+  @override
+  Future<List<BodegaResumen>> listarBodegas() async => bodegasARetornar;
 }
 
 class FakeInventoryRepository implements InventoryRepository {
@@ -49,12 +58,71 @@ class FakeInventoryRepository implements InventoryRepository {
   String? ultimaBodegaId;
   List<String>? ultimasVarianteProductoIds;
 
+  List<TomaInventarioListado> tomasARetornar = [];
+  TomaInventarioDetalle? tomaDetalleARetornar;
+  String tomaIdARetornar = 'toma-fake-id';
+  String? ultimoFiltroBodegaTomas;
+  EstadoTomaInventario? ultimoFiltroEstadoTomas;
+
+  List<TrasladoListado> trasladosARetornar = [];
+  TrasladoDetalle? trasladoDetalleARetornar;
+  String trasladoIdARetornar = 'traslado-fake-id';
+  String? ultimoFiltroBodegaTraslados;
+  EstadoTraslado? ultimoFiltroEstadoTraslados;
+
+  List<LineaTarjetaExistencia> tarjetaExistenciaARetornar = [];
+
   @override
   Future<List<StockVariante>> listarStock({required String bodegaId, required List<String> varianteProductoIds}) async {
     ultimaBodegaId = bodegaId;
     ultimasVarianteProductoIds = varianteProductoIds;
     return stockARetornar;
   }
+
+  @override
+  Future<List<TomaInventarioListado>> listarTomas({String? bodegaId, EstadoTomaInventario? estado}) async {
+    ultimoFiltroBodegaTomas = bodegaId;
+    ultimoFiltroEstadoTomas = estado;
+    return tomasARetornar;
+  }
+
+  @override
+  Future<String> abrirToma({required String bodegaId}) async => tomaIdARetornar;
+
+  @override
+  Future<void> registrarConteo({required String tomaId, required String varianteProductoId, required double cantidadContada}) async {}
+
+  @override
+  Future<void> cerrarToma(String tomaId) async {}
+
+  @override
+  Future<TomaInventarioDetalle> obtenerToma(String tomaId) async => tomaDetalleARetornar!;
+
+  @override
+  Future<List<TrasladoListado>> listarTraslados({String? bodegaId, EstadoTraslado? estado}) async {
+    ultimoFiltroBodegaTraslados = bodegaId;
+    ultimoFiltroEstadoTraslados = estado;
+    return trasladosARetornar;
+  }
+
+  @override
+  Future<String> crearTraslado({required String bodegaOrigenId, required String bodegaDestinoId}) async => trasladoIdARetornar;
+
+  @override
+  Future<void> agregarLineaTraslado({required String trasladoId, required String varianteProductoId, required double cantidad}) async {}
+
+  @override
+  Future<void> enviarTraslado(String trasladoId) async {}
+
+  @override
+  Future<void> recibirTraslado({required String trasladoId, required Map<String, double> lineas}) async {}
+
+  @override
+  Future<TrasladoDetalle> obtenerTraslado(String trasladoId) async => trasladoDetalleARetornar!;
+
+  @override
+  Future<List<LineaTarjetaExistencia>> obtenerTarjetaExistencia({required String bodegaId, required String varianteProductoId}) async =>
+      tarjetaExistenciaARetornar;
 }
 
 class FakeSalesRepository implements SalesRepository {
