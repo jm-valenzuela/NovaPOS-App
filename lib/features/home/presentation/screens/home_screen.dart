@@ -154,6 +154,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     badgeKey: const Key('badgeCreditoPendiente'),
                     onTap: () => context.push('/clientes/credito-pendientes'),
                   ),
+                if (tieneClientes)
+                  _TarjetaMenu(
+                    key: const Key('homeCobranzasCard'),
+                    categoria: 'Cobranzas',
+                    titulo: 'Cobranzas',
+                    subtitulo: 'Cargos, abonos y cuentas vencidas por Cliente.',
+                    onTap: () => context.push('/clientes/cobranzas'),
+                  ),
+                if (tieneClientes)
+                  _TarjetaMenu(
+                    key: const Key('homePlazosPagoClientesCard'),
+                    categoria: 'Plazos de Pago',
+                    titulo: 'Plazos de Clientes',
+                    subtitulo: 'Catálogo de plazos y cuotas para vender a crédito.',
+                    onTap: () => context.push('/clientes/plazos-pago'),
+                  ),
                 if (tieneCompras)
                   _TarjetaMenu(
                     key: const Key('homeComprasCard'),

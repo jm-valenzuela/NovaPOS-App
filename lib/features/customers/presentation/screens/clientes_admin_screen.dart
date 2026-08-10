@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../domain/models/cliente_resumen.dart';
 import '../providers/customer_admin_providers.dart';
@@ -28,23 +27,7 @@ class _ClientesAdminScreenState extends ConsumerState<ClientesAdminScreen> {
     final estado = ref.watch(clientesAdminProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Clientes'),
-        actions: [
-          IconButton(
-            key: const Key('irACobranzasBoton'),
-            icon: const Icon(Icons.request_quote_outlined),
-            tooltip: 'Cobranzas',
-            onPressed: () => context.push('/clientes/cobranzas'),
-          ),
-          IconButton(
-            key: const Key('irAPlazosPagoBoton'),
-            icon: const Icon(Icons.schedule_outlined),
-            tooltip: 'Plazos de Pago',
-            onPressed: () => context.push('/clientes/plazos-pago'),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Clientes')),
       floatingActionButton: FloatingActionButton(
         key: const Key('nuevoClienteBoton'),
         onPressed: () => _abrirFormulario(context),
