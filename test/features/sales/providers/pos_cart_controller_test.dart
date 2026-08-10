@@ -213,7 +213,7 @@ void main() {
     expect(controller.state.procesandoCotizacion, isFalse);
   });
 
-  test('rescatarCotizacion trae el detalle y reemplaza el carrito, con la Venta bloqueada', () async {
+  test('rescatarCotizacion trae el detalle y reemplaza el carrito, editable si no hay descuento en curso', () async {
     fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
       ventaId: 'venta-rescatada',
       clienteId: 'cliente-juan',
@@ -226,6 +226,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-coca-1',
           varianteProductoId: 'variante-coca',
           nombreProducto: 'Coca Cola 1.5L',
           sku: 'COCA-15',
@@ -241,10 +242,108 @@ void main() {
     expect(detalle?.clienteNombre, 'Juan Pérez');
     expect(fakeSales.ultimaVentaIdCotizacionConsultada, 'venta-rescatada');
     expect(controller.state.ventaId, 'venta-rescatada');
-    expect(controller.state.carritoBloqueado, isTrue);
+    expect(controller.state.carritoBloqueado, isFalse,
+        reason: 'Sin descuento Pendiente/Autorizado, la Cotización rescatada se puede seguir editando');
     expect(controller.state.lineas, hasLength(1));
     expect(controller.state.lineas.first.cantidad, 2);
+    expect(controller.state.lineas.first.lineaVentaId, 'linea-coca-1');
     expect(controller.state.total, 3000);
+  });
+
+  test('Tras rescatar, cambiar la cantidad de una línea la sincroniza contra el backend', () async {
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-rescatada',
+      clienteId: 'cliente-juan',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: '76.123.456-0',
+      subtotalLineas: 3000,
+      total: 3000,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+      descuentoGeneralPorcentaje: null,
+      descuentoGeneralMonto: null,
+      lineas: [
+        LineaCotizacionDetalle(
+          lineaVentaId: 'linea-coca-1',
+          varianteProductoId: 'variante-coca',
+          nombreProducto: 'Coca Cola 1.5L',
+          sku: 'COCA-15',
+          cantidad: 2,
+          precioUnitario: 1500,
+          subtotal: 3000,
+        ),
+      ],
+    );
+    await controller.rescatarCotizacion('venta-rescatada');
+
+    await controller.cambiarCantidad('variante-coca', 5);
+
+    expect(fakeSales.lineasActualizadas, hasLength(1));
+    expect(fakeSales.lineasActualizadas.single.ventaId, 'venta-rescatada');
+    expect(fakeSales.lineasActualizadas.single.lineaVentaId, 'linea-coca-1');
+    expect(fakeSales.lineasActualizadas.single.cantidad, 5);
+    expect(controller.state.lineas.single.cantidad, 5);
+  });
+
+  test('Tras rescatar, quitar una línea la elimina también del backend', () async {
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-rescatada',
+      clienteId: 'cliente-juan',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: '76.123.456-0',
+      subtotalLineas: 3000,
+      total: 3000,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.sinSolicitar,
+      descuentoGeneralPorcentaje: null,
+      descuentoGeneralMonto: null,
+      lineas: [
+        LineaCotizacionDetalle(
+          lineaVentaId: 'linea-coca-1',
+          varianteProductoId: 'variante-coca',
+          nombreProducto: 'Coca Cola 1.5L',
+          sku: 'COCA-15',
+          cantidad: 2,
+          precioUnitario: 1500,
+          subtotal: 3000,
+        ),
+      ],
+    );
+    await controller.rescatarCotizacion('venta-rescatada');
+
+    await controller.quitarLinea('variante-coca');
+
+    expect(fakeSales.lineasQuitadas, hasLength(1));
+    expect(fakeSales.lineasQuitadas.single.ventaId, 'venta-rescatada');
+    expect(fakeSales.lineasQuitadas.single.lineaVentaId, 'linea-coca-1');
+    expect(controller.state.lineas, isEmpty);
+  });
+
+  test('Con un descuento Autorizado, el carrito rescatado queda bloqueado', () async {
+    fakeSales.cotizacionDetalleARetornar = const CotizacionDetalle(
+      ventaId: 'venta-autorizada',
+      clienteId: 'cliente-juan',
+      clienteNombre: 'Juan Pérez',
+      clienteRut: '76.123.456-0',
+      subtotalLineas: 3000,
+      total: 2700,
+      estadoDescuentoGeneral: EstadoDescuentoGeneral.autorizado,
+      descuentoGeneralPorcentaje: 10,
+      descuentoGeneralMonto: null,
+      lineas: [
+        LineaCotizacionDetalle(
+          lineaVentaId: 'linea-coca-1',
+          varianteProductoId: 'variante-coca',
+          nombreProducto: 'Coca Cola 1.5L',
+          sku: 'COCA-15',
+          cantidad: 2,
+          precioUnitario: 1500,
+          subtotal: 3000,
+        ),
+      ],
+    );
+
+    await controller.rescatarCotizacion('venta-autorizada');
+
+    expect(controller.state.carritoBloqueado, isTrue);
   });
 
   test('rescatarCotizacion preserva un descuento general ya Autorizado', () async {
@@ -260,6 +359,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-coca-1',
           varianteProductoId: 'variante-coca',
           nombreProducto: 'Coca Cola 1.5L',
           sku: 'COCA-15',
@@ -290,6 +390,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-tornillo-1',
           varianteProductoId: 'variante-tornillo',
           nombreProducto: 'Tornillo Autoperforante',
           sku: 'TORN-001',

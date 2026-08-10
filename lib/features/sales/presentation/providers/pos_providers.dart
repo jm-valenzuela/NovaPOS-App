@@ -252,11 +252,13 @@ class PosCartState {
   /// tras un cobro exitoso, para el diálogo de venta cobrada.
   final ResumenVenta? resumenCobrado;
 
-  /// Null hasta que se solicita un descuento — recién ahí se crea la
-  /// Venta real en el servidor (ver PosCartController.solicitarDescuento),
-  /// antes de eso el carrito es 100% local. Una vez asignado, el carrito
-  /// queda bloqueado para edición (ver carritoBloqueado): las líneas ya
-  /// están en el servidor y cambiarlas localmente las desincronizaría.
+  /// Null hasta que se solicita un descuento, se guarda como Cotización o
+  /// se rescata una — recién ahí hay una Venta real en el servidor (ver
+  /// PosCartController.solicitarDescuento/guardarCotizacion/cargarCotizacion),
+  /// antes de eso el carrito es 100% local. Con esto asignado, cada
+  /// edición (agregar/quitar/cambiar cantidad) se sincroniza contra el
+  /// backend en vez de mutar solo el estado local — ver carritoBloqueado
+  /// para cuándo la edición en sí queda prohibida.
   final String? ventaId;
 
   final EstadoDescuentoGeneral estadoDescuento;
@@ -273,7 +275,15 @@ class PosCartState {
   /// menú de Cotización en la UI para evitar doble-tap.
   final bool procesandoCotizacion;
 
-  bool get carritoBloqueado => ventaId != null;
+  /// Solo mientras un descuento general está Pendiente (alguien lo está
+  /// evaluando ahora mismo) o Autorizado (el monto ya se validó contra un
+  /// Subtotal específico) — ver Venta.GarantizarLineasEditables en el
+  /// backend, que rechaza editar líneas en esos dos estados exactamente.
+  /// Desde SinSolicitar o Rechazado el carrito sigue editable (sincroniza
+  /// contra el backend si ventaId ya existe, ver agregarProducto/
+  /// cambiarCantidad/quitarLinea).
+  bool get carritoBloqueado =>
+      estadoDescuento == EstadoDescuentoGeneral.pendiente || estadoDescuento == EstadoDescuentoGeneral.autorizado;
 
   /// No se puede volver a pedir mientras ya hay uno Pendiente (esperando
   /// resolución) o ya Autorizado (no tiene sentido pedir otro encima) —
@@ -335,40 +345,58 @@ class PosCartController extends StateNotifier<PosCartState> {
   /// CantidadPesableDialog en PosScreen) — si la Variante ya estaba en el
   /// carrito, se SUMA a lo ya pesado, no lo reemplaza (permite pesar el
   /// mismo producto en más de una tanda).
-  /// Una vez que se pidió un descuento, la Venta y sus líneas ya existen
-  /// en el servidor (ver solicitarDescuento) — agregar un Producto más acá
-  /// solo cambiaría el carrito local, sin avisarle al backend, así que el
-  /// Total que se ve en pantalla dejaría de coincidir con lo que
-  /// Confirmar() realmente va a cobrar. Se bloquea, no se ignora en
-  /// silencio: se informa por qué (mismo canal que otros errores del carrito).
-  void agregarProducto(ProductoVendible producto, {double cantidad = 1}) {
+  /// Con un descuento general Pendiente o Autorizado, el carrito está
+  /// bloqueado (ver carritoBloqueado) — se informa por qué, no se ignora
+  /// en silencio. Fuera de eso, si ya existe una Venta en el servidor
+  /// (ventaId != null — se pidió un descuento antes y fue Rechazado, se
+  /// guardó como Cotización, o se rescató una), la línea se agrega también
+  /// contra el backend para no desincronizar el Total real que Confirmar()
+  /// va a cobrar.
+  Future<void> agregarProducto(ProductoVendible producto, {double cantidad = 1}) async {
     if (state.carritoBloqueado) {
       state = state.copyWith(
-        error: 'No puedes agregar más productos: ya se solicitó un descuento para esta venta. '
-            'Vacía el carrito para empezar de nuevo.',
+        error: 'No puedes agregar más productos: hay un descuento general Pendiente o Autorizado para esta venta.',
       );
       return;
     }
     final indice = state.lineas.indexWhere((l) => l.producto.varianteProductoId == producto.varianteProductoId);
-    if (indice == -1) {
+    if (indice != -1) {
+      await _actualizarCantidad(indice, state.lineas[indice].cantidad + cantidad);
+      return;
+    }
+
+    final ventaId = state.ventaId;
+    if (ventaId == null) {
       state = state.copyWith(lineas: [...state.lineas, LineaCarrito(producto: producto, cantidad: cantidad)]);
-    } else {
-      _actualizarCantidad(indice, state.lineas[indice].cantidad + cantidad);
+      return;
+    }
+
+    try {
+      final lineaVentaId = await _salesRepository.agregarLinea(
+        ventaId: ventaId,
+        varianteProductoId: producto.varianteProductoId,
+        cantidad: cantidad,
+      );
+      state = state.copyWith(
+        lineas: [...state.lineas, LineaCarrito(producto: producto, cantidad: cantidad, lineaVentaId: lineaVentaId)],
+      );
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
     }
   }
 
-  void cambiarCantidad(String varianteProductoId, double cantidad) {
+  Future<void> cambiarCantidad(String varianteProductoId, double cantidad) async {
     if (state.carritoBloqueado) return;
     final indice = state.lineas.indexWhere((l) => l.producto.varianteProductoId == varianteProductoId);
     if (indice == -1) return;
-    _actualizarCantidad(indice, cantidad);
+    await _actualizarCantidad(indice, cantidad);
   }
 
-  void quitarLinea(String varianteProductoId) {
+  Future<void> quitarLinea(String varianteProductoId) async {
     if (state.carritoBloqueado) return;
-    state = state.copyWith(
-      lineas: state.lineas.where((l) => l.producto.varianteProductoId != varianteProductoId).toList(),
-    );
+    final indice = state.lineas.indexWhere((l) => l.producto.varianteProductoId == varianteProductoId);
+    if (indice == -1) return;
+    await _quitarEnIndice(indice);
   }
 
   /// Reinicio completo a propósito (no solo las líneas): si ya se pidió un
@@ -381,13 +409,49 @@ class PosCartController extends StateNotifier<PosCartState> {
     state = const PosCartState();
   }
 
-  void _actualizarCantidad(int indice, double nuevaCantidad) {
+  Future<void> _quitarEnIndice(int indice) async {
+    final linea = state.lineas[indice];
+    final ventaId = state.ventaId;
+    if (ventaId != null && linea.lineaVentaId != null) {
+      try {
+        await _salesRepository.quitarLinea(ventaId: ventaId, lineaVentaId: linea.lineaVentaId!);
+      } catch (e) {
+        state = state.copyWith(error: e.toString());
+        return;
+      }
+    }
+    state = state.copyWith(lineas: [...state.lineas]..removeAt(indice));
+  }
+
+  /// Si la línea ya está sincronizada con el backend (lineaVentaId no
+  /// nulo), la edición se manda primero — si falla (ej. justo se volvió a
+  /// Pendiente/Autorizado en otra pestaña), el estado local no cambia. Una
+  /// vez sincronizada, se reconstruye la línea sin los campos históricos
+  /// (porcentajeDescuentoVolumenHistorico, etc.): esos representan lo que
+  /// se cobró en el pasado (ej. al rescatar una Cotización), y tras
+  /// editar la Cantidad ya no describen esta línea — el Subtotal en
+  /// pantalla vuelve a calcularse en vivo con las reglas vigentes del
+  /// Producto (mismas que el backend acaba de aplicar), igual que
+  /// cualquier línea agregada en esta sesión.
+  Future<void> _actualizarCantidad(int indice, double nuevaCantidad) async {
     if (nuevaCantidad <= 0) {
-      state = state.copyWith(lineas: [...state.lineas]..removeAt(indice));
+      await _quitarEnIndice(indice);
       return;
     }
+
+    final linea = state.lineas[indice];
+    final ventaId = state.ventaId;
+    if (ventaId != null && linea.lineaVentaId != null) {
+      try {
+        await _salesRepository.actualizarLinea(ventaId: ventaId, lineaVentaId: linea.lineaVentaId!, cantidad: nuevaCantidad);
+      } catch (e) {
+        state = state.copyWith(error: e.toString());
+        return;
+      }
+    }
+
     final lineas = [...state.lineas];
-    lineas[indice] = lineas[indice].copyWith(cantidad: nuevaCantidad);
+    lineas[indice] = LineaCarrito(producto: linea.producto, cantidad: nuevaCantidad, lineaVentaId: linea.lineaVentaId);
     state = state.copyWith(lineas: lineas);
   }
 
@@ -455,22 +519,26 @@ class PosCartController extends StateNotifier<PosCartState> {
     state = state.copyWith(solicitandoDescuento: true, limpiarError: true);
     try {
       var ventaId = state.ventaId;
+      var lineas = state.lineas;
       if (ventaId == null) {
         ventaId = await _salesRepository.crearVenta(cajaId: cajaId, clienteId: clienteId);
 
+        final lineasConId = <LineaCarrito>[];
         for (final linea in state.lineas) {
-          await _salesRepository.agregarLinea(
+          final lineaVentaId = await _salesRepository.agregarLinea(
             ventaId: ventaId,
             varianteProductoId: linea.producto.varianteProductoId,
             cantidad: linea.cantidad,
           );
+          lineasConId.add(linea.copyWith(lineaVentaId: lineaVentaId));
         }
+        lineas = lineasConId;
       }
 
       await _salesRepository.solicitarDescuentoGeneral(ventaId: ventaId, porcentaje: porcentaje, monto: monto);
 
       state = PosCartState(
-        lineas: state.lineas,
+        lineas: lineas,
         ventaId: ventaId,
         estadoDescuento: EstadoDescuentoGeneral.pendiente,
         descuentoPorcentaje: porcentaje,
@@ -570,6 +638,7 @@ class PosCartController extends StateNotifier<PosCartState> {
                 porcentajeDescuentoUnidadPromocion: linea.porcentajeDescuentoUnidadPromocion,
               ),
               cantidad: linea.cantidad,
+              lineaVentaId: linea.lineaVentaId,
               porcentajeDescuentoVolumenHistorico: linea.porcentajeDescuentoAplicado,
               montoDescuentoPromocionHistorico: linea.montoDescuentoPromocion,
               ofertaAplicadaHistorico: linea.precioOferta != null && linea.precioOferta == linea.precioUnitario,

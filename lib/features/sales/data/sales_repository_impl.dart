@@ -22,8 +22,16 @@ class SalesRepositoryImpl implements SalesRepository {
       );
 
   @override
-  Future<void> agregarLinea({required String ventaId, required String varianteProductoId, required double cantidad}) =>
+  Future<String> agregarLinea({required String ventaId, required String varianteProductoId, required double cantidad}) =>
       _api.agregarLinea(ventaId: ventaId, varianteProductoId: varianteProductoId, cantidad: cantidad);
+
+  @override
+  Future<void> actualizarLinea({required String ventaId, required String lineaVentaId, required double cantidad}) =>
+      _api.actualizarLinea(ventaId: ventaId, lineaVentaId: lineaVentaId, cantidad: cantidad);
+
+  @override
+  Future<void> quitarLinea({required String ventaId, required String lineaVentaId}) =>
+      _api.quitarLinea(ventaId: ventaId, lineaVentaId: lineaVentaId);
 
   @override
   Future<ResumenVenta> confirmarVenta({

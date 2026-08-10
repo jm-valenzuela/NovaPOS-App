@@ -134,6 +134,8 @@ class FakeSalesRepository implements SalesRepository {
   String? ultimoCajaId;
   String? ultimoClienteId;
   final List<({String varianteProductoId, double cantidad})> lineasAgregadas = [];
+  final List<({String ventaId, String lineaVentaId, double cantidad})> lineasActualizadas = [];
+  final List<({String ventaId, String lineaVentaId})> lineasQuitadas = [];
 
   @override
   Future<String> crearVenta({required String cajaId, String? clienteId}) async {
@@ -145,8 +147,21 @@ class FakeSalesRepository implements SalesRepository {
   }
 
   @override
-  Future<void> agregarLinea({required String ventaId, required String varianteProductoId, required double cantidad}) async {
+  Future<String> agregarLinea({required String ventaId, required String varianteProductoId, required double cantidad}) async {
     lineasAgregadas.add((varianteProductoId: varianteProductoId, cantidad: cantidad));
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return 'linea-fake-${lineasAgregadas.length}';
+  }
+
+  @override
+  Future<void> actualizarLinea({required String ventaId, required String lineaVentaId, required double cantidad}) async {
+    lineasActualizadas.add((ventaId: ventaId, lineaVentaId: lineaVentaId, cantidad: cantidad));
+    if (errorAforzar != null) throw Exception(errorAforzar);
+  }
+
+  @override
+  Future<void> quitarLinea({required String ventaId, required String lineaVentaId}) async {
+    lineasQuitadas.add((ventaId: ventaId, lineaVentaId: lineaVentaId));
     if (errorAforzar != null) throw Exception(errorAforzar);
   }
 

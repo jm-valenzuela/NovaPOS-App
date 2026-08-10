@@ -1,15 +1,14 @@
 import '../../../catalog/domain/models/producto_vendible.dart';
 
-/// El carrito es puro estado de cliente hasta que se presiona "Cobrar" —
-/// el backend no tiene forma de editar/eliminar una línea ya agregada a
-/// una Venta (solo AgregarLinea, ConfirmarVenta), así que armar el
-/// carrito recién contra la API en el momento del cobro es la única
-/// forma sana de soportar "agregar, quitar, cambiar cantidad" antes de
-/// confirmar.
+/// El carrito es puro estado de cliente mientras no hay una Venta real en
+/// el servidor (ver PosCartState.ventaId) — recién ahí cada línea también
+/// vive en el backend (LineaVenta), y lineaVentaId la identifica para
+/// poder editar/quitarla contra la API (Venta.ActualizarLinea/QuitarLinea).
 class LineaCarrito {
   const LineaCarrito({
     required this.producto,
     required this.cantidad,
+    this.lineaVentaId,
     this.porcentajeDescuentoVolumenHistorico,
     this.montoDescuentoPromocionHistorico,
     this.ofertaAplicadaHistorico = false,
@@ -18,6 +17,12 @@ class LineaCarrito {
 
   final ProductoVendible producto;
   final double cantidad;
+
+  /// Id real de LineaVenta en el backend — null mientras el carrito es
+  /// puramente local (todavía no se solicitó un descuento, ni se guardó/
+  /// rescató como Cotización). Con esto seteado, PosCartController
+  /// sincroniza cada edición contra la API en vez de mutar solo localmente.
+  final String? lineaVentaId;
 
   /// Descuento por volumen ya aplicado a esta línea al rescatar una
   /// Cotización guardada — hecho histórico del backend (LineaVenta.
@@ -101,9 +106,10 @@ class LineaCarrito {
     return subtotalConDescuentoVolumen - montoDescuentoPromocion;
   }
 
-  LineaCarrito copyWith({double? cantidad}) => LineaCarrito(
+  LineaCarrito copyWith({double? cantidad, String? lineaVentaId}) => LineaCarrito(
         producto: producto,
         cantidad: cantidad ?? this.cantidad,
+        lineaVentaId: lineaVentaId ?? this.lineaVentaId,
         porcentajeDescuentoVolumenHistorico: porcentajeDescuentoVolumenHistorico,
         montoDescuentoPromocionHistorico: montoDescuentoPromocionHistorico,
         ofertaAplicadaHistorico: ofertaAplicadaHistorico,

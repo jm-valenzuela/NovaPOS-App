@@ -743,6 +743,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-fake-1',
           varianteProductoId: 'variante-coca',
           nombreProducto: 'Coca Cola 1.5L',
           sku: 'COCA-15',
@@ -870,6 +871,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-fake-1',
           varianteProductoId: 'variante-tornillo',
           nombreProducto: 'Tornillo Autoperforante',
           sku: 'TORN-001',
@@ -916,6 +918,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-fake-1',
           varianteProductoId: 'variante-oferta',
           nombreProducto: 'TV Test Oferta E2E',
           sku: 'TV-55-4K',
@@ -964,6 +967,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-fake-1',
           varianteProductoId: 'variante-neumatico',
           nombreProducto: 'Neumático 175/65 R14',
           sku: 'NEUM-001',
@@ -1014,6 +1018,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-fake-1',
           varianteProductoId: 'variante-pan-hallulla',
           nombreProducto: 'Pan Hallulla',
           sku: 'PAN-HALL',
@@ -1064,6 +1069,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-fake-1',
           varianteProductoId: 'variante-neumatico',
           nombreProducto: 'Neumático 175/65 R14',
           sku: 'NEUM-001',
@@ -1115,6 +1121,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-fake-1',
           varianteProductoId: 'variante-coca',
           nombreProducto: 'Coca Cola 1.5L',
           sku: 'COCA-15',
@@ -1168,6 +1175,7 @@ void main() {
       descuentoGeneralMonto: null,
       lineas: [
         LineaCotizacionDetalle(
+          lineaVentaId: 'linea-fake-1',
           varianteProductoId: 'variante-pan',
           nombreProducto: 'Pan Marraqueta',
           sku: 'PAN-MARR',

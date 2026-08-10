@@ -33,16 +33,37 @@ class VentaApi {
     }
   }
 
-  Future<void> agregarLinea({
+  /// Devuelve el Id de la LineaVenta creada — necesario para poder editar/
+  /// quitar esta línea puntual después (ver actualizarLinea/quitarLinea).
+  Future<String> agregarLinea({
     required String ventaId,
     required String varianteProductoId,
     required double cantidad,
   }) async {
     try {
-      await _client.dio.post('/ventas/$ventaId/lineas', data: {
+      final respuesta = await _client.dio.post('/ventas/$ventaId/lineas', data: {
         'varianteProductoId': varianteProductoId,
         'cantidad': cantidad,
       });
+      return respuesta.data['id'] as String;
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  /// Reemplaza la Cantidad de una línea ya agregada — el Precio unitario se
+  /// resuelve de nuevo en el backend desde el Catálogo, no se manda acá.
+  Future<void> actualizarLinea({required String ventaId, required String lineaVentaId, required double cantidad}) async {
+    try {
+      await _client.dio.put('/ventas/$ventaId/lineas/$lineaVentaId', data: {'cantidad': cantidad});
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<void> quitarLinea({required String ventaId, required String lineaVentaId}) async {
+    try {
+      await _client.dio.delete('/ventas/$ventaId/lineas/$lineaVentaId');
     } on DioException catch (e) {
       ApiClient.lanzarError(e);
     }

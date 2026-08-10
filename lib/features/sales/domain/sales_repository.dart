@@ -12,7 +12,16 @@ import 'models/venta_enums.dart';
 abstract class SalesRepository {
   Future<String> crearVenta({required String cajaId, String? clienteId});
 
-  Future<void> agregarLinea({required String ventaId, required String varianteProductoId, required double cantidad});
+  /// Devuelve el Id de la LineaVenta creada.
+  Future<String> agregarLinea({required String ventaId, required String varianteProductoId, required double cantidad});
+
+  /// Cambia la Cantidad de una línea ya agregada — el backend rechaza esto
+  /// mientras haya un descuento general Pendiente o Autorizado (ver
+  /// Venta.GarantizarLineasEditables).
+  Future<void> actualizarLinea({required String ventaId, required String lineaVentaId, required double cantidad});
+
+  /// Mismo bloqueo que actualizarLinea.
+  Future<void> quitarLinea({required String ventaId, required String lineaVentaId});
 
   /// tipoDocumento: Boleta o Factura, elegido por el Cajero (ver
   /// CheckoutDialog). pagos: obligatorio y no vacío si la Venta es al

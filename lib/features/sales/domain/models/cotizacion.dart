@@ -41,6 +41,7 @@ class CotizacionResumen {
 /// para que "rescatar" pueda mostrarlo (no solo el Subtotal ya rebajado).
 class LineaCotizacionDetalle {
   const LineaCotizacionDetalle({
+    required this.lineaVentaId,
     required this.varianteProductoId,
     required this.nombreProducto,
     required this.sku,
@@ -59,6 +60,7 @@ class LineaCotizacionDetalle {
   });
 
   factory LineaCotizacionDetalle.fromJson(Map<String, dynamic> json) => LineaCotizacionDetalle(
+        lineaVentaId: json['lineaVentaId'] as String,
         varianteProductoId: json['varianteProductoId'] as String,
         nombreProducto: json['nombreProducto'] as String,
         sku: json['sku'] as String,
@@ -76,6 +78,10 @@ class LineaCotizacionDetalle {
         precioVenta: (json['precioVenta'] as num?)?.toDouble(),
       );
 
+  /// El Id real de LineaVenta (no de la Variante) — permite editar/quitar
+  /// esta línea puntual contra el backend tras rescatar (ver
+  /// PosCartController.cargarCotizacion).
+  final String lineaVentaId;
   final String varianteProductoId;
   final String nombreProducto;
   final String sku;
