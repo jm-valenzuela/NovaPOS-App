@@ -36,6 +36,12 @@ class _ProveedoresScreenState extends ConsumerState<ProveedoresScreen> {
             tooltip: 'Plazos de Pago',
             onPressed: () => context.push('/compras/proveedores/plazos-pago'),
           ),
+          IconButton(
+            key: const Key('irACuentasPorPagarBoton'),
+            icon: const Icon(Icons.request_quote_outlined),
+            tooltip: 'Cuentas por Pagar',
+            onPressed: () => context.push('/compras/cuentas-por-pagar'),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(

@@ -16,6 +16,8 @@ import '../../features/inventory/presentation/screens/kardex_screen.dart';
 import '../../features/inventory/presentation/screens/toma_inventario_detalle_screen.dart';
 import '../../features/inventory/presentation/screens/traslado_detalle_screen.dart';
 import '../../features/inventory/presentation/screens/traslados_inventario_screen.dart';
+import '../../features/payables/presentation/screens/cuentas_por_pagar_screen.dart';
+import '../../features/payables/presentation/screens/detalle_cuenta_proveedor_screen.dart';
 import '../../features/purchasing/presentation/screens/compras_hub_screen.dart';
 import '../../features/purchasing/presentation/screens/discrepancias_screen.dart';
 import '../../features/purchasing/presentation/screens/documentos_recibidos_screen.dart';
@@ -74,6 +76,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/compras', builder: (context, state) => const ComprasHubScreen()),
       GoRoute(path: '/compras/proveedores', builder: (context, state) => const ProveedoresScreen()),
       GoRoute(path: '/compras/proveedores/plazos-pago', builder: (context, state) => const PlazosPagoProveedorScreen()),
+      GoRoute(path: '/compras/cuentas-por-pagar', builder: (context, state) => const CuentasPorPagarScreen()),
+      GoRoute(
+        path: '/compras/cuentas-por-pagar/:id',
+        builder: (context, state) => DetalleCuentaProveedorScreen(proveedorId: state.pathParameters['id']!),
+      ),
       GoRoute(path: '/compras/ordenes', builder: (context, state) => const OrdenesCompraScreen()),
       GoRoute(
         path: '/compras/ordenes/:id',
