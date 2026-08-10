@@ -9,10 +9,11 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../customers/presentation/providers/solicitudes_credito_pendientes_providers.dart';
 import '../../../sales/presentation/providers/descuentos_pendientes_providers.dart';
 
-/// Menú principal post-login — el resto de las pantallas (Inventario,
-/// Catálogo, etc.) se agregan acá como nuevas tarjetas, cada una con su
-/// propia carpeta bajo lib/features/ siguiendo el mismo patrón que auth/
-/// y sales/.
+/// Menú principal post-login — una grilla de tarjetas, cada una con su
+/// propia etiqueta de categoría (Ventas, Clientes, Compras, etc.), en vez
+/// de una lista plana. El resto de las pantallas se agregan acá como
+/// nuevas tarjetas, cada una con su propia carpeta bajo lib/features/
+/// siguiendo el mismo patrón que auth/ y sales/.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -71,6 +72,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         tieneAutorizarCredito ? ref.watch(solicitudesCreditoPendientesProvider).pendientes.length : 0;
 
     return Scaffold(
+      backgroundColor: _HomeColores.fondoPagina,
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -105,120 +107,173 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Padding(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                _TarjetaMenu(
+                  categoria: 'Ventas',
+                  titulo: 'Punto de Venta',
+                  subtitulo: 'Buscar productos, armar el carrito y cobrar.',
+                  onTap: () => context.push('/pos'),
+                ),
+                if (tieneAutorizarDescuentos)
+                  _TarjetaMenu(
+                    categoria: 'Ventas',
+                    titulo: 'Descuentos pendientes',
+                    subtitulo: 'Autorizar o rechazar descuentos solicitados en el POS.',
+                    badge: cantidadDescuentosPendientes > 0 ? cantidadDescuentosPendientes : null,
+                    badgeKey: const Key('badgeDescuentosPendientes'),
+                    onTap: () => context.push('/descuentos-pendientes'),
+                  ),
+                _TarjetaMenu(
+                  categoria: 'Catálogo',
+                  titulo: 'Productos',
+                  subtitulo: 'Crear y editar Productos y Variantes.',
+                  onTap: () => context.push('/catalogo'),
+                ),
+                if (tieneClientes)
+                  _TarjetaMenu(
+                    key: const Key('homeClientesCard'),
+                    categoria: 'Clientes',
+                    titulo: 'Mantención de Clientes',
+                    subtitulo: 'Crear y editar Clientes.',
+                    onTap: () => context.push('/clientes'),
+                  ),
+                if (tieneAutorizarCredito)
+                  _TarjetaMenu(
+                    key: const Key('homeCreditoPendienteCard'),
+                    categoria: 'Clientes',
+                    titulo: 'Cupo de Crédito',
+                    subtitulo: 'Autorizar o rechazar solicitudes de crédito de Clientes.',
+                    badge: cantidadSolicitudesCreditoPendientes > 0 ? cantidadSolicitudesCreditoPendientes : null,
+                    badgeKey: const Key('badgeCreditoPendiente'),
+                    onTap: () => context.push('/clientes/credito-pendientes'),
+                  ),
+                if (tieneCompras)
+                  _TarjetaMenu(
+                    key: const Key('homeComprasCard'),
+                    categoria: 'Compras',
+                    titulo: 'Proveedores y Órdenes',
+                    subtitulo: 'Proveedores, Órdenes de Compra y discrepancias.',
+                    onTap: () => context.push('/compras'),
+                  ),
+                if (tieneInventario)
+                  _TarjetaMenu(
+                    key: const Key('homeInventarioCard'),
+                    categoria: 'Inventario',
+                    titulo: 'Stock en tiempo real',
+                    subtitulo: 'Ajustes, Traslados y Tarjeta de Existencia.',
+                    onTap: () => context.push('/inventario'),
+                  ),
+                if (tieneReportes)
+                  _TarjetaMenu(
+                    key: const Key('homeFlujoCajaCard'),
+                    categoria: 'Reportes',
+                    titulo: 'Flujo de Caja',
+                    subtitulo: 'Ingresos y egresos por período.',
+                    onTap: () => context.push('/reportes/flujo-caja'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeColores {
+  _HomeColores._();
+
+  static const fondoPagina = Color(0xFFF2ECE0);
+  static const tarjeta = Color(0xFF14233A);
+  static const acento = Color(0xFFE58A3D);
+  static const subtitulo = Color(0xFFAAB8CB);
+}
+
+/// Tarjeta oscura con etiqueta de categoría — cada una es autocontenida
+/// (no depende de un encabezado de sección compartido), así que se
+/// acomodan en un `Wrap` que fluye a 1 columna en pantallas angostas tipo
+/// celular y hasta 3-4 en pantallas anchas tipo desktop/web.
+class _TarjetaMenu extends StatelessWidget {
+  const _TarjetaMenu({
+    super.key,
+    required this.categoria,
+    required this.titulo,
+    required this.subtitulo,
+    required this.onTap,
+    this.badge,
+    this.badgeKey,
+  });
+
+  final String categoria;
+  final String titulo;
+  final String subtitulo;
+  final VoidCallback onTap;
+  final int? badge;
+  final Key? badgeKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 260,
+      child: Card(
+        color: _HomeColores.tarjeta,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.point_of_sale, size: 32),
-                    title: const Text('Punto de Venta'),
-                    subtitle: const Text('Buscar productos, armar el carrito y cobrar'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/pos'),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        categoria.toUpperCase(),
+                        style: const TextStyle(
+                          color: _HomeColores.acento,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                    if (badge != null)
+                      Container(
+                        key: badgeKey,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _HomeColores.acento,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '$badge',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.inventory_2, size: 32),
-                    title: const Text('Catálogo'),
-                    subtitle: const Text('Crear y editar Productos'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/catalogo'),
-                  ),
+                const SizedBox(height: 10),
+                Text(
+                  titulo,
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700, height: 1.2),
                 ),
-                if (tieneAutorizarDescuentos) ...[
-                  const SizedBox(height: 12),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.percent, size: 32),
-                      title: const Text('Descuentos pendientes'),
-                      subtitle: const Text('Autorizar o rechazar descuentos solicitados en el POS'),
-                      trailing: cantidadDescuentosPendientes > 0
-                          ? Badge(
-                              key: const Key('badgeDescuentosPendientes'),
-                              label: Text('$cantidadDescuentosPendientes'),
-                              child: const Icon(Icons.chevron_right),
-                            )
-                          : const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/descuentos-pendientes'),
-                    ),
-                  ),
-                ],
-                if (tieneClientes) ...[
-                  const SizedBox(height: 12),
-                  Card(
-                    child: ListTile(
-                      key: const Key('homeClientesCard'),
-                      leading: const Icon(Icons.people_outline, size: 32),
-                      title: const Text('Clientes'),
-                      subtitle: const Text('Crear y editar Clientes'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/clientes'),
-                    ),
-                  ),
-                ],
-                if (tieneAutorizarCredito) ...[
-                  const SizedBox(height: 12),
-                  Card(
-                    child: ListTile(
-                      key: const Key('homeCreditoPendienteCard'),
-                      leading: const Icon(Icons.request_quote_outlined, size: 32),
-                      title: const Text('Cupo de Crédito'),
-                      subtitle: const Text('Autorizar o rechazar solicitudes de crédito de Clientes'),
-                      trailing: cantidadSolicitudesCreditoPendientes > 0
-                          ? Badge(
-                              key: const Key('badgeCreditoPendiente'),
-                              label: Text('$cantidadSolicitudesCreditoPendientes'),
-                              child: const Icon(Icons.chevron_right),
-                            )
-                          : const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/clientes/credito-pendientes'),
-                    ),
-                  ),
-                ],
-                if (tieneCompras) ...[
-                  const SizedBox(height: 12),
-                  Card(
-                    child: ListTile(
-                      key: const Key('homeComprasCard'),
-                      leading: const Icon(Icons.shopping_cart_outlined, size: 32),
-                      title: const Text('Compras'),
-                      subtitle: const Text('Proveedores, Órdenes de Compra y discrepancias'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/compras'),
-                    ),
-                  ),
-                ],
-                if (tieneInventario) ...[
-                  const SizedBox(height: 12),
-                  Card(
-                    child: ListTile(
-                      key: const Key('homeInventarioCard'),
-                      leading: const Icon(Icons.warehouse_outlined, size: 32),
-                      title: const Text('Inventario'),
-                      subtitle: const Text('Ajustes, Traslados y Tarjeta de Existencia'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/inventario'),
-                    ),
-                  ),
-                ],
-                if (tieneReportes) ...[
-                  const SizedBox(height: 12),
-                  Card(
-                    child: ListTile(
-                      key: const Key('homeFlujoCajaCard'),
-                      leading: const Icon(Icons.query_stats_outlined, size: 32),
-                      title: const Text('Flujo de Caja'),
-                      subtitle: const Text('Ingresos y egresos por período'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/reportes/flujo-caja'),
-                    ),
-                  ),
-                ],
+                const SizedBox(height: 8),
+                Text(
+                  subtitulo,
+                  style: const TextStyle(color: _HomeColores.subtitulo, fontSize: 14, height: 1.35),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
