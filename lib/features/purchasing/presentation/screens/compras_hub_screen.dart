@@ -32,6 +32,28 @@ class ComprasHubScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 Card(
                   child: ListTile(
+                    key: const Key('comprasCuentasPorPagarCard'),
+                    leading: const Icon(Icons.request_quote_outlined, size: 32),
+                    title: const Text('Cuentas por Pagar'),
+                    subtitle: const Text('Saldo, cargos y abonos por Proveedor'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/compras/cuentas-por-pagar'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: ListTile(
+                    key: const Key('comprasPlazosPagoCard'),
+                    leading: const Icon(Icons.schedule_outlined, size: 32),
+                    title: const Text('Plazos de Pago'),
+                    subtitle: const Text('Catálogo de plazos y cuotas para Proveedores'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/compras/proveedores/plazos-pago'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: ListTile(
                     key: const Key('comprasOrdenesCard'),
                     leading: const Icon(Icons.shopping_cart_outlined, size: 32),
                     title: const Text('Órdenes de Compra'),

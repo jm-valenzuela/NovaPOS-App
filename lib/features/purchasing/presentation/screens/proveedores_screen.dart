@@ -27,23 +27,7 @@ class _ProveedoresScreenState extends ConsumerState<ProveedoresScreen> {
     final estado = ref.watch(proveedoresProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Proveedores'),
-        actions: [
-          IconButton(
-            key: const Key('irAPlazosPagoBoton'),
-            icon: const Icon(Icons.schedule_outlined),
-            tooltip: 'Plazos de Pago',
-            onPressed: () => context.push('/compras/proveedores/plazos-pago'),
-          ),
-          IconButton(
-            key: const Key('irACuentasPorPagarBoton'),
-            icon: const Icon(Icons.request_quote_outlined),
-            tooltip: 'Cuentas por Pagar',
-            onPressed: () => context.push('/compras/cuentas-por-pagar'),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Proveedores')),
       floatingActionButton: FloatingActionButton(
         key: const Key('nuevoProveedorBoton'),
         onPressed: () => _abrirFormulario(context),
