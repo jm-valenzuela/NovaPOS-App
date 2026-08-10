@@ -67,11 +67,41 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     return true;
   }
 
-  double get _sumaPagos => _pagos.fold(0, (suma, p) => suma + p.monto);
+  static const _epsilon = 0.005;
 
-  double get _diferencia => widget.total - _sumaPagos;
+  double get _montoNoEfectivo =>
+      _pagos.where((p) => p.medioPago != MedioPago.efectivo).fold(0, (suma, p) => suma + p.monto);
 
-  bool get _pagosCuadran => _diferencia.abs() < 0.005;
+  double get _montoEfectivo =>
+      _pagos.where((p) => p.medioPago == MedioPago.efectivo).fold(0, (suma, p) => suma + p.monto);
+
+  /// Lo que el Efectivo todavía debe cubrir después de restar Tarjeta/otros
+  /// medios — puede ser negativo si esos medios ya superan el Total (ver
+  /// _excedeSinEfectivo).
+  double get _restanteParaEfectivo => widget.total - _montoNoEfectivo;
+
+  /// Tarjeta (u otro medio sin vuelto) no puede superar el Total por sí
+  /// sola — a diferencia del Efectivo, no hay "vuelto" en una tarjeta.
+  bool get _excedeSinEfectivo => _montoNoEfectivo > widget.total + _epsilon;
+
+  bool get _pagosCuadran => !_excedeSinEfectivo && _montoEfectivo >= _restanteParaEfectivo - _epsilon;
+
+  /// Solo el Efectivo entregado de más se devuelve como vuelto — si el
+  /// Cajero recibió $10.000 en efectivo y solo hacían falta $8.982, el
+  /// vuelto son $1.018 (no se registra como parte del pago, ver
+  /// _pagosParaEnviar).
+  double get _vuelto {
+    if (_excedeSinEfectivo || !_pagosCuadran) return 0;
+    final exceso = _montoEfectivo - _restanteParaEfectivo;
+    return exceso > _epsilon ? exceso : 0;
+  }
+
+  String get _mensajePagos {
+    if (_excedeSinEfectivo) return 'El monto en medios distintos a Efectivo no puede superar el Total.';
+    if (!_pagosCuadran) return 'Falta ${MonedaFormatter.formatear(_restanteParaEfectivo - _montoEfectivo)} por cubrir.';
+    if (_vuelto > 0) return 'Vuelto: ${MonedaFormatter.formatear(_vuelto)}';
+    return 'Los pagos cuadran con el Total.';
+  }
 
   @override
   void dispose() {
@@ -95,15 +125,37 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
 
   void _confirmar() {
     if (_esContado && !_pagosCuadran) {
-      setState(() => _error = 'La suma de los pagos debe coincidir exacto con el Total.');
+      setState(() => _error = _excedeSinEfectivo
+          ? 'El monto en medios distintos a Efectivo no puede superar el Total.'
+          : 'Falta cubrir el Total.');
       return;
     }
 
-    final pagos = _esContado
-        ? _pagos.map((p) => PagoInput(medioPago: p.medioPago, monto: p.monto)).toList()
-        : const <PagoInput>[];
+    Navigator.of(context).pop(ResultadoCheckout(tipoDocumento: _tipoDocumento, pagos: _pagosParaEnviar()));
+  }
 
-    Navigator.of(context).pop(ResultadoCheckout(tipoDocumento: _tipoDocumento, pagos: pagos));
+  /// El backend exige que la suma de los pagos coincida EXACTO con el
+  /// Total (ver Venta.Confirmar) — el vuelto no es parte del pago, así
+  /// que se descuenta acá del monto de Efectivo antes de enviar (nunca
+  /// del monto tendido que el Cajero tipeó, ese es solo para calcular el
+  /// vuelto en pantalla). Se descuenta desde la última línea en Efectivo
+  /// hacia la primera, por si hubiera más de una.
+  List<PagoInput> _pagosParaEnviar() {
+    if (!_esContado) return const [];
+
+    var vueltoRestante = _vuelto;
+    final resultado = <PagoInput>[];
+    for (var i = _pagos.length - 1; i >= 0; i--) {
+      final pago = _pagos[i];
+      var monto = pago.monto;
+      if (pago.medioPago == MedioPago.efectivo && vueltoRestante > 0) {
+        final descuento = monto < vueltoRestante ? monto : vueltoRestante;
+        monto -= descuento;
+        vueltoRestante -= descuento;
+      }
+      resultado.insert(0, PagoInput(medioPago: pago.medioPago, monto: monto));
+    }
+    return resultado.where((p) => p.monto > _epsilon).toList();
   }
 
   @override
@@ -152,9 +204,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
               ),
               const SizedBox(height: 4),
               Text(
-                _pagosCuadran
-                    ? 'Los pagos cuadran con el Total.'
-                    : 'Falta ${MonedaFormatter.formatear(_diferencia)} por cubrir.',
+                _mensajePagos,
                 style: TextStyle(color: _pagosCuadran ? Colors.green : Theme.of(context).colorScheme.error),
               ),
             ],
