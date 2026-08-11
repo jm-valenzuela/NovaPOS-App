@@ -135,7 +135,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         MenuCard(
           categoria: 'Catálogo',
           titulo: 'Productos',
-          subtitulo: 'Crear y editar Productos y Variantes.',
+          subtitulo: 'Productos, Marcas, Categorías y Ofertas para Imprimir.',
           onTap: () => context.push('/catalogo'),
         ),
         if (tieneClientes)

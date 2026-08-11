@@ -104,4 +104,16 @@ class VarianteAdmin {
   final double? precioOferta;
   final DateTime? ofertaDesde;
   final DateTime? ofertaHasta;
+
+  /// Misma lógica que ProductoVendible.ofertaVigente — duplicada acá porque
+  /// son dos DTOs distintos (éste incluye Variantes inactivas, para la
+  /// pantalla de administración).
+  bool get ofertaVigente {
+    if (precioOferta == null || ofertaDesde == null || ofertaHasta == null) return false;
+    final hoy = DateTime.now();
+    final hoySoloFecha = DateTime(hoy.year, hoy.month, hoy.day);
+    return !hoySoloFecha.isBefore(ofertaDesde!) && !hoySoloFecha.isAfter(ofertaHasta!);
+  }
+
+  double get precioEfectivo => ofertaVigente ? precioOferta! : precioVenta;
 }

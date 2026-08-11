@@ -22,6 +22,29 @@ final departamentosAdminProvider = FutureProvider.autoDispose<List<Departamento>
 /// Tab de Departamento seleccionada en el catálogo admin — null = "Todos".
 final departamentoAdminSeleccionadoProvider = StateProvider.autoDispose<String?>((ref) => null);
 
+/// Resto de la jerarquía de clasificación + Marcas, para las pantallas de
+/// mantención (CategoriasAdminScreen/MarcasAdminScreen) — `.family` porque
+/// cada nivel depende del padre elegido. Tras crear un ítem, la pantalla
+/// invalida el provider correspondiente en vez de mutar una lista local
+/// (mismo criterio que ProductosAdminController: catálogo chico, prioriza
+/// no divergir del servidor por sobre el costo de un round-trip extra).
+final subDepartamentosAdminProvider =
+    FutureProvider.autoDispose.family<List<SubDepartamento>, String>((ref, departamentoId) {
+  return ref.watch(catalogAdminRepositoryProvider).listarSubDepartamentos(departamentoId);
+});
+
+final clasesAdminProvider = FutureProvider.autoDispose.family<List<Clase>, String>((ref, subDepartamentoId) {
+  return ref.watch(catalogAdminRepositoryProvider).listarClases(subDepartamentoId);
+});
+
+final subclasesAdminProvider = FutureProvider.autoDispose.family<List<Subclase>, String>((ref, claseId) {
+  return ref.watch(catalogAdminRepositoryProvider).listarSubclases(claseId);
+});
+
+final marcasAdminProvider = FutureProvider.autoDispose<List<Marca>>((ref) {
+  return ref.watch(catalogAdminRepositoryProvider).listarMarcas();
+});
+
 class ProductosAdminState {
   const ProductosAdminState({this.productos = const [], this.cargando = false, this.error});
 
