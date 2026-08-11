@@ -55,13 +55,16 @@ pw.Widget _paginaOferta(ItemOferta item) {
       mainAxisAlignment: pw.MainAxisAlignment.center,
       crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
-        pw.Text(
-          item.nombreProducto,
-          textAlign: pw.TextAlign.center,
-          style: pw.TextStyle(fontSize: 32, fontWeight: pw.FontWeight.bold),
+        pw.Container(
+          constraints: const pw.BoxConstraints(maxWidth: 680),
+          child: pw.Text(
+            item.nombreProducto,
+            textAlign: pw.TextAlign.center,
+            style: pw.TextStyle(fontSize: 52, fontWeight: pw.FontWeight.bold),
+          ),
         ),
-        pw.SizedBox(height: 6),
-        pw.Text(item.sku, style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey600)),
+        pw.SizedBox(height: 10),
+        pw.Text(item.sku, style: const pw.TextStyle(fontSize: 18, color: PdfColors.grey600)),
         pw.SizedBox(height: 48),
         if (item.precioOferta != null) ...[
           pw.Text(
@@ -79,17 +82,33 @@ pw.Widget _paginaOferta(ItemOferta item) {
             style: pw.TextStyle(fontSize: 36, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 32),
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 36, vertical: 20),
-            decoration: pw.BoxDecoration(color: PdfColors.green700, borderRadius: pw.BorderRadius.circular(16)),
-            child: pw.Text(
-              item.etiquetaPromocion ?? '',
-              textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(fontSize: 44, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-            ),
-          ),
+          _bloquePromocion(item.etiquetaPromocion ?? ''),
         ],
       ],
+    ),
+  );
+}
+
+/// Tamaño de letra según el largo de la etiqueta — "2x1"/"4x3" pueden ser
+/// gigantes (110pt); "Desde 15 uds. -5%" o "2do al 20% dto." necesitan
+/// bajar un poco para no desbordar el ancho de la página, pero siguen
+/// siendo grandes. Antes era un tamaño fijo (44pt) que se veía chico al
+/// lado del precio de oferta (100pt) — a pedido explícito ("el de las
+/// promociones se ve pequeño").
+pw.Widget _bloquePromocion(String etiqueta) {
+  final fontSize = switch (etiqueta.length) {
+    <= 6 => 110.0,
+    <= 14 => 72.0,
+    _ => 52.0,
+  };
+  return pw.Container(
+    constraints: const pw.BoxConstraints(maxWidth: 620),
+    padding: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 28),
+    decoration: pw.BoxDecoration(color: PdfColors.green700, borderRadius: pw.BorderRadius.circular(20)),
+    child: pw.Text(
+      etiqueta,
+      textAlign: pw.TextAlign.center,
+      style: pw.TextStyle(fontSize: fontSize, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
     ),
   );
 }
