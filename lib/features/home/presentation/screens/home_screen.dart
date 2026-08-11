@@ -136,16 +136,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             subtitulo: 'Crear y editar Clientes.',
             onTap: () => context.push('/clientes'),
           ),
-        if (tieneAutorizarCredito)
-          MenuCard(
-            key: const Key('homeCreditoPendienteCard'),
-            categoria: 'Clientes',
-            titulo: 'Cupo de Crédito',
-            subtitulo: 'Autorizar o rechazar solicitudes de crédito de Clientes.',
-            badge: cantidadSolicitudesCreditoPendientes > 0 ? cantidadSolicitudesCreditoPendientes : null,
-            badgeKey: const Key('badgeCreditoPendiente'),
-            onTap: () => context.push('/clientes/credito-pendientes'),
-          ),
         if (tieneClientes)
           MenuCard(
             key: const Key('homeCobranzasCard'),
@@ -161,6 +151,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             titulo: 'Plazos de Clientes',
             subtitulo: 'Catálogo de plazos y cuotas para vender a crédito.',
             onTap: () => context.push('/clientes/plazos-pago'),
+          ),
+        if (tieneAutorizarCredito)
+          MenuCard(
+            key: const Key('homeCreditoPendienteCard'),
+            categoria: 'Clientes',
+            titulo: 'Cupo de Crédito',
+            subtitulo: 'Autorizar o rechazar solicitudes de crédito de Clientes.',
+            badge: cantidadSolicitudesCreditoPendientes > 0 ? cantidadSolicitudesCreditoPendientes : null,
+            badgeKey: const Key('badgeCreditoPendiente'),
+            onTap: () => context.push('/clientes/credito-pendientes'),
           ),
         if (tieneCompras)
           MenuCard(
