@@ -7,6 +7,7 @@ import '../../features/auth/presentation/screens/registro_empresa_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/catalog/presentation/screens/productos_admin_screen.dart';
 import '../../features/customers/presentation/screens/clientes_admin_screen.dart';
+import '../../features/customers/presentation/screens/clientes_hub_screen.dart';
 import '../../features/customers/presentation/screens/plazos_pago_screen.dart';
 import '../../features/customers/presentation/screens/solicitudes_credito_pendientes_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -65,7 +66,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/pos', builder: (context, state) => const PosScreen()),
       GoRoute(path: '/catalogo', builder: (context, state) => const ProductosAdminScreen()),
       GoRoute(path: '/descuentos-pendientes', builder: (context, state) => const DescuentosPendientesScreen()),
-      GoRoute(path: '/clientes', builder: (context, state) => const ClientesAdminScreen()),
+      GoRoute(path: '/clientes', builder: (context, state) => const ClientesHubScreen()),
+      GoRoute(path: '/clientes/mantencion', builder: (context, state) => const ClientesAdminScreen()),
       GoRoute(
           path: '/clientes/credito-pendientes', builder: (context, state) => const SolicitudesCreditoPendientesScreen()),
       GoRoute(path: '/clientes/plazos-pago', builder: (context, state) => const PlazosPagoScreen()),

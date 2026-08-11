@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/menu_card.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
-import '../../../customers/presentation/providers/solicitudes_credito_pendientes_providers.dart';
 import '../../../sales/presentation/providers/descuentos_pendientes_providers.dart';
 
 /// Menú principal post-login — una grilla de tarjetas (`MenuCard`, ver
@@ -31,7 +30,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// existe y no molesta si se llama sin tener el permiso, pero evitamos
   /// el llamado innecesario igual.
   Timer? _pollDescuentosPendientes;
-  Timer? _pollSolicitudesCredito;
 
   @override
   void initState() {
@@ -41,17 +39,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.read(descuentosPendientesProvider.notifier).cargar();
       }
     });
-    _pollSolicitudesCredito = Timer.periodic(const Duration(seconds: 20), (_) {
-      if (ref.read(authControllerProvider).sesion?.tienePermiso('customers.clientes.autorizarcredito') ?? false) {
-        ref.read(solicitudesCreditoPendientesProvider.notifier).cargar();
-      }
-    });
   }
 
   @override
   void dispose() {
     _pollDescuentosPendientes?.cancel();
-    _pollSolicitudesCredito?.cancel();
     super.dispose();
   }
 
@@ -59,7 +51,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final sesion = ref.watch(authControllerProvider).sesion;
     final tieneAutorizarDescuentos = sesion?.tienePermiso('sales.descuentos.autorizar') ?? false;
-    final tieneClientes = sesion?.tienePermiso('customers.clientes.gestionar') ?? false;
+    final tieneClientes = (sesion?.tienePermiso('customers.clientes.gestionar') ?? false) ||
+        (sesion?.tienePermiso('customers.clientes.autorizarcredito') ?? false);
     final tieneCompras = (sesion?.tienePermiso('purchasing.ordenescompra.gestionar') ?? false) ||
         (sesion?.tienePermiso('purchasing.proveedores.gestionar') ?? false);
     final tieneInventario = sesion?.tienePermiso('inventory.stock.ver') ?? false;
@@ -69,9 +62,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // tarjeta (ej. un Cajero sin el permiso).
     final cantidadDescuentosPendientes =
         tieneAutorizarDescuentos ? ref.watch(descuentosPendientesProvider).pendientes.length : 0;
-    final tieneAutorizarCredito = sesion?.tienePermiso('customers.clientes.autorizarcredito') ?? false;
-    final cantidadSolicitudesCreditoPendientes =
-        tieneAutorizarCredito ? ref.watch(solicitudesCreditoPendientesProvider).pendientes.length : 0;
 
     return MenuScaffold(
       appBar: AppBar(
@@ -132,35 +122,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           MenuCard(
             key: const Key('homeClientesCard'),
             categoria: 'Clientes',
-            titulo: 'Mantención de Clientes',
-            subtitulo: 'Crear y editar Clientes.',
+            titulo: 'Clientes',
+            subtitulo: 'Mantención, Cobranzas, Plazos de Pago y Cupo de Crédito.',
             onTap: () => context.push('/clientes'),
-          ),
-        if (tieneClientes)
-          MenuCard(
-            key: const Key('homeCobranzasCard'),
-            categoria: 'Cobranzas',
-            titulo: 'Cobranzas',
-            subtitulo: 'Cargos, abonos y cuentas vencidas por Cliente.',
-            onTap: () => context.push('/clientes/cobranzas'),
-          ),
-        if (tieneClientes)
-          MenuCard(
-            key: const Key('homePlazosPagoClientesCard'),
-            categoria: 'Plazos de Pago',
-            titulo: 'Plazos de Clientes',
-            subtitulo: 'Catálogo de plazos y cuotas para vender a crédito.',
-            onTap: () => context.push('/clientes/plazos-pago'),
-          ),
-        if (tieneAutorizarCredito)
-          MenuCard(
-            key: const Key('homeCreditoPendienteCard'),
-            categoria: 'Clientes',
-            titulo: 'Cupo de Crédito',
-            subtitulo: 'Autorizar o rechazar solicitudes de crédito de Clientes.',
-            badge: cantidadSolicitudesCreditoPendientes > 0 ? cantidadSolicitudesCreditoPendientes : null,
-            badgeKey: const Key('badgeCreditoPendiente'),
-            onTap: () => context.push('/clientes/credito-pendientes'),
           ),
         if (tieneCompras)
           MenuCard(
