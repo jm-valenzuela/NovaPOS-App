@@ -165,9 +165,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (tieneCompras)
           MenuCard(
             key: const Key('homeComprasCard'),
-            categoria: 'Compras',
+            categoria: 'Proveedores',
             titulo: 'Proveedores y Órdenes',
-            subtitulo: 'Proveedores, Órdenes de Compra y discrepancias.',
+            subtitulo: 'Proveedores, Órdenes de Compra, Discrepancias, Cuentas por Pagar y Plazos de Pago.',
             onTap: () => context.push('/compras'),
           ),
         if (tieneInventario)
