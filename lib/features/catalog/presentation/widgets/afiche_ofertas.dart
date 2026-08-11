@@ -9,72 +9,85 @@ class ItemOferta {
     required this.nombreProducto,
     required this.sku,
     required this.precioVenta,
-    required this.precioOferta,
+    this.precioOferta,
+    this.etiquetaPromocion,
   });
 
   final String nombreProducto;
   final String sku;
   final double precioVenta;
-  final double precioOferta;
+
+  /// No nulo solo cuando la promoción es un precio de oferta literal — en
+  /// ese caso el afiche destaca "antes/ahora". Para volumen o grupo (2x1,
+  /// 4x3, "Desde N uds. -X%") no hay un segundo precio, así que se destaca
+  /// `etiquetaPromocion` en su lugar.
+  final double? precioOferta;
+  final String? etiquetaPromocion;
 }
 
-/// Genera un afiche A4 con una tarjeta por Variante en oferta — Nombre,
-/// Sku, precio normal tachado y precio de oferta destacado — para pegar en
-/// la góndola o repartir como volante. Mismo patrón `Printing.layoutPdf`
+/// Genera un afiche tamaño carta — **una página completa por Variante en
+/// promoción**, con el precio o la etiqueta ("2x1", "Desde 15 uds. -5%",
+/// etc.) en letra gigante, para que se note lo conveniente que es (a
+/// pedido explícito: "que se note lo conveniente que es... de tamaño
+/// grande, para que se haga notar"). Mismo patrón `Printing.layoutPdf`
 /// que imprimirEtiquetaCodigoBarras/imprimirTicketCotizacion: no se guarda
 /// ningún archivo, se entrega directo al diálogo nativo de impresión.
 Future<void> imprimirAficheOfertas(List<ItemOferta> items) {
   return Printing.layoutPdf(
     name: 'Ofertas',
-    format: PdfPageFormat.a4,
+    format: PdfPageFormat.letter,
     onLayout: (pageFormat) async {
       final documento = pw.Document();
-      documento.addPage(
-        pw.MultiPage(
-          pageFormat: pageFormat.copyWith(
-            marginLeft: 16 * PdfPageFormat.mm,
-            marginRight: 16 * PdfPageFormat.mm,
-            marginTop: 16 * PdfPageFormat.mm,
-            marginBottom: 16 * PdfPageFormat.mm,
-          ),
-          build: (pwContext) => [
-            pw.Header(
-              text: 'Ofertas vigentes',
-              textStyle: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 12),
-            pw.Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [for (final item in items) _tarjetaOferta(item)],
-            ),
-          ],
-        ),
-      );
+      for (final item in items) {
+        documento.addPage(
+          pw.Page(pageFormat: pageFormat, build: (pwContext) => _paginaOferta(item)),
+        );
+      }
       return documento.save();
     },
   );
 }
 
-pw.Widget _tarjetaOferta(ItemOferta item) {
-  return pw.Container(
-    width: 160,
-    padding: const pw.EdgeInsets.all(10),
-    decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.8), borderRadius: pw.BorderRadius.circular(6)),
+pw.Widget _paginaOferta(ItemOferta item) {
+  return pw.Center(
     child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      mainAxisAlignment: pw.MainAxisAlignment.center,
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
-        pw.Text(item.nombreProducto, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12), maxLines: 2),
-        pw.Text(item.sku, style: const pw.TextStyle(fontSize: 8)),
+        pw.Text(
+          item.nombreProducto,
+          textAlign: pw.TextAlign.center,
+          style: pw.TextStyle(fontSize: 32, fontWeight: pw.FontWeight.bold),
+        ),
         pw.SizedBox(height: 6),
-        pw.Text(
-          MonedaFormatter.formatear(item.precioVenta),
-          style: const pw.TextStyle(fontSize: 10, decoration: pw.TextDecoration.lineThrough),
-        ),
-        pw.Text(
-          MonedaFormatter.formatear(item.precioOferta),
-          style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.red700),
-        ),
+        pw.Text(item.sku, style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey600)),
+        pw.SizedBox(height: 48),
+        if (item.precioOferta != null) ...[
+          pw.Text(
+            MonedaFormatter.formatear(item.precioVenta),
+            style: const pw.TextStyle(fontSize: 24, decoration: pw.TextDecoration.lineThrough, color: PdfColors.grey500),
+          ),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            MonedaFormatter.formatear(item.precioOferta!),
+            style: pw.TextStyle(fontSize: 100, fontWeight: pw.FontWeight.bold, color: PdfColors.red700),
+          ),
+        ] else ...[
+          pw.Text(
+            MonedaFormatter.formatear(item.precioVenta),
+            style: pw.TextStyle(fontSize: 36, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 32),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 36, vertical: 20),
+            decoration: pw.BoxDecoration(color: PdfColors.green700, borderRadius: pw.BorderRadius.circular(16)),
+            child: pw.Text(
+              item.etiquetaPromocion ?? '',
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(fontSize: 44, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+            ),
+          ),
+        ],
       ],
     ),
   );

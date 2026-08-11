@@ -18,10 +18,15 @@ String _sufijoColorTalla(VarianteAdmin variante) {
   return partes.isEmpty ? '' : ' · ${partes.join(' · ')}';
 }
 
-/// Productos en oferta hoy, listos para imprimir un afiche — filtra sobre
-/// el mismo listado admin que ProductosAdminScreen (`productosAdminProvider`,
-/// ya trae todo el catálogo) usando VarianteAdmin.ofertaVigente en vez de
-/// pedir un endpoint nuevo, ya que el catálogo de una PyME es chico.
+/// Productos "convenientes para el Cliente" hoy, listos para imprimir un
+/// afiche — no solo precioOferta, también descuento por volumen y
+/// promoción por grupo (2x1, 4x3, etc.), mismos 3 tipos que se destacan en
+/// la tarjeta del POS (a pedido explícito: "se consideran todos los
+/// productos que están en oferta... que sea conveniente para un cliente").
+/// Filtra sobre el mismo listado admin que ProductosAdminScreen
+/// (`productosAdminProvider`, ya trae todo el catálogo) usando
+/// VarianteAdmin.tienePromocion en vez de pedir un endpoint nuevo, ya que
+/// el catálogo de una PyME es chico.
 class ProductosOfertaScreen extends ConsumerWidget {
   const ProductosOfertaScreen({super.key});
 
@@ -32,7 +37,7 @@ class ProductosOfertaScreen extends ConsumerWidget {
     final items = <_VarianteEnOferta>[
       for (final producto in estado.productos)
         for (final variante in producto.variantes)
-          if (variante.ofertaVigente) _VarianteEnOferta(producto: producto, variante: variante),
+          if (variante.tienePromocion) _VarianteEnOferta(producto: producto, variante: variante),
     ];
 
     return Scaffold(
@@ -50,7 +55,8 @@ class ProductosOfertaScreen extends ConsumerWidget {
                     nombreProducto: item.producto.nombre,
                     sku: item.variante.sku,
                     precioVenta: item.variante.precioVenta,
-                    precioOferta: item.variante.precioOferta!,
+                    precioOferta: item.variante.ofertaVigente ? item.variante.precioOferta : null,
+                    etiquetaPromocion: item.variante.etiquetaPromocion,
                   ),
               ]),
             ),
@@ -59,7 +65,7 @@ class ProductosOfertaScreen extends ConsumerWidget {
       body: estado.cargando && estado.productos.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : items.isEmpty
-              ? const Center(child: Text('No hay Variantes con oferta vigente hoy.'))
+              ? const Center(child: Text('No hay Variantes con ofertas o promociones vigentes hoy.'))
               : RefreshIndicator(
                   onRefresh: () => ref.read(productosAdminProvider.notifier).cargar(),
                   child: ListView.separated(
@@ -67,22 +73,31 @@ class ProductosOfertaScreen extends ConsumerWidget {
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final item = items[index];
+                      final variante = item.variante;
                       return ListTile(
-                        key: Key('ofertaItem_${item.variante.varianteProductoId}'),
+                        key: Key('ofertaItem_${variante.varianteProductoId}'),
                         title: Text(item.producto.nombre),
-                        subtitle: Text('${item.variante.sku}${_sufijoColorTalla(item.variante)}'),
+                        subtitle: Text('${variante.sku}${_sufijoColorTalla(variante)}'),
                         trailing: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              MonedaFormatter.formatear(item.variante.precioVenta),
-                              style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 12),
-                            ),
-                            Text(
-                              MonedaFormatter.formatear(item.variante.precioOferta!),
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.error),
-                            ),
+                            if (variante.ofertaVigente) ...[
+                              Text(
+                                MonedaFormatter.formatear(variante.precioVenta),
+                                style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 12),
+                              ),
+                              Text(
+                                MonedaFormatter.formatear(variante.precioOferta!),
+                                style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.error),
+                              ),
+                            ] else ...[
+                              Text(MonedaFormatter.formatear(variante.precioVenta)),
+                              Text(
+                                variante.etiquetaPromocion ?? '',
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 12),
+                              ),
+                            ],
                           ],
                         ),
                       );

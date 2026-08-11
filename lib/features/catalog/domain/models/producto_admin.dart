@@ -1,3 +1,5 @@
+import 'promocion_grupo.dart';
+
 /// Espejo de ProductoAdminResumen/VarianteAdminResumen (ListarProductosQuery
 /// en el backend) — a diferencia de ProductoVendible (búsqueda para el
 /// POS), incluye Productos/Variantes inactivos y los Ids/nombres de
@@ -116,4 +118,29 @@ class VarianteAdmin {
   }
 
   double get precioEfectivo => ofertaVigente ? precioOferta! : precioVenta;
+
+  /// Cualquiera de las 3 promociones configuradas (mutuamente excluyentes
+  /// entre sí) — usado por ProductosOfertaScreen para decidir qué Variantes
+  /// "son convenientes para el Cliente", no solo las que tienen un
+  /// precioOferta literal.
+  bool get tienePromocion => ofertaVigente || cantidadMinimaDescuentoVolumen != null || cantidadPorGrupoPromocion != null;
+
+  /// Texto legible de la promoción vigente, null si no tiene ninguna. Mismo
+  /// criterio de etiquetas que ProductoResultadoTile (POS): "Oferta" para
+  /// precioOferta, "Desde N uds. -X%" para el descuento por volumen, y
+  /// PromocionGrupo.etiqueta ("2x1", "2do al 20% dto.", etc.) para la
+  /// promoción por grupo.
+  String? get etiquetaPromocion {
+    if (ofertaVigente) return 'Oferta';
+    if (cantidadMinimaDescuentoVolumen != null) {
+      return 'Desde $cantidadMinimaDescuentoVolumen uds. -${_formatearPorcentaje(porcentajeDescuentoVolumen!)}%';
+    }
+    if (cantidadPorGrupoPromocion != null) {
+      return PromocionGrupo.etiqueta(cantidadPorGrupoPromocion!, porcentajeDescuentoUnidadPromocion!);
+    }
+    return null;
+  }
 }
+
+String _formatearPorcentaje(double porcentaje) =>
+    porcentaje.truncateToDouble() == porcentaje ? porcentaje.toInt().toString() : porcentaje.toString();
