@@ -16,14 +16,16 @@ ProductoAdmin _base({
   double? porcentajeDescuentoVolumen,
   int? cantidadPorGrupoPromocion,
   double? porcentajeDescuentoUnidadPromocion,
+  String departamentoId = 'depto-1',
+  String departamentoNombre = 'Depto',
 }) {
   final hoy = DateTime.now();
   return ProductoAdmin(
     productoId: 'producto-$id',
     nombre: 'Producto $id',
     descripcion: null,
-    departamentoId: 'depto-1',
-    departamentoNombre: 'Depto',
+    departamentoId: departamentoId,
+    departamentoNombre: departamentoNombre,
     subclaseId: 'subclase-1',
     subclaseNombre: 'Subclase',
     marcaId: 'marca-1',
@@ -79,7 +81,6 @@ void main() {
 
     expect(find.text('Producto vigente'), findsOneWidget);
     expect(find.text('Producto futura'), findsNothing);
-    expect(find.byKey(const Key('ofertasImprimirBoton')), findsOneWidget);
   });
 
   testWidgets('Muestra Variantes con descuento por volumen, con su etiqueta', (tester) async {
@@ -123,14 +124,15 @@ void main() {
     expect(find.text('Producto aceite'), findsNothing);
   });
 
-  testWidgets('Todas las Variantes empiezan seleccionadas', (tester) async {
+  testWidgets('Ninguna Variante viene seleccionada por defecto', (tester) async {
     fake = FakeCatalogAdminRepository()..productos = [_base(id: 'vigente', ofertaVigente: true)];
     await pumpPantalla(tester);
 
-    expect(find.text('1 de 1 seleccionadas'), findsOneWidget);
+    expect(find.text('0 de 1 seleccionadas'), findsOneWidget);
+    expect(find.byKey(const Key('ofertasImprimirBoton')), findsNothing);
   });
 
-  testWidgets('Deseleccionar una Variante actualiza el contador', (tester) async {
+  testWidgets('Seleccionar una Variante actualiza el contador y muestra el botón de imprimir', (tester) async {
     fake = FakeCatalogAdminRepository()
       ..productos = [
         _base(id: 'vigente', ofertaVigente: true),
@@ -145,9 +147,13 @@ void main() {
     expect(find.byKey(const Key('ofertasImprimirBoton')), findsOneWidget);
   });
 
-  testWidgets('Deseleccionar la única Variante oculta el botón de imprimir', (tester) async {
+  testWidgets('Deseleccionar una Variante ya marcada la quita y puede ocultar el botón de imprimir', (tester) async {
     fake = FakeCatalogAdminRepository()..productos = [_base(id: 'vigente', ofertaVigente: true)];
     await pumpPantalla(tester);
+
+    await tester.tap(find.byKey(const Key('ofertaItem_variante-vigente')));
+    await tester.pump();
+    expect(find.byKey(const Key('ofertasImprimirBoton')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('ofertaItem_variante-vigente')));
     await tester.pump();
@@ -156,7 +162,7 @@ void main() {
     expect(find.byKey(const Key('ofertasImprimirBoton')), findsNothing);
   });
 
-  testWidgets('"Ninguna" y "Todas" deseleccionan/seleccionan de a bloque', (tester) async {
+  testWidgets('"Todas" y "Ninguna" seleccionan/deseleccionan de a bloque', (tester) async {
     fake = FakeCatalogAdminRepository()
       ..productos = [
         _base(id: 'vigente', ofertaVigente: true),
@@ -164,12 +170,41 @@ void main() {
       ];
     await pumpPantalla(tester);
 
-    await tester.tap(find.byKey(const Key('ofertasDeseleccionarTodas')));
-    await tester.pump();
-    expect(find.text('0 de 2 seleccionadas'), findsOneWidget);
-
     await tester.tap(find.byKey(const Key('ofertasSeleccionarTodas')));
     await tester.pump();
     expect(find.text('2 de 2 seleccionadas'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('ofertasDeseleccionarTodas')));
+    await tester.pump();
+    expect(find.text('0 de 2 seleccionadas'), findsOneWidget);
+  });
+
+  testWidgets('Filtrar por Departamento muestra solo las Variantes de ese Departamento', (tester) async {
+    fake = FakeCatalogAdminRepository()
+      ..productos = [
+        _base(id: 'harina', ofertaVigente: true, departamentoId: 'depto-abarrotes', departamentoNombre: 'Abarrotes'),
+        _base(
+          id: 'aceite',
+          cantidadPorGrupoPromocion: 2,
+          porcentajeDescuentoUnidadPromocion: 100,
+          departamentoId: 'depto-limpieza',
+          departamentoNombre: 'Limpieza',
+        ),
+      ];
+    await pumpPantalla(tester);
+
+    expect(find.text('Producto harina'), findsOneWidget);
+    expect(find.text('Producto aceite'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('ofertasDepartamento_depto-abarrotes')));
+    await tester.pump();
+
+    expect(find.text('Producto harina'), findsOneWidget);
+    expect(find.text('Producto aceite'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('ofertasDepartamentoTodos')));
+    await tester.pump();
+
+    expect(find.text('Producto aceite'), findsOneWidget);
   });
 }

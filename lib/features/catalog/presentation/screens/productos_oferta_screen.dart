@@ -38,11 +38,15 @@ class _ProductosOfertaScreenState extends ConsumerState<ProductosOfertaScreen> {
   final _busquedaController = TextEditingController();
   String _texto = '';
 
-  /// Todas las Variantes en promoción están seleccionadas por defecto (el
-  /// caso común es imprimir el afiche completo) — acá solo se registran
-  /// las que el usuario deselecciona explícitamente, así que una Variante
-  /// nueva (tras un refresh) queda seleccionada sin lógica extra.
-  final Set<String> _deseleccionadas = {};
+  /// Ninguna Variante viene seleccionada por defecto — el usuario elige
+  /// explícitamente cuáles imprimir (a pedido explícito: "que no aparezcan
+  /// todos seleccionados").
+  final Set<String> _seleccionadas = {};
+
+  /// Estado local, no el `departamentoAdminSeleccionadoProvider` compartido
+  /// con ProductosAdminScreen — el filtro de esta pantalla es independiente
+  /// del de Catálogo.
+  String? _departamentoSeleccionado;
 
   @override
   void dispose() {
@@ -52,8 +56,11 @@ class _ProductosOfertaScreenState extends ConsumerState<ProductosOfertaScreen> {
 
   List<_VarianteEnOferta> _filtrar(List<_VarianteEnOferta> items) {
     final texto = _texto.trim().toLowerCase();
-    if (texto.isEmpty) return items;
     return items.where((item) {
+      if (_departamentoSeleccionado != null && item.producto.departamentoId != _departamentoSeleccionado) {
+        return false;
+      }
+      if (texto.isEmpty) return true;
       if (item.producto.nombre.toLowerCase().contains(texto)) return true;
       return item.variante.sku.toLowerCase().contains(texto);
     }).toList();
@@ -68,9 +75,11 @@ class _ProductosOfertaScreenState extends ConsumerState<ProductosOfertaScreen> {
         for (final variante in producto.variantes)
           if (variante.tienePromocion) _VarianteEnOferta(producto: producto, variante: variante),
     ];
+    final departamentos = <String, String>{
+      for (final item in todos) item.producto.departamentoId: item.producto.departamentoNombre,
+    };
     final visibles = _filtrar(todos);
-    final seleccionados =
-        todos.where((item) => !_deseleccionadas.contains(item.variante.varianteProductoId)).toList();
+    final seleccionados = todos.where((item) => _seleccionadas.contains(item.variante.varianteProductoId)).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -122,6 +131,38 @@ class _ProductosOfertaScreenState extends ConsumerState<ProductosOfertaScreen> {
                         onChanged: (texto) => setState(() => _texto = texto),
                       ),
                     ),
+                    if (departamentos.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: SizedBox(
+                          height: 44,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: ChoiceChip(
+                                  key: const Key('ofertasDepartamentoTodos'),
+                                  label: const Text('Todos'),
+                                  selected: _departamentoSeleccionado == null,
+                                  onSelected: (_) => setState(() => _departamentoSeleccionado = null),
+                                ),
+                              ),
+                              for (final entry in departamentos.entries)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: ChoiceChip(
+                                    key: Key('ofertasDepartamento_${entry.key}'),
+                                    label: Text(entry.value),
+                                    selected: _departamentoSeleccionado == entry.key,
+                                    onSelected: (_) => setState(() => _departamentoSeleccionado = entry.key),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
@@ -131,16 +172,15 @@ class _ProductosOfertaScreenState extends ConsumerState<ProductosOfertaScreen> {
                           TextButton(
                             key: const Key('ofertasSeleccionarTodas'),
                             onPressed: () => setState(
-                              () => _deseleccionadas
-                                  .removeAll(visibles.map((item) => item.variante.varianteProductoId)),
+                              () => _seleccionadas.addAll(visibles.map((item) => item.variante.varianteProductoId)),
                             ),
                             child: const Text('Todas'),
                           ),
                           TextButton(
                             key: const Key('ofertasDeseleccionarTodas'),
                             onPressed: () => setState(
-                              () => _deseleccionadas
-                                  .addAll(visibles.map((item) => item.variante.varianteProductoId)),
+                              () => _seleccionadas
+                                  .removeAll(visibles.map((item) => item.variante.varianteProductoId)),
                             ),
                             child: const Text('Ninguna'),
                           ),
@@ -158,15 +198,15 @@ class _ProductosOfertaScreenState extends ConsumerState<ProductosOfertaScreen> {
                                 itemBuilder: (context, index) {
                                   final item = visibles[index];
                                   final variante = item.variante;
-                                  final seleccionada = !_deseleccionadas.contains(variante.varianteProductoId);
+                                  final seleccionada = _seleccionadas.contains(variante.varianteProductoId);
                                   return CheckboxListTile(
                                     key: Key('ofertaItem_${variante.varianteProductoId}'),
                                     value: seleccionada,
                                     onChanged: (_) => setState(() {
                                       if (seleccionada) {
-                                        _deseleccionadas.add(variante.varianteProductoId);
+                                        _seleccionadas.remove(variante.varianteProductoId);
                                       } else {
-                                        _deseleccionadas.remove(variante.varianteProductoId);
+                                        _seleccionadas.add(variante.varianteProductoId);
                                       }
                                     }),
                                     controlAffinity: ListTileControlAffinity.leading,
