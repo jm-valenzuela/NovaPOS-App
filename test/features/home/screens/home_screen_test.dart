@@ -4,9 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:novapos_app/features/auth/domain/models/sesion_usuario.dart';
 import 'package:novapos_app/features/auth/presentation/providers/auth_providers.dart';
+import 'package:novapos_app/features/customers/domain/models/solicitud_credito_pendiente.dart';
 import 'package:novapos_app/features/home/presentation/screens/home_screen.dart';
 import 'package:novapos_app/features/sales/domain/models/descuento_pendiente.dart';
-import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart' show salesRepositoryProvider;
+import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart'
+    show customerRepositoryProvider, salesRepositoryProvider;
 
 import '../../auth/fakes/fake_auth_repository.dart';
 import '../../sales/fakes/pos_fakes.dart';
@@ -110,9 +112,72 @@ void main() {
     expect(find.byKey(const Key('homeComprasCard')), findsOneWidget);
   });
 
-  testWidgets('Con solo el permiso de autorizar credito, tambien muestra la tarjeta Clientes', (tester) async {
-    await pumpHome(tester, permisos: ['customers.clientes.autorizarcredito']);
+  testWidgets('Sin el permiso de autorizar credito, no muestra la tarjeta ni la burbuja', (tester) async {
+    await pumpHome(tester, permisos: []);
 
-    expect(find.byKey(const Key('homeClientesCard')), findsOneWidget);
+    expect(find.byKey(const Key('homeCreditoPendienteCard')), findsNothing);
+    expect(find.byKey(const Key('badgeCreditoPendiente')), findsNothing);
+  });
+
+  testWidgets('Con el permiso pero sin solicitudes pendientes, muestra la tarjeta sin burbuja', (tester) async {
+    fakeAuth = FakeAuthRepository()
+      ..sesionActiva = true
+      ..sesionARetornar = const SesionUsuario(
+        nombreCompleto: 'Ana Pérez',
+        email: 'admin@novapos-demo.cl',
+        empresaRazonSocial: 'Minimarket Don José SpA',
+        permisos: ['customers.clientes.autorizarcredito'],
+      );
+    final fakeCustomer = FakeCustomerRepository();
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(fakeAuth),
+        customerRepositoryProvider.overrideWithValue(fakeCustomer),
+      ],
+      child: const MaterialApp(home: HomeScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('homeCreditoPendienteCard')), findsOneWidget);
+    expect(find.byKey(const Key('badgeCreditoPendiente')), findsNothing);
+  });
+
+  testWidgets('Con solicitudes pendientes, muestra la burbuja con la cantidad', (tester) async {
+    fakeAuth = FakeAuthRepository()
+      ..sesionActiva = true
+      ..sesionARetornar = const SesionUsuario(
+        nombreCompleto: 'Ana Pérez',
+        email: 'admin@novapos-demo.cl',
+        empresaRazonSocial: 'Minimarket Don José SpA',
+        permisos: ['customers.clientes.autorizarcredito'],
+      );
+    final fakeCustomer = FakeCustomerRepository()
+      ..solicitudesCreditoPendientesARetornar = [
+        SolicitudCreditoPendiente(
+          clienteId: 'cliente-1',
+          clienteNombre: 'Empresa Test',
+          clienteRut: '12345678-5',
+          cupoCreditoActual: 0,
+          cupoCreditoSolicitado: 500000,
+          plazoPagoIdSolicitado: 'plazo-1',
+          solicitadoPorUsuarioId: 'usuario-1',
+          fechaSolicitud: DateTime(2026, 8, 8),
+        ),
+      ];
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(fakeAuth),
+        customerRepositoryProvider.overrideWithValue(fakeCustomer),
+      ],
+      child: const MaterialApp(home: HomeScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('badgeCreditoPendiente')), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
   });
 }

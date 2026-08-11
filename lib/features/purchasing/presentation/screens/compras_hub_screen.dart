@@ -38,7 +38,7 @@ class ComprasHubScreen extends StatelessWidget {
         ),
         MenuCard(
           key: const Key('comprasCuentasPorPagarCard'),
-          categoria: 'Compras',
+          categoria: 'Proveedores',
           titulo: 'Cuentas por Pagar',
           subtitulo: 'Saldo, cargos y abonos por Proveedor.',
           onTap: () => context.push('/compras/cuentas-por-pagar'),

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/menu_card.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../customers/presentation/providers/solicitudes_credito_pendientes_providers.dart';
 import '../../../sales/presentation/providers/descuentos_pendientes_providers.dart';
 
 /// Menú principal post-login — una grilla de tarjetas (`MenuCard`, ver
@@ -30,6 +31,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// existe y no molesta si se llama sin tener el permiso, pero evitamos
   /// el llamado innecesario igual.
   Timer? _pollDescuentosPendientes;
+  Timer? _pollSolicitudesCredito;
 
   @override
   void initState() {
@@ -39,11 +41,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.read(descuentosPendientesProvider.notifier).cargar();
       }
     });
+    _pollSolicitudesCredito = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (ref.read(authControllerProvider).sesion?.tienePermiso('customers.clientes.autorizarcredito') ?? false) {
+        ref.read(solicitudesCreditoPendientesProvider.notifier).cargar();
+      }
+    });
   }
 
   @override
   void dispose() {
     _pollDescuentosPendientes?.cancel();
+    _pollSolicitudesCredito?.cancel();
     super.dispose();
   }
 
@@ -51,8 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final sesion = ref.watch(authControllerProvider).sesion;
     final tieneAutorizarDescuentos = sesion?.tienePermiso('sales.descuentos.autorizar') ?? false;
-    final tieneClientes = (sesion?.tienePermiso('customers.clientes.gestionar') ?? false) ||
-        (sesion?.tienePermiso('customers.clientes.autorizarcredito') ?? false);
+    final tieneClientes = sesion?.tienePermiso('customers.clientes.gestionar') ?? false;
     final tieneCompras = (sesion?.tienePermiso('purchasing.ordenescompra.gestionar') ?? false) ||
         (sesion?.tienePermiso('purchasing.proveedores.gestionar') ?? false);
     final tieneInventario = sesion?.tienePermiso('inventory.stock.ver') ?? false;
@@ -62,6 +69,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // tarjeta (ej. un Cajero sin el permiso).
     final cantidadDescuentosPendientes =
         tieneAutorizarDescuentos ? ref.watch(descuentosPendientesProvider).pendientes.length : 0;
+    final tieneAutorizarCredito = sesion?.tienePermiso('customers.clientes.autorizarcredito') ?? false;
+    final cantidadSolicitudesCreditoPendientes =
+        tieneAutorizarCredito ? ref.watch(solicitudesCreditoPendientesProvider).pendientes.length : 0;
 
     return MenuScaffold(
       appBar: AppBar(
@@ -76,15 +86,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         bottom: sesion == null
             ? null
             : PreferredSize(
-                preferredSize: const Size.fromHeight(28),
+                preferredSize: const Size.fromHeight(32),
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    '${sesion.nombreCompleto} · ${sesion.empresaRazonSocial}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text.rich(
+                    TextSpan(
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                      children: [
+                        TextSpan(text: '${sesion.nombreCompleto} · '),
+                        TextSpan(
+                          text: sesion.empresaRazonSocial,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -121,15 +141,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (tieneClientes)
           MenuCard(
             key: const Key('homeClientesCard'),
-            categoria: 'Clientes',
+            categoria: 'Clientes, Cuentas x Cobrar',
             titulo: 'Clientes',
-            subtitulo: 'Mantención, Cobranzas, Plazos de Pago y Cupo de Crédito.',
+            subtitulo: 'Mantención, Cuentas x Cobrar y Plazos de Pago.',
             onTap: () => context.push('/clientes'),
+          ),
+        if (tieneAutorizarCredito)
+          MenuCard(
+            key: const Key('homeCreditoPendienteCard'),
+            categoria: 'Clientes',
+            titulo: 'Cupo de Crédito',
+            subtitulo: 'Autorizar o rechazar solicitudes de crédito de Clientes.',
+            badge: cantidadSolicitudesCreditoPendientes > 0 ? cantidadSolicitudesCreditoPendientes : null,
+            badgeKey: const Key('badgeCreditoPendiente'),
+            onTap: () => context.push('/clientes/credito-pendientes'),
           ),
         if (tieneCompras)
           MenuCard(
             key: const Key('homeComprasCard'),
-            categoria: 'Proveedores',
+            categoria: 'Proveedores, Cuentas x Pagar',
             titulo: 'Proveedores y Órdenes',
             subtitulo: 'Proveedores, Órdenes de Compra, Discrepancias, Cuentas por Pagar y Plazos de Pago.',
             onTap: () => context.push('/compras'),
