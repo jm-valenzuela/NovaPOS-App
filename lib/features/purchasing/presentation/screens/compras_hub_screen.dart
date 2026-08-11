@@ -36,6 +36,20 @@ class ComprasHubScreen extends StatelessWidget {
           subtitulo: 'Diferencias entre lo negociado y el documento del Proveedor.',
           onTap: () => context.push('/compras/discrepancias'),
         ),
+        MenuCard(
+          key: const Key('comprasCuentasPorPagarCard'),
+          categoria: 'Compras',
+          titulo: 'Cuentas por Pagar',
+          subtitulo: 'Saldo, cargos y abonos por Proveedor.',
+          onTap: () => context.push('/compras/cuentas-por-pagar'),
+        ),
+        MenuCard(
+          key: const Key('comprasPlazosPagoCard'),
+          categoria: 'Plazos de Pago',
+          titulo: 'Plazos de Proveedores',
+          subtitulo: 'Catálogo de plazos y cuotas para comprar a crédito.',
+          onTap: () => context.push('/compras/proveedores/plazos-pago'),
+        ),
       ],
     );
   }

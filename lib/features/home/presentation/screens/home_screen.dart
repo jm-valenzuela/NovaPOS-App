@@ -170,22 +170,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             subtitulo: 'Proveedores, Órdenes de Compra y discrepancias.',
             onTap: () => context.push('/compras'),
           ),
-        if (tieneCompras)
-          MenuCard(
-            key: const Key('homeCuentasPorPagarCard'),
-            categoria: 'Compras',
-            titulo: 'Cuentas por Pagar',
-            subtitulo: 'Saldo, cargos y abonos por Proveedor.',
-            onTap: () => context.push('/compras/cuentas-por-pagar'),
-          ),
-        if (tieneCompras)
-          MenuCard(
-            key: const Key('homePlazosPagoProveedoresCard'),
-            categoria: 'Plazos de Pago',
-            titulo: 'Plazos de Proveedores',
-            subtitulo: 'Catálogo de plazos y cuotas para comprar a crédito.',
-            onTap: () => context.push('/compras/proveedores/plazos-pago'),
-          ),
         if (tieneInventario)
           MenuCard(
             key: const Key('homeInventarioCard'),
