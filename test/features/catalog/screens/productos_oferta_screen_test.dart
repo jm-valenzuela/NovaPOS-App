@@ -107,4 +107,69 @@ void main() {
     expect(find.text('No hay Variantes con ofertas o promociones vigentes hoy.'), findsOneWidget);
     expect(find.byKey(const Key('ofertasImprimirBoton')), findsNothing);
   });
+
+  testWidgets('Buscar por nombre filtra la lista visible', (tester) async {
+    fake = FakeCatalogAdminRepository()
+      ..productos = [
+        _base(id: 'harina', ofertaVigente: true),
+        _base(id: 'aceite', cantidadPorGrupoPromocion: 2, porcentajeDescuentoUnidadPromocion: 100),
+      ];
+    await pumpPantalla(tester);
+
+    await tester.enterText(find.byKey(const Key('ofertasBusqueda')), 'harina');
+    await tester.pump();
+
+    expect(find.text('Producto harina'), findsOneWidget);
+    expect(find.text('Producto aceite'), findsNothing);
+  });
+
+  testWidgets('Todas las Variantes empiezan seleccionadas', (tester) async {
+    fake = FakeCatalogAdminRepository()..productos = [_base(id: 'vigente', ofertaVigente: true)];
+    await pumpPantalla(tester);
+
+    expect(find.text('1 de 1 seleccionadas'), findsOneWidget);
+  });
+
+  testWidgets('Deseleccionar una Variante actualiza el contador', (tester) async {
+    fake = FakeCatalogAdminRepository()
+      ..productos = [
+        _base(id: 'vigente', ofertaVigente: true),
+        _base(id: 'grupo', cantidadPorGrupoPromocion: 2, porcentajeDescuentoUnidadPromocion: 100),
+      ];
+    await pumpPantalla(tester);
+
+    await tester.tap(find.byKey(const Key('ofertaItem_variante-vigente')));
+    await tester.pump();
+
+    expect(find.text('1 de 2 seleccionadas'), findsOneWidget);
+    expect(find.byKey(const Key('ofertasImprimirBoton')), findsOneWidget);
+  });
+
+  testWidgets('Deseleccionar la única Variante oculta el botón de imprimir', (tester) async {
+    fake = FakeCatalogAdminRepository()..productos = [_base(id: 'vigente', ofertaVigente: true)];
+    await pumpPantalla(tester);
+
+    await tester.tap(find.byKey(const Key('ofertaItem_variante-vigente')));
+    await tester.pump();
+
+    expect(find.text('0 de 1 seleccionadas'), findsOneWidget);
+    expect(find.byKey(const Key('ofertasImprimirBoton')), findsNothing);
+  });
+
+  testWidgets('"Ninguna" y "Todas" deseleccionan/seleccionan de a bloque', (tester) async {
+    fake = FakeCatalogAdminRepository()
+      ..productos = [
+        _base(id: 'vigente', ofertaVigente: true),
+        _base(id: 'grupo', cantidadPorGrupoPromocion: 2, porcentajeDescuentoUnidadPromocion: 100),
+      ];
+    await pumpPantalla(tester);
+
+    await tester.tap(find.byKey(const Key('ofertasDeseleccionarTodas')));
+    await tester.pump();
+    expect(find.text('0 de 2 seleccionadas'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('ofertasSeleccionarTodas')));
+    await tester.pump();
+    expect(find.text('2 de 2 seleccionadas'), findsOneWidget);
+  });
 }

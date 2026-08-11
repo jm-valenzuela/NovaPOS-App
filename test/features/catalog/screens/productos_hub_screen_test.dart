@@ -14,6 +14,6 @@ void main() {
     expect(find.byKey(const Key('productosOfertasCard')), findsOneWidget);
     expect(find.text('Marcas'), findsOneWidget);
     expect(find.text('Categorías'), findsOneWidget);
-    expect(find.text('Ofertas para Imprimir'), findsOneWidget);
+    expect(find.text('Ofertas y Promociones para Imprimir'), findsOneWidget);
   });
 }

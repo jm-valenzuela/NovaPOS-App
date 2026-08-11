@@ -27,30 +27,62 @@ String _sufijoColorTalla(VarianteAdmin variante) {
 /// (`productosAdminProvider`, ya trae todo el catálogo) usando
 /// VarianteAdmin.tienePromocion en vez de pedir un endpoint nuevo, ya que
 /// el catálogo de una PyME es chico.
-class ProductosOfertaScreen extends ConsumerWidget {
+class ProductosOfertaScreen extends ConsumerStatefulWidget {
   const ProductosOfertaScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProductosOfertaScreen> createState() => _ProductosOfertaScreenState();
+}
+
+class _ProductosOfertaScreenState extends ConsumerState<ProductosOfertaScreen> {
+  final _busquedaController = TextEditingController();
+  String _texto = '';
+
+  /// Todas las Variantes en promoción están seleccionadas por defecto (el
+  /// caso común es imprimir el afiche completo) — acá solo se registran
+  /// las que el usuario deselecciona explícitamente, así que una Variante
+  /// nueva (tras un refresh) queda seleccionada sin lógica extra.
+  final Set<String> _deseleccionadas = {};
+
+  @override
+  void dispose() {
+    _busquedaController.dispose();
+    super.dispose();
+  }
+
+  List<_VarianteEnOferta> _filtrar(List<_VarianteEnOferta> items) {
+    final texto = _texto.trim().toLowerCase();
+    if (texto.isEmpty) return items;
+    return items.where((item) {
+      if (item.producto.nombre.toLowerCase().contains(texto)) return true;
+      return item.variante.sku.toLowerCase().contains(texto);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final estado = ref.watch(productosAdminProvider);
 
-    final items = <_VarianteEnOferta>[
+    final todos = <_VarianteEnOferta>[
       for (final producto in estado.productos)
         for (final variante in producto.variantes)
           if (variante.tienePromocion) _VarianteEnOferta(producto: producto, variante: variante),
     ];
+    final visibles = _filtrar(todos);
+    final seleccionados =
+        todos.where((item) => !_deseleccionadas.contains(item.variante.varianteProductoId)).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ofertas para Imprimir'),
+        title: const Text('Ofertas y Promociones para Imprimir'),
         actions: [
-          if (items.isNotEmpty)
+          if (seleccionados.isNotEmpty)
             IconButton(
               key: const Key('ofertasImprimirBoton'),
               icon: const Icon(Icons.print),
-              tooltip: 'Imprimir afiche de ofertas',
+              tooltip: 'Imprimir afiche de las seleccionadas',
               onPressed: () => imprimirAficheOfertas([
-                for (final item in items)
+                for (final item in seleccionados)
                   ItemOferta(
                     nombreProducto: item.producto.nombre,
                     sku: item.variante.sku,
@@ -64,45 +96,117 @@ class ProductosOfertaScreen extends ConsumerWidget {
       ),
       body: estado.cargando && estado.productos.isEmpty
           ? const Center(child: CircularProgressIndicator())
-          : items.isEmpty
+          : todos.isEmpty
               ? const Center(child: Text('No hay Variantes con ofertas o promociones vigentes hoy.'))
-              : RefreshIndicator(
-                  onRefresh: () => ref.read(productosAdminProvider.notifier).cargar(),
-                  child: ListView.separated(
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      final variante = item.variante;
-                      return ListTile(
-                        key: Key('ofertaItem_${variante.varianteProductoId}'),
-                        title: Text(item.producto.nombre),
-                        subtitle: Text('${variante.sku}${_sufijoColorTalla(variante)}'),
-                        trailing: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (variante.ofertaVigente) ...[
-                              Text(
-                                MonedaFormatter.formatear(variante.precioVenta),
-                                style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 12),
-                              ),
-                              Text(
-                                MonedaFormatter.formatear(variante.precioOferta!),
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.error),
-                              ),
-                            ] else ...[
-                              Text(MonedaFormatter.formatear(variante.precioVenta)),
-                              Text(
-                                variante.etiquetaPromocion ?? '',
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 12),
-                              ),
-                            ],
-                          ],
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      child: TextField(
+                        key: const Key('ofertasBusqueda'),
+                        controller: _busquedaController,
+                        decoration: InputDecoration(
+                          hintText: 'Buscar producto por nombre o SKU...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _texto.isEmpty
+                              ? null
+                              : IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _busquedaController.clear();
+                                    setState(() => _texto = '');
+                                  },
+                                ),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                      );
-                    },
-                  ),
+                        onChanged: (texto) => setState(() => _texto = texto),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Text('${seleccionados.length} de ${todos.length} seleccionadas'),
+                          const Spacer(),
+                          TextButton(
+                            key: const Key('ofertasSeleccionarTodas'),
+                            onPressed: () => setState(
+                              () => _deseleccionadas
+                                  .removeAll(visibles.map((item) => item.variante.varianteProductoId)),
+                            ),
+                            child: const Text('Todas'),
+                          ),
+                          TextButton(
+                            key: const Key('ofertasDeseleccionarTodas'),
+                            onPressed: () => setState(
+                              () => _deseleccionadas
+                                  .addAll(visibles.map((item) => item.variante.varianteProductoId)),
+                            ),
+                            child: const Text('Ninguna'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: visibles.isEmpty
+                          ? Center(child: Text('Sin resultados para "$_texto".'))
+                          : RefreshIndicator(
+                              onRefresh: () => ref.read(productosAdminProvider.notifier).cargar(),
+                              child: ListView.separated(
+                                itemCount: visibles.length,
+                                separatorBuilder: (_, __) => const Divider(height: 1),
+                                itemBuilder: (context, index) {
+                                  final item = visibles[index];
+                                  final variante = item.variante;
+                                  final seleccionada = !_deseleccionadas.contains(variante.varianteProductoId);
+                                  return CheckboxListTile(
+                                    key: Key('ofertaItem_${variante.varianteProductoId}'),
+                                    value: seleccionada,
+                                    onChanged: (_) => setState(() {
+                                      if (seleccionada) {
+                                        _deseleccionadas.add(variante.varianteProductoId);
+                                      } else {
+                                        _deseleccionadas.remove(variante.varianteProductoId);
+                                      }
+                                    }),
+                                    controlAffinity: ListTileControlAffinity.leading,
+                                    title: Text(item.producto.nombre),
+                                    subtitle: Text('${variante.sku}${_sufijoColorTalla(variante)}'),
+                                    secondary: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: variante.ofertaVigente
+                                          ? [
+                                              Text(
+                                                MonedaFormatter.formatear(variante.precioVenta),
+                                                style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 12),
+                                              ),
+                                              Text(
+                                                MonedaFormatter.formatear(variante.precioOferta!),
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Theme.of(context).colorScheme.error,
+                                                ),
+                                              ),
+                                            ]
+                                          : [
+                                              Text(MonedaFormatter.formatear(variante.precioVenta)),
+                                              Text(
+                                                variante.etiquetaPromocion ?? '',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.green,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                    ),
+                  ],
                 ),
     );
   }

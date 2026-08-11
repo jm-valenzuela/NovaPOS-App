@@ -25,17 +25,18 @@ class ItemOferta {
   final String? etiquetaPromocion;
 }
 
-/// Genera un afiche tamaño carta — **una página completa por Variante en
-/// promoción**, con el precio o la etiqueta ("2x1", "Desde 15 uds. -5%",
-/// etc.) en letra gigante, para que se note lo conveniente que es (a
-/// pedido explícito: "que se note lo conveniente que es... de tamaño
-/// grande, para que se haga notar"). Mismo patrón `Printing.layoutPdf`
-/// que imprimirEtiquetaCodigoBarras/imprimirTicketCotizacion: no se guarda
+/// Genera un afiche tamaño carta horizontal — **una página completa por
+/// Variante en promoción**, con el precio o la etiqueta ("2x1", "Desde 15
+/// uds. -5%", etc.) en letra gigante, para que se note lo conveniente que
+/// es (a pedido explícito: "que se note lo conveniente que es... de
+/// tamaño grande, para que se haga notar"; luego "formato de impresion
+/// horizontal"). Mismo patrón `Printing.layoutPdf` que
+/// imprimirEtiquetaCodigoBarras/imprimirTicketCotizacion: no se guarda
 /// ningún archivo, se entrega directo al diálogo nativo de impresión.
 Future<void> imprimirAficheOfertas(List<ItemOferta> items) {
   return Printing.layoutPdf(
     name: 'Ofertas',
-    format: PdfPageFormat.letter,
+    format: PdfPageFormat.letter.landscape,
     onLayout: (pageFormat) async {
       final documento = pw.Document();
       for (final item in items) {

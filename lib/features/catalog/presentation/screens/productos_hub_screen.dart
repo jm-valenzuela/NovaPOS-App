@@ -38,8 +38,8 @@ class ProductosHubScreen extends StatelessWidget {
         MenuCard(
           key: const Key('productosOfertasCard'),
           categoria: 'Promociones',
-          titulo: 'Ofertas para Imprimir',
-          subtitulo: 'Productos en oferta vigente, listos para armar el afiche.',
+          titulo: 'Ofertas y Promociones para Imprimir',
+          subtitulo: 'Productos en oferta o promoción vigente, listos para armar el afiche.',
           onTap: () => context.push('/catalogo/ofertas'),
         ),
       ],
