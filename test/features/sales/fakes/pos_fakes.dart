@@ -371,6 +371,7 @@ class FakeCustomerRepository implements CustomerRepository {
   String? ultimoClienteIdSolicitudCredito;
   double? ultimoCupoSolicitado;
   String? ultimoPlazoPagoIdSolicitado;
+  String? ultimaObservacionSolicitudCredito;
   String? ultimoClienteIdCreditoAutorizado;
   String? ultimoClienteIdCreditoRechazado;
   String? ultimoMotivoRechazoCredito;
@@ -380,10 +381,12 @@ class FakeCustomerRepository implements CustomerRepository {
     required String clienteId,
     required double cupoSolicitado,
     String? plazoPagoIdSolicitado,
+    String? observacion,
   }) async {
     ultimoClienteIdSolicitudCredito = clienteId;
     ultimoCupoSolicitado = cupoSolicitado;
     ultimoPlazoPagoIdSolicitado = plazoPagoIdSolicitado;
+    ultimaObservacionSolicitudCredito = observacion;
   }
 
   @override

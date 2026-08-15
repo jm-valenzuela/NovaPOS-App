@@ -1,5 +1,6 @@
 import 'models/discrepancia.dart';
-import 'models/documento_recibido.dart';
+import 'models/documento_recibido_global.dart';
+import 'models/factura_interna.dart';
 import 'models/orden_compra.dart';
 import 'models/plazo_pago.dart';
 import 'models/proveedor.dart';
@@ -46,6 +47,8 @@ abstract class PurchasingRepository {
   Future<List<OrdenCompraResumenListado>> listarOrdenesCompra({String? proveedorId, EstadoOrdenCompra? estado});
 
   // Documentos Recibidos — la Boleta/Factura real del Proveedor.
+  // ordenCompraId es opcional (compra directa, "Factura Interna"); cuando
+  // no viene, categoria es obligatoria — ver CategoriaDocumentoRecibido.
   Future<String> registrarDocumentoRecibido({
     required String proveedorId,
     String? ordenCompraId,
@@ -55,9 +58,25 @@ abstract class PurchasingRepository {
     required double montoTotal,
     required FormaPago formaPago,
     required DateTime fechaEmision,
+    CategoriaDocumentoRecibido? categoria,
   });
 
-  Future<List<DocumentoRecibido>> listarDocumentosRecibidos(String proveedorId);
+  /// Todos los Documentos Recibidos (mercadería + Facturas Internas) a
+  /// través de todos los Proveedores — pantalla global, reemplaza tener
+  /// que entrar Proveedor por Proveedor a pedido explícito del usuario.
+  Future<List<DocumentoRecibidoGlobal>> listarTodosDocumentosRecibidos();
+
+  // Facturas Internas — mismos DocumentosRecibidos sin Orden de Compra,
+  // pero listados a través de todos los Proveedores (pantalla propia).
+  Future<List<FacturaInterna>> listarFacturasInternas();
+
+  /// Respaldo (Foto o PDF) de una Factura Interna ya registrada — un solo
+  /// archivo por documento, ver DocumentoRecibido.AdjuntarRespaldo.
+  Future<String> adjuntarRespaldoDocumentoRecibido({
+    required String documentoRecibidoId,
+    required List<int> bytes,
+    required String nombreArchivo,
+  });
 
   // Discrepancias — siempre generadas por el sistema, nunca a mano.
   Future<List<Discrepancia>> listarDiscrepancias({EstadoDiscrepancia? estado});

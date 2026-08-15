@@ -94,11 +94,13 @@ class CustomerApi {
     required String clienteId,
     required double cupoSolicitado,
     String? plazoPagoIdSolicitado,
+    String? observacion,
   }) async {
     try {
       await _client.dio.post('/clientes/$clienteId/credito/solicitar', data: {
         'cupoSolicitado': cupoSolicitado,
         'plazoPagoIdSolicitado': plazoPagoIdSolicitado,
+        'observacion': observacion,
       });
     } on DioException catch (e) {
       ApiClient.lanzarError(e);

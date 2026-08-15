@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/rut_validator.dart';
 import '../../domain/models/cliente_resumen.dart';
-import '../../domain/models/plazo_pago.dart';
 import '../providers/customer_admin_providers.dart';
 
 /// Un solo diálogo para crear y editar. El Rut es obligatorio al registrar un
@@ -30,7 +29,6 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
   late final _direccionController = TextEditingController(text: widget.existente?.direccion ?? '');
   late final _comunaController = TextEditingController(text: widget.existente?.comuna ?? '');
   late final _ciudadController = TextEditingController(text: widget.existente?.ciudad ?? '');
-  late String? _plazoPagoIdSeleccionado = widget.existente?.plazoPagoId;
   bool _guardando = false;
   String? _error;
 
@@ -89,12 +87,6 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
               controller: _telefonoController,
               decoration: const InputDecoration(labelText: 'Teléfono (opcional)'),
               keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 12),
-            _SelectorPlazoPago(
-              plazos: ref.watch(plazosPagoProvider).plazos,
-              seleccionado: _plazoPagoIdSeleccionado,
-              onChanged: (id) => setState(() => _plazoPagoIdSeleccionado = id),
             ),
             const SizedBox(height: 16),
             const Divider(),
@@ -176,13 +168,13 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
       return;
     }
 
-    // Cupo de crédito no se edita desde este formulario — requiere una
-    // evaluación y autorización aparte (ver SolicitarCreditoDialog). Se
-    // reenvía sin cambios en una edición, y en 0 en un alta nueva (mismo
-    // default que tenía el Cliente Genérico). El Plazo de Pago sí es
-    // editable acá — es solo una referencia al catálogo, no un otorgamiento
-    // de crédito.
+    // Cupo de crédito y Plazo de Pago no se editan desde este formulario —
+    // ambos requieren pasar por Solicitar Cupo de Crédito + autorización
+    // (ver SolicitarCreditoDialog, Cliente.AutorizarCredito). Se reenvían
+    // sin cambios en una edición, y en sus defaults (0 / sin Plazo) en un
+    // alta nueva.
     final cupoCredito = widget.existente?.cupoCredito ?? 0;
+    final plazoPagoId = widget.existente?.plazoPagoId;
     final email = _emailController.text.trim().isEmpty ? null : _emailController.text.trim();
     final telefono = _telefonoController.text.trim().isEmpty ? null : _telefonoController.text.trim();
     final giro = _giroController.text.trim().isEmpty ? null : _giroController.text.trim();
@@ -203,7 +195,7 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
             email: email,
             telefono: telefono,
             cupoCredito: cupoCredito,
-            plazoPagoId: _plazoPagoIdSeleccionado,
+            plazoPagoId: plazoPagoId,
             giro: giro,
             direccion: direccion,
             comuna: comuna,
@@ -222,7 +214,7 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
             email: email,
             telefono: telefono,
             cupoCredito: cupoCredito,
-            plazoPagoId: _plazoPagoIdSeleccionado,
+            plazoPagoId: plazoPagoId,
             giro: giro,
             direccion: direccion,
             comuna: comuna,
@@ -239,53 +231,5 @@ class _ClienteFormDialogState extends ConsumerState<ClienteFormDialog> {
         _error = ref.read(clientesAdminProvider).error ?? 'No se pudo guardar el Cliente.';
       });
     }
-  }
-}
-
-/// Dropdown de Plazos de Pago activos — vacío ("Inmediato") es un valor
-/// válido, ver Cliente.PlazoPagoId. Si el Cliente ya tiene asignado un
-/// Plazo que fue desactivado después, se incluye igual en la lista
-/// (marcado "(inactivo)") para no perder la selección al editar.
-class _SelectorPlazoPago extends StatelessWidget {
-  const _SelectorPlazoPago({required this.plazos, required this.seleccionado, required this.onChanged});
-
-  final List<PlazoPago> plazos;
-  final String? seleccionado;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final activos = plazos.where((p) => p.activo).toList();
-    final yaCubierto = seleccionado == null || activos.any((p) => p.id == seleccionado);
-
-    // Si el Plazo seleccionado no está entre los activos (fue desactivado, o
-    // el catálogo todavía no termina de cargar), igual hay que darle un
-    // ítem — si no, DropdownButtonFormField revienta porque su `value` no
-    // coincidiría con ningún `item`.
-    PlazoPago? seleccionadoFueraDeLista;
-    if (!yaCubierto) {
-      for (final p in plazos) {
-        if (p.id == seleccionado) {
-          seleccionadoFueraDeLista = p;
-          break;
-        }
-      }
-    }
-
-    return DropdownButtonFormField<String?>(
-      key: const Key('clientePlazoPago'),
-      value: seleccionado,
-      decoration: const InputDecoration(labelText: 'Plazo de pago'),
-      items: [
-        const DropdownMenuItem<String?>(value: null, child: Text('Inmediato')),
-        for (final plazo in activos) DropdownMenuItem<String?>(value: plazo.id, child: Text(plazo.nombre)),
-        if (!yaCubierto)
-          DropdownMenuItem<String?>(
-            value: seleccionado,
-            child: Text(seleccionadoFueraDeLista != null ? '${seleccionadoFueraDeLista.nombre} (inactivo)' : 'Cargando...'),
-          ),
-      ],
-      onChanged: onChanged,
-    );
   }
 }

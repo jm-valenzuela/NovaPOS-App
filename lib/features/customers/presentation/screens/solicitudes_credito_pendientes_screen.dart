@@ -84,10 +84,10 @@ class _TarjetaSolicitudCredito extends StatelessWidget {
   final VoidCallback onAutorizar;
   final VoidCallback onRechazar;
 
-  String get _nombrePlazo {
-    if (pendiente.plazoPagoIdSolicitado == null) return 'Inmediato';
+  String _nombrePlazo(String? plazoPagoId) {
+    if (plazoPagoId == null) return 'Inmediato';
     for (final plazo in plazos) {
-      if (plazo.id == pendiente.plazoPagoIdSolicitado) return plazo.nombre;
+      if (plazo.id == plazoPagoId) return plazo.nombre;
     }
     return 'Plazo de pago';
   }
@@ -103,10 +103,21 @@ class _TarjetaSolicitudCredito extends StatelessWidget {
           children: [
             Text('${pendiente.clienteNombre} · ${pendiente.clienteRut}', style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
-            Text('Cupo actual: ${MonedaFormatter.formatear(pendiente.cupoCreditoActual)}'),
+            if (pendiente.tieneCupoVigente)
+              Text(
+                key: const Key('creditoPendienteCupoVigente'),
+                'Ya tiene cupo vigente: ${MonedaFormatter.formatear(pendiente.cupoCreditoActual)} · ${_nombrePlazo(pendiente.plazoPagoIdActual)}',
+                style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600),
+              )
+            else
+              const Text('Sin cupo vigente'),
             Text(
-              'Cupo solicitado: ${MonedaFormatter.formatear(pendiente.cupoCreditoSolicitado)} · $_nombrePlazo',
+              'Cupo solicitado: ${MonedaFormatter.formatear(pendiente.cupoCreditoSolicitado)} · ${_nombrePlazo(pendiente.plazoPagoIdSolicitado)}',
             ),
+            if (pendiente.observacion != null && pendiente.observacion!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text('Observación: ${pendiente.observacion}', style: const TextStyle(fontStyle: FontStyle.italic)),
+            ],
             const SizedBox(height: 8),
             Row(
               children: [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/moneda_formatter.dart';
 import '../../domain/models/cliente_resumen.dart';
 import '../../domain/models/plazo_pago.dart';
 import '../providers/customer_admin_providers.dart';
@@ -24,19 +25,32 @@ class SolicitarCreditoDialog extends ConsumerStatefulWidget {
 
 class _SolicitarCreditoDialogState extends ConsumerState<SolicitarCreditoDialog> {
   final _cupoController = TextEditingController();
+  final _observacionController = TextEditingController();
   String? _plazoPagoIdSeleccionado;
   bool _guardando = false;
   String? _error;
 
+  bool get _tieneCupoVigente => widget.cliente.cupoCredito > 0;
+
   @override
   void dispose() {
     _cupoController.dispose();
+    _observacionController.dispose();
     super.dispose();
+  }
+
+  String _nombrePlazo(String? plazoPagoId, List<PlazoPago> plazos) {
+    if (plazoPagoId == null) return 'Inmediato';
+    for (final plazo in plazos) {
+      if (plazo.id == plazoPagoId) return plazo.nombre;
+    }
+    return 'Plazo de pago';
   }
 
   @override
   Widget build(BuildContext context) {
     final sinRut = widget.cliente.rut == null || widget.cliente.rut!.trim().isEmpty;
+    final plazos = ref.watch(plazosPagoProvider).plazos;
 
     return AlertDialog(
       title: const Text('Solicitar Cupo de Crédito'),
@@ -45,6 +59,16 @@ class _SolicitarCreditoDialogState extends ConsumerState<SolicitarCreditoDialog>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(widget.cliente.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          if (_tieneCupoVigente)
+            Text(
+              key: const Key('solicitarCreditoCupoVigente'),
+              'Ya tiene cupo vigente: ${MonedaFormatter.formatear(widget.cliente.cupoCredito)} · '
+              '${_nombrePlazo(widget.cliente.plazoPagoId, plazos)}',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            )
+          else
+            const Text('Sin cupo vigente', style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 12),
           if (sinRut)
             Text(
@@ -67,9 +91,19 @@ class _SolicitarCreditoDialogState extends ConsumerState<SolicitarCreditoDialog>
             ),
             const SizedBox(height: 12),
             _SelectorPlazoPagoSolicitud(
-              plazos: ref.watch(plazosPagoProvider).plazos,
+              plazos: plazos,
               seleccionado: _plazoPagoIdSeleccionado,
               onChanged: (id) => setState(() => _plazoPagoIdSeleccionado = id),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('solicitarCreditoObservacion'),
+              controller: _observacionController,
+              decoration: InputDecoration(
+                labelText: _tieneCupoVigente ? 'Observación (por qué pide un cupo nuevo)' : 'Observación (opcional)',
+                border: const OutlineInputBorder(),
+              ),
+              maxLines: 2,
             ),
           ],
         ],
@@ -101,10 +135,12 @@ class _SolicitarCreditoDialogState extends ConsumerState<SolicitarCreditoDialog>
     });
 
     try {
+      final observacion = _observacionController.text.trim();
       await ref.read(clientesAdminProvider.notifier).solicitarCredito(
             clienteId: widget.cliente.id,
             cupoSolicitado: cupo,
             plazoPagoIdSolicitado: _plazoPagoIdSeleccionado,
+            observacion: observacion.isEmpty ? null : observacion,
           );
 
       if (!mounted) return;

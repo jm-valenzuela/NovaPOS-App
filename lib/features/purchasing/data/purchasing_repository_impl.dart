@@ -1,5 +1,6 @@
 import '../domain/models/discrepancia.dart';
-import '../domain/models/documento_recibido.dart';
+import '../domain/models/documento_recibido_global.dart';
+import '../domain/models/factura_interna.dart';
 import '../domain/models/orden_compra.dart';
 import '../domain/models/plazo_pago.dart';
 import '../domain/models/proveedor.dart';
@@ -66,6 +67,7 @@ class PurchasingRepositoryImpl implements PurchasingRepository {
     required double montoTotal,
     required FormaPago formaPago,
     required DateTime fechaEmision,
+    CategoriaDocumentoRecibido? categoria,
   }) =>
       _api.registrarDocumentoRecibido(
         proveedorId: proveedorId,
@@ -76,10 +78,22 @@ class PurchasingRepositoryImpl implements PurchasingRepository {
         montoTotal: montoTotal,
         formaPago: formaPago,
         fechaEmision: fechaEmision,
+        categoria: categoria,
       );
 
   @override
-  Future<List<DocumentoRecibido>> listarDocumentosRecibidos(String proveedorId) => _api.listarDocumentosRecibidos(proveedorId);
+  Future<List<DocumentoRecibidoGlobal>> listarTodosDocumentosRecibidos() => _api.listarTodosDocumentosRecibidos();
+
+  @override
+  Future<List<FacturaInterna>> listarFacturasInternas() => _api.listarFacturasInternas();
+
+  @override
+  Future<String> adjuntarRespaldoDocumentoRecibido({
+    required String documentoRecibidoId,
+    required List<int> bytes,
+    required String nombreArchivo,
+  }) =>
+      _api.adjuntarRespaldoDocumentoRecibido(documentoRecibidoId: documentoRecibidoId, bytes: bytes, nombreArchivo: nombreArchivo);
 
   @override
   Future<List<Discrepancia>> listarDiscrepancias({EstadoDiscrepancia? estado}) => _api.listarDiscrepancias(estado: estado);

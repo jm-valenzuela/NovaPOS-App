@@ -35,7 +35,12 @@ abstract class CustomerRepository {
   Future<void> asignarRutCliente({required String clienteId, required String rut});
 
   /// Dispara la evaluación de Cupo de Crédito — no lo otorga de inmediato, ver ClientesAdminScreen.
-  Future<void> solicitarCreditoCliente({required String clienteId, required double cupoSolicitado, String? plazoPagoIdSolicitado});
+  Future<void> solicitarCreditoCliente({
+    required String clienteId,
+    required double cupoSolicitado,
+    String? plazoPagoIdSolicitado,
+    String? observacion,
+  });
 
   Future<void> autorizarCreditoCliente(String clienteId);
 

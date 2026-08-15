@@ -5,6 +5,8 @@ import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/registro_empresa_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
+import '../../features/cash/presentation/screens/cierre_caja_screen.dart';
+import '../../features/cash/presentation/screens/retiros_pendientes_screen.dart';
 import '../../features/catalog/presentation/screens/categorias_admin_screen.dart';
 import '../../features/catalog/presentation/screens/marcas_admin_screen.dart';
 import '../../features/catalog/presentation/screens/productos_admin_screen.dart';
@@ -26,6 +28,7 @@ import '../../features/payables/presentation/screens/detalle_cuenta_proveedor_sc
 import '../../features/purchasing/presentation/screens/compras_hub_screen.dart';
 import '../../features/purchasing/presentation/screens/discrepancias_screen.dart';
 import '../../features/purchasing/presentation/screens/documentos_recibidos_screen.dart';
+import '../../features/purchasing/presentation/screens/facturas_internas_screen.dart';
 import '../../features/purchasing/presentation/screens/orden_compra_detalle_screen.dart';
 import '../../features/purchasing/presentation/screens/ordenes_compra_screen.dart';
 import '../../features/purchasing/presentation/screens/plazos_pago_proveedor_screen.dart';
@@ -33,6 +36,9 @@ import '../../features/purchasing/presentation/screens/proveedores_screen.dart';
 import '../../features/receivables/presentation/screens/cobranzas_screen.dart';
 import '../../features/receivables/presentation/screens/detalle_cuenta_cliente_screen.dart';
 import '../../features/reporting/presentation/screens/flujo_caja_screen.dart';
+import '../../features/returns/presentation/screens/devolucion_venta_screen.dart';
+import '../../features/returns/presentation/screens/registrar_devolucion_screen.dart';
+import '../../features/sales/presentation/screens/cotizaciones_screen.dart';
 import '../../features/sales/presentation/screens/descuentos_pendientes_screen.dart';
 import '../../features/sales/presentation/screens/pos_screen.dart';
 
@@ -68,12 +74,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/registro-empresa', builder: (context, state) => const RegistroEmpresaScreen()),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
       GoRoute(path: '/pos', builder: (context, state) => const PosScreen()),
+      GoRoute(path: '/caja/retiros-pendientes', builder: (context, state) => const RetirosPendientesScreen()),
+      GoRoute(
+        path: '/caja/cierre/:sesionId',
+        builder: (context, state) => CierreCajaScreen(sesionCajaId: state.pathParameters['sesionId']!),
+      ),
+      GoRoute(path: '/devolucion-venta', builder: (context, state) => const DevolucionVentaScreen()),
+      GoRoute(
+        path: '/devolucion-venta/:ventaId',
+        builder: (context, state) => RegistrarDevolucionScreen(ventaId: state.pathParameters['ventaId']!),
+      ),
       GoRoute(path: '/catalogo', builder: (context, state) => const ProductosHubScreen()),
       GoRoute(path: '/catalogo/productos', builder: (context, state) => const ProductosAdminScreen()),
       GoRoute(path: '/catalogo/marcas', builder: (context, state) => const MarcasAdminScreen()),
       GoRoute(path: '/catalogo/categorias', builder: (context, state) => const CategoriasAdminScreen()),
       GoRoute(path: '/catalogo/ofertas', builder: (context, state) => const ProductosOfertaScreen()),
       GoRoute(path: '/descuentos-pendientes', builder: (context, state) => const DescuentosPendientesScreen()),
+      GoRoute(path: '/cotizaciones', builder: (context, state) => const CotizacionesScreen()),
       GoRoute(path: '/clientes', builder: (context, state) => const ClientesHubScreen()),
       GoRoute(path: '/clientes/mantencion', builder: (context, state) => const ClientesAdminScreen()),
       GoRoute(
@@ -85,6 +102,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => DetalleCuentaClienteScreen(clienteId: state.pathParameters['id']!),
       ),
       GoRoute(path: '/compras', builder: (context, state) => const ComprasHubScreen()),
+      GoRoute(path: '/facturas-internas', builder: (context, state) => const FacturasInternasScreen()),
       GoRoute(path: '/compras/proveedores', builder: (context, state) => const ProveedoresScreen()),
       GoRoute(path: '/compras/proveedores/plazos-pago', builder: (context, state) => const PlazosPagoProveedorScreen()),
       GoRoute(path: '/compras/cuentas-por-pagar', builder: (context, state) => const CuentasPorPagarScreen()),
@@ -97,17 +115,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/compras/ordenes/:id',
         builder: (context, state) => OrdenCompraDetalleScreen(ordenCompraId: state.pathParameters['id']!),
       ),
-      GoRoute(
-        path: '/compras/proveedores/:id/documentos',
-        builder: (context, state) {
-          final extra = state.extra as Map<String, String?>?;
-          return DocumentosRecibidosScreen(
-            proveedorId: state.pathParameters['id']!,
-            proveedorNombre: extra?['nombre'] ?? '',
-            rutProveedor: extra?['rut'],
-          );
-        },
-      ),
+      GoRoute(path: '/compras/documentos-recibidos', builder: (context, state) => const DocumentosRecibidosScreen()),
       GoRoute(path: '/compras/discrepancias', builder: (context, state) => const DiscrepanciasScreen()),
       GoRoute(path: '/reportes/flujo-caja', builder: (context, state) => const FlujoCajaScreen()),
       GoRoute(path: '/inventario', builder: (context, state) => const InventarioHubScreen()),

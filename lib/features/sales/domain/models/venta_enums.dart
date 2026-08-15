@@ -62,7 +62,8 @@ enum TipoDocumento {
 enum MedioPago {
   efectivo(0),
   tarjetaDebito(1),
-  tarjetaCredito(2);
+  tarjetaCredito(2),
+  notaCredito(3);
 
   const MedioPago(this.valorApi);
 
@@ -72,5 +73,6 @@ enum MedioPago {
         MedioPago.efectivo => 'Efectivo',
         MedioPago.tarjetaDebito => 'Tarjeta Débito',
         MedioPago.tarjetaCredito => 'Tarjeta Crédito',
+        MedioPago.notaCredito => 'Nota de Crédito',
       };
 }

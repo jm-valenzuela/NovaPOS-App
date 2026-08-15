@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:novapos_app/features/cash/domain/models/resumen_cierre_caja.dart';
+import 'package:novapos_app/features/cash/domain/models/sesion_caja.dart';
+import 'package:novapos_app/features/cash/presentation/providers/cash_providers.dart';
 import 'package:novapos_app/features/catalog/domain/models/clasificacion.dart';
 import 'package:novapos_app/features/catalog/domain/models/unidad_medida.dart';
 import 'package:novapos_app/features/catalog/presentation/providers/catalog_admin_providers.dart';
 import 'package:novapos_app/features/inventory/domain/models/stock_variante.dart';
+import 'package:novapos_app/features/returns/domain/models/nota_credito_disponible_resumen.dart';
+import 'package:novapos_app/features/returns/presentation/providers/returns_providers.dart';
 import 'package:novapos_app/features/sales/domain/models/cotizacion.dart';
 import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
@@ -13,8 +18,14 @@ import 'package:novapos_app/features/sales/presentation/providers/pos_providers.
 import 'package:novapos_app/features/sales/presentation/screens/pos_screen.dart';
 import 'package:novapos_app/features/tenancy/domain/models/caja_resumen.dart';
 
+import '../../cash/fakes/cash_fakes.dart';
 import '../../catalog/fakes/catalog_admin_fakes.dart' show FakeCatalogAdminRepository;
+import '../../returns/fakes/returns_fakes.dart';
 import '../fakes/pos_fakes.dart';
+
+/// Sentinel para distinguir "no pasé el parámetro" de "pasé null a propósito"
+/// en `sesionCajaAbierta` (que es un `SesionCaja?`).
+const _sinEspecificar = Object();
 
 void main() {
   late FakeCatalogRepository fakeCatalog;
@@ -23,13 +34,20 @@ void main() {
   late FakeInventoryRepository fakeInventory;
   late FakeCatalogAdminRepository fakeCatalogAdmin;
   late FakeCustomerRepository fakeCustomer;
+  late FakeCashRepository fakeCash;
+  late FakeReturnsRepository fakeReturns;
 
+  /// Por defecto la Caja ya tiene una Sesión Abierta — así el grueso de los
+  /// tests de este archivo (que no tienen relación con Cash) no interactúa
+  /// con el diálogo bloqueante de "Abrir Caja". Los tests que sí prueban el
+  /// flujo de Caja pasan `sesionCajaAbierta: null` explícito.
   Future<void> pumpPos(
     WidgetTester tester, {
     List<CajaResumen>? cajas,
     List<Departamento>? departamentos,
     EscanearCodigoBarra? escanearCodigoBarra,
     bool escaneoDisponible = true,
+    Object? sesionCajaAbierta = _sinEspecificar,
   }) async {
     fakeCatalog = FakeCatalogRepository();
     fakeTenancy = FakeTenancyRepository()
@@ -39,6 +57,18 @@ void main() {
     fakeInventory = FakeInventoryRepository();
     fakeCatalogAdmin = FakeCatalogAdminRepository()..departamentos = departamentos ?? [];
     fakeCustomer = FakeCustomerRepository();
+    fakeReturns = FakeReturnsRepository();
+    fakeCash = FakeCashRepository()
+      ..sesionAbiertaARetornar = identical(sesionCajaAbierta, _sinEspecificar)
+          ? SesionCaja(
+              id: 'sesion-1',
+              cajaId: cajaUnica.cajaId,
+              montoInicial: 20000,
+              abiertaPorUsuarioId: 'usuario-1',
+              fechaApertura: DateTime(2026, 8, 11),
+              estado: EstadoSesionCaja.abierta,
+            )
+          : sesionCajaAbierta as SesionCaja?;
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -48,6 +78,8 @@ void main() {
         inventoryRepositoryProvider.overrideWithValue(fakeInventory),
         catalogAdminRepositoryProvider.overrideWithValue(fakeCatalogAdmin),
         customerRepositoryProvider.overrideWithValue(fakeCustomer),
+        cashRepositoryProvider.overrideWithValue(fakeCash),
+        returnsRepositoryProvider.overrideWithValue(fakeReturns),
       ],
       child: MaterialApp(
         home: PosScreen(
@@ -149,6 +181,27 @@ void main() {
     expect(find.text(r'Total cobrado: $2.300'), findsOneWidget);
     expect(find.text(r'Subtotal: $1.933'), findsOneWidget);
     expect(find.text(r'IVA (19%): $367'), findsOneWidget);
+  });
+
+  testWidgets('Cobrar en Efectivo por sobre el Total muestra el Vuelto en "Venta confirmada"', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    fakeSales.totalARetornar = 1500;
+
+    await buscarYEsperar(tester, 'a');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('posCobrar')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('checkoutMonto_0')), '2000');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('checkoutConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Venta confirmada'), findsOneWidget);
+    expect(find.byKey(const Key('ventaConfirmadaVuelto')), findsOneWidget);
+    expect(find.text(r'Vuelto: $500'), findsOneWidget);
   });
 
   testWidgets('Confirmar "Nueva Venta" vacía el carrito para la siguiente', (tester) async {
@@ -764,6 +817,7 @@ void main() {
 
     expect(find.byKey(const Key('posCarrito_variante-coca')), findsOneWidget);
     expect(textoDe(tester, const Key('posTotal')), r'$3.000');
+    expect(find.text('Cotización rescatada: COT-20260801-001'), findsOneWidget);
   });
 
   testWidgets('El diálogo de rescatar filtra por número de cotización', (tester) async {
@@ -1200,5 +1254,158 @@ void main() {
 
     expect(find.byKey(const Key('posCarrito_variante-pan')), findsOneWidget);
     expect(find.byKey(const Key('posCarrito_variante-coca')), findsNothing);
+  });
+
+  testWidgets('Sin Sesión de Caja Abierta, ofrece "Abrir Caja" y al confirmar llama al repositorio', (tester) async {
+    await pumpPos(tester, sesionCajaAbierta: null);
+
+    expect(find.byKey(const Key('posAbrirCaja')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('posAbrirCaja')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('abrirCajaMontoInicial')), '20000');
+    await tester.tap(find.byKey(const Key('abrirCajaConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCash.ultimoCajaIdAbierto, cajaUnica.cajaId);
+    expect(fakeCash.ultimoMontoInicial, 20000);
+    expect(find.byKey(const Key('posMenuCaja')), findsOneWidget, reason: 'tras abrir, aparece el menú de Caja');
+  });
+
+  testWidgets('Sin Sesión de Caja Abierta, el cuerpo del POS queda bloqueado (sin buscador ni carrito)', (tester) async {
+    await pumpPos(tester, sesionCajaAbierta: null);
+
+    expect(find.byKey(const Key('posBusqueda')), findsNothing);
+    expect(find.byKey(const Key('posCajaCerradaAbrir')), findsOneWidget);
+    expect(find.textContaining('está cerrada'), findsOneWidget);
+  });
+
+  testWidgets('El botón "Abrir Caja" del cuerpo bloqueado también abre el diálogo y llama al repositorio', (tester) async {
+    await pumpPos(tester, sesionCajaAbierta: null);
+
+    await tester.tap(find.byKey(const Key('posCajaCerradaAbrir')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('abrirCajaMontoInicial')), '15000');
+    await tester.tap(find.byKey(const Key('abrirCajaConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCash.ultimoCajaIdAbierto, cajaUnica.cajaId);
+    expect(fakeCash.ultimoMontoInicial, 15000);
+    expect(find.byKey(const Key('posBusqueda')), findsOneWidget, reason: 'tras abrir, el POS se desbloquea');
+  });
+
+  testWidgets('Abrir Caja acepta un monto inicial de cero', (tester) async {
+    await pumpPos(tester, sesionCajaAbierta: null);
+
+    await tester.tap(find.byKey(const Key('posAbrirCaja')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('abrirCajaMontoInicial')), '0');
+    await tester.tap(find.byKey(const Key('abrirCajaConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCash.ultimoMontoInicial, 0);
+    expect(find.byKey(const Key('posBusqueda')), findsOneWidget);
+  });
+
+  testWidgets('Cancelar en el diálogo de Abrir Caja no registra nada y el POS sigue bloqueado', (tester) async {
+    await pumpPos(tester, sesionCajaAbierta: null);
+
+    await tester.tap(find.byKey(const Key('posAbrirCaja')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('abrirCajaCancelar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCash.ultimoCajaIdAbierto, isNull);
+    expect(find.byKey(const Key('posCajaCerradaAbrir')), findsOneWidget);
+    expect(find.byKey(const Key('posBusqueda')), findsNothing);
+  });
+
+  testWidgets('Con Sesión Abierta, "Retirar efectivo" solicita el retiro al repositorio', (tester) async {
+    await pumpPos(tester);
+
+    await tester.tap(find.byKey(const Key('posMenuCaja')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retirar efectivo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('retirarEfectivoMonto')), '20000');
+    await tester.enterText(find.byKey(const Key('retirarEfectivoMotivo')), 'Mucho efectivo acumulado');
+    await tester.tap(find.byKey(const Key('retirarEfectivoConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCash.ultimoSesionIdRetiroSolicitado, 'sesion-1');
+    expect(fakeCash.ultimoMontoRetiroSolicitado, 20000);
+    expect(fakeCash.ultimoMotivoRetiroSolicitado, 'Mucho efectivo acumulado');
+  });
+
+  testWidgets('Con Sesión Abierta, "Ver Arqueo" muestra el resumen de la Caja sin cerrarla', (tester) async {
+    await pumpPos(tester);
+    fakeCash.resumenCierreARetornar = const ResumenCierreCaja(
+      sesionCajaId: 'sesion-1',
+      cajaId: 'caja-1',
+      montoInicial: 20000,
+      totalVentasEfectivo: 15000,
+      totalVentasTarjetaDebito: 0,
+      totalVentasTarjetaCredito: 0,
+      totalVentasCredito: 0,
+      totalRetiros: 5000,
+      montoEsperado: 30000,
+      montoContado: null,
+      diferencia: null,
+      cerrada: false,
+      movimientos: [],
+    );
+
+    await tester.tap(find.byKey(const Key('posMenuCaja')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver Arqueo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Arqueo de Caja'), findsOneWidget);
+    expect(find.text('Sesión Abierta'), findsOneWidget);
+    expect(find.text('Monto esperado'), findsOneWidget);
+    expect(find.text('Cerrar Caja'), findsNothing);
+
+    await tester.tap(find.text('Cerrar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Arqueo de Caja'), findsNothing);
+  });
+
+  testWidgets(
+      '"Registrar devolución por nota de crédito" lista las Notas Disponibles y, al confirmar, las reembolsa en efectivo',
+      (tester) async {
+    await pumpPos(tester);
+    fakeReturns.notasDisponiblesARetornar = [
+      NotaCreditoDisponibleResumen(
+        id: 'nota-1',
+        folio: 'NC-20260813-001',
+        clienteId: 'cliente-1',
+        clienteNombre: 'Juan Pérez',
+        montoTotal: 5000,
+        fechaEmision: DateTime(2026, 8, 11, 12),
+        motivo: 'Producto defectuoso',
+      ),
+    ];
+
+    await tester.tap(find.byKey(const Key('posMenuCaja')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Registrar devolución por nota de crédito'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Notas de crédito a devolver en efectivo'), findsOneWidget);
+    expect(find.byKey(const Key('devolucionBuscarNotaCredito')), findsOneWidget);
+    expect(find.byKey(const Key('devolucionNotaCreditoDisponible_nota-1')), findsOneWidget);
+    expect(find.text('Juan Pérez'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('devolucionNotaCreditoDisponible_nota-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Confirmar reembolso'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('devolucionConfirmarReembolso')));
+    await tester.pumpAndSettle();
+
+    expect(fakeReturns.ultimaNotaCreditoIdReembolsada, 'nota-1');
+    expect(fakeReturns.ultimaSesionCajaIdDeReembolso, 'sesion-1');
+    expect(find.textContaining('reembolsados en efectivo a Juan Pérez'), findsOneWidget);
   });
 }

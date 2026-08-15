@@ -1,5 +1,6 @@
 import 'package:novapos_app/features/purchasing/domain/models/discrepancia.dart';
-import 'package:novapos_app/features/purchasing/domain/models/documento_recibido.dart';
+import 'package:novapos_app/features/purchasing/domain/models/documento_recibido_global.dart';
+import 'package:novapos_app/features/purchasing/domain/models/factura_interna.dart';
 import 'package:novapos_app/features/purchasing/domain/models/orden_compra.dart';
 import 'package:novapos_app/features/purchasing/domain/models/plazo_pago.dart';
 import 'package:novapos_app/features/purchasing/domain/models/proveedor.dart';
@@ -24,8 +25,7 @@ class FakePurchasingRepository implements PurchasingRepository {
   bool enviarLlamado = false;
   Map<String, double>? ultimasLineasRecibidas;
 
-  List<DocumentoRecibido> documentosARetornar = [];
-  String? ultimoProveedorIdDocumentos;
+  List<DocumentoRecibidoGlobal> documentosARetornar = [];
 
   List<Discrepancia> discrepanciasARetornar = [];
   String? ultimaDiscrepanciaResuelta;
@@ -104,6 +104,11 @@ class FakePurchasingRepository implements PurchasingRepository {
     return ordenesARetornar;
   }
 
+  String? ultimoOrdenCompraIdDocumento;
+  CategoriaDocumentoRecibido? ultimaCategoriaDocumento;
+  String? ultimoProveedorIdDocumentoRegistrado;
+  String documentoIdARetornar = 'documento-nuevo';
+
   @override
   Future<String> registrarDocumentoRecibido({
     String? ordenCompraId,
@@ -114,16 +119,45 @@ class FakePurchasingRepository implements PurchasingRepository {
     required double montoTotal,
     required FormaPago formaPago,
     required DateTime fechaEmision,
+    CategoriaDocumentoRecibido? categoria,
   }) async {
+    ultimoOrdenCompraIdDocumento = ordenCompraId;
+    ultimaCategoriaDocumento = categoria;
+    ultimoProveedorIdDocumentoRegistrado = proveedorId;
     if (errorAforzar != null) throw Exception(errorAforzar);
-    return 'documento-nuevo';
+    return documentoIdARetornar;
   }
 
   @override
-  Future<List<DocumentoRecibido>> listarDocumentosRecibidos(String proveedorId) async {
-    ultimoProveedorIdDocumentos = proveedorId;
+  Future<List<DocumentoRecibidoGlobal>> listarTodosDocumentosRecibidos() async {
     if (errorAforzar != null) throw Exception(errorAforzar);
     return documentosARetornar;
+  }
+
+  List<FacturaInterna> facturasInternasARetornar = [];
+  String documentoRecibidoIdARespaldar = 'documento-respaldado';
+  String? ultimoDocumentoIdConRespaldo;
+  List<int>? ultimosBytesRespaldo;
+  String? ultimoNombreArchivoRespaldo;
+  String rutaRespaldoARetornar = '/archivos/documentos-recibidos/e/d/f.pdf';
+
+  @override
+  Future<List<FacturaInterna>> listarFacturasInternas() async {
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return facturasInternasARetornar;
+  }
+
+  @override
+  Future<String> adjuntarRespaldoDocumentoRecibido({
+    required String documentoRecibidoId,
+    required List<int> bytes,
+    required String nombreArchivo,
+  }) async {
+    ultimoDocumentoIdConRespaldo = documentoRecibidoId;
+    ultimosBytesRespaldo = bytes;
+    ultimoNombreArchivoRespaldo = nombreArchivo;
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return rutaRespaldoARetornar;
   }
 
   @override

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dart';
+import 'package:novapos_app/features/returns/domain/models/nota_credito_cliente_resumen.dart';
+import 'package:novapos_app/features/returns/presentation/providers/returns_providers.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/presentation/widgets/checkout_dialog.dart';
+
+import '../../returns/fakes/returns_fakes.dart';
 
 const _clienteCompleto = ClienteResumen(
   id: 'cliente-1',
@@ -37,16 +42,18 @@ void main() {
     ClienteResumen? cliente,
   }) async {
     resultadoObtenido[0] = null;
-    await tester.pumpWidget(MaterialApp(
-      home: Builder(
-        builder: (context) => ElevatedButton(
-          onPressed: () async {
-            resultadoObtenido[0] = await showDialog<ResultadoCheckout>(
-              context: context,
-              builder: (_) => CheckoutDialog(total: total, formaPago: formaPago, clienteSeleccionado: cliente),
-            );
-          },
-          child: const Text('Abrir'),
+    await tester.pumpWidget(ProviderScope(
+      child: MaterialApp(
+        home: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () async {
+              resultadoObtenido[0] = await showDialog<ResultadoCheckout>(
+                context: context,
+                builder: (_) => CheckoutDialog(total: total, formaPago: formaPago, clienteSeleccionado: cliente),
+              );
+            },
+            child: const Text('Abrir'),
+          ),
         ),
       ),
     ));
@@ -119,7 +126,8 @@ void main() {
     await tester.enterText(find.byKey(const Key('checkoutMonto_0')), '10000');
     await tester.pump();
 
-    expect(find.text('Vuelto: \$1.018'), findsOneWidget);
+    expect(find.text('Vuelto: \$1.018'), findsWidgets);
+    expect(find.byKey(const Key('checkoutVueltoArriba')), findsOneWidget);
     final boton = tester.widget<FilledButton>(find.byKey(const Key('checkoutConfirmar')));
     expect(boton.onPressed, isNotNull);
   });
@@ -168,7 +176,8 @@ void main() {
     await tester.enterText(find.byKey(const Key('checkoutMonto_1')), '5000'); // efectivo, sobran $1.018
     await tester.pump();
 
-    expect(find.text('Vuelto: \$1.018'), findsOneWidget);
+    expect(find.text('Vuelto: \$1.018'), findsWidgets);
+    expect(find.byKey(const Key('checkoutVueltoArriba')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('checkoutConfirmar')));
     await tester.pumpAndSettle();
@@ -180,5 +189,104 @@ void main() {
     expect(tarjeta.monto, 5000);
     expect(efectivo.monto, 3982);
     expect(tarjeta.monto + efectivo.monto, 8982);
+  });
+
+  group('Nota de Crédito como medio de pago', () {
+    late FakeReturnsRepository fake;
+
+    Future<void> abrirDialogoConNotas(
+      WidgetTester tester, {
+      required double total,
+      ClienteResumen? cliente,
+    }) async {
+      resultadoObtenido[0] = null;
+      await tester.pumpWidget(ProviderScope(
+        overrides: [returnsRepositoryProvider.overrideWithValue(fake)],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () async {
+                resultadoObtenido[0] = await showDialog<ResultadoCheckout>(
+                  context: context,
+                  builder: (_) => CheckoutDialog(total: total, formaPago: FormaPago.contado, clienteSeleccionado: cliente),
+                );
+              },
+              child: const Text('Abrir'),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('Abrir'));
+      await tester.pumpAndSettle();
+    }
+
+    setUp(() => fake = FakeReturnsRepository());
+
+    testWidgets('sin Cliente seleccionado, Nota de Crédito no aparece como opción', (tester) async {
+      await abrirDialogoConNotas(tester, total: 1000, cliente: null);
+
+      await tester.tap(find.byKey(const Key('checkoutMedioPago_0')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nota de Crédito'), findsNothing);
+    });
+
+    testWidgets('con Cliente seleccionado, elegir una Nota fija el Monto a su valor íntegro', (tester) async {
+      fake.notasARetornar = [
+        NotaCreditoClienteResumen(
+          id: 'nota-1',
+          folio: 'NC-20260813-001',
+          montoTotal: 1000,
+          estado: EstadoNotaCreditoCliente.disponible,
+          fechaEmision: DateTime(2026, 8, 13),
+          motivo: 'Devolución',
+        ),
+      ];
+      await abrirDialogoConNotas(tester, total: 1000, cliente: _clienteCompleto);
+
+      await tester.tap(find.byKey(const Key('checkoutMedioPago_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nota de Crédito').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('checkoutNotaCredito_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NC-20260813-001 · \$1.000').last);
+      await tester.pumpAndSettle();
+
+      final montoField = tester.widget<TextField>(find.byKey(const Key('checkoutMonto_0')));
+      expect(montoField.controller!.text, '1000');
+      expect(montoField.readOnly, isTrue);
+
+      await tester.tap(find.byKey(const Key('checkoutConfirmar')));
+      await tester.pumpAndSettle();
+
+      final resultado = resultadoObtenido[0]!;
+      expect(resultado.pagos.single.medioPago, MedioPago.notaCredito);
+      expect(resultado.pagos.single.notaCreditoClienteId, 'nota-1');
+      expect(resultado.pagos.single.monto, 1000);
+    });
+
+    testWidgets('elegir Nota de Crédito sin elegir una Nota puntual deja Confirmar deshabilitado', (tester) async {
+      fake.notasARetornar = [
+        NotaCreditoClienteResumen(
+          id: 'nota-1',
+          folio: 'NC-20260813-001',
+          montoTotal: 1000,
+          estado: EstadoNotaCreditoCliente.disponible,
+          fechaEmision: DateTime(2026, 8, 13),
+          motivo: 'Devolución',
+        ),
+      ];
+      await abrirDialogoConNotas(tester, total: 1000, cliente: _clienteCompleto);
+
+      await tester.tap(find.byKey(const Key('checkoutMedioPago_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nota de Crédito').last);
+      await tester.pumpAndSettle();
+
+      final boton = tester.widget<FilledButton>(find.byKey(const Key('checkoutConfirmar')));
+      expect(boton.onPressed, isNull);
+    });
   });
 }

@@ -18,4 +18,8 @@ class ApiConfig {
     if (!kIsWeb && Platform.isAndroid) return 'http://10.0.2.2:6453/api/v1';
     return 'http://localhost:6453/api/v1';
   }
+
+  /// Host sin el prefijo '/api/v1' — para armar la URL de archivos
+  /// estáticos (imágenes, respaldos), que se sirven fuera de la Api REST.
+  static String get origin => baseUrl.replaceFirst(RegExp(r'/api/v1$'), '');
 }

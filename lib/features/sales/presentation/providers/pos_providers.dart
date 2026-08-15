@@ -235,6 +235,7 @@ class PosCartState {
     this.cobrando = false,
     this.error,
     this.resumenCobrado,
+    this.vueltoCobrado = 0,
     this.ventaId,
     this.estadoDescuento = EstadoDescuentoGeneral.sinSolicitar,
     this.descuentoPorcentaje,
@@ -242,6 +243,7 @@ class PosCartState {
     this.motivoRechazoDescuento,
     this.solicitandoDescuento = false,
     this.procesandoCotizacion = false,
+    this.numeroCotizacion,
   });
 
   final List<LineaCarrito> lineas;
@@ -251,6 +253,12 @@ class PosCartState {
   /// Desglose real devuelto por el backend al confirmar — solo se llena
   /// tras un cobro exitoso, para el diálogo de venta cobrada.
   final ResumenVenta? resumenCobrado;
+
+  /// Vuelto en efectivo de la última Venta cobrada — viene de
+  /// ResultadoCheckout.vuelto (calculado en CheckoutDialog, nunca del
+  /// backend: el pago que se confirma ya viene recortado al Total exacto,
+  /// ver PosCartController.cobrar). 0 si no hubo Efectivo de más.
+  final double vueltoCobrado;
 
   /// Null hasta que se solicita un descuento, se guarda como Cotización o
   /// se rescata una — recién ahí hay una Venta real en el servidor (ver
@@ -275,6 +283,14 @@ class PosCartState {
   /// menú de Cotización en la UI para evitar doble-tap.
   final bool procesandoCotizacion;
 
+  /// Referencia legible ("COT-20260807-006") de la Cotización rescatada —
+  /// null en un carrito armado desde cero. Se muestra junto al Cliente en
+  /// el panel del carrito para que quede claro por qué los productos
+  /// pueden tener otro precio/promoción/oferta que el vigente ahora (a
+  /// pedido explícito del usuario, viendo el carrito de una Cotización
+  /// rescatada sin ninguna referencia a cuál era).
+  final String? numeroCotizacion;
+
   /// Solo mientras un descuento general está Pendiente (alguien lo está
   /// evaluando ahora mismo) o Autorizado (el monto ya se validó contra un
   /// Subtotal específico) — ver Venta.GarantizarLineasEditables en el
@@ -296,9 +312,14 @@ class PosCartState {
 
   double get total => lineas.fold(0, (suma, linea) => suma + linea.subtotal);
 
+  /// Redondeado al peso (CLP no tiene decimales) — mismo criterio que
+  /// Venta.RecalcularTotal en el backend (Math.Round AwayFromZero), para
+  /// que totalConDescuento acá coincida exacto con el Total que el
+  /// backend valida al confirmar (ver ConfirmarVentaCommand: exige que la
+  /// suma de los pagos calce exacto).
   double get montoDescuentoAplicado {
     if (estadoDescuento != EstadoDescuentoGeneral.autorizado) return 0;
-    if (descuentoPorcentaje != null) return total * descuentoPorcentaje! / 100;
+    if (descuentoPorcentaje != null) return (total * descuentoPorcentaje! / 100).roundToDouble();
     return descuentoMonto ?? 0;
   }
 
@@ -323,6 +344,7 @@ class PosCartState {
       cobrando: cobrando ?? this.cobrando,
       error: limpiarError ? null : (error ?? this.error),
       resumenCobrado: limpiarResumenCobrado ? null : resumenCobrado,
+      vueltoCobrado: limpiarResumenCobrado ? 0 : vueltoCobrado,
       ventaId: ventaId,
       estadoDescuento: estadoDescuento,
       descuentoPorcentaje: descuentoPorcentaje,
@@ -330,6 +352,7 @@ class PosCartState {
       motivoRechazoDescuento: motivoRechazoDescuento,
       solicitandoDescuento: solicitandoDescuento ?? this.solicitandoDescuento,
       procesandoCotizacion: procesandoCotizacion ?? this.procesandoCotizacion,
+      numeroCotizacion: numeroCotizacion,
     );
   }
 }
@@ -471,6 +494,7 @@ class PosCartController extends StateNotifier<PosCartState> {
     String? clienteId,
     required TipoDocumento tipoDocumento,
     required List<PagoInput> pagos,
+    double vuelto = 0,
   }) async {
     if (state.lineas.isEmpty) return;
     if (state.estadoDescuento == EstadoDescuentoGeneral.pendiente) return;
@@ -492,7 +516,7 @@ class PosCartController extends StateNotifier<PosCartState> {
 
       final resumen = await _salesRepository.confirmarVenta(ventaId: ventaId, tipoDocumento: tipoDocumento, pagos: pagos);
 
-      state = PosCartState(resumenCobrado: resumen);
+      state = PosCartState(resumenCobrado: resumen, vueltoCobrado: vuelto);
     } catch (e) {
       state = state.copyWith(cobrando: false, error: e.toString());
     }
@@ -656,6 +680,7 @@ class PosCartController extends StateNotifier<PosCartState> {
       estadoDescuento: detalle.estadoDescuentoGeneral,
       descuentoPorcentaje: detalle.descuentoGeneralPorcentaje,
       descuentoMonto: detalle.descuentoGeneralMonto,
+      numeroCotizacion: detalle.numeroCotizacion,
     );
   }
 

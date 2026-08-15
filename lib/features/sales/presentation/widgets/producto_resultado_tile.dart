@@ -64,7 +64,7 @@ class ProductoResultadoTile extends StatelessWidget {
                       producto.unidad.esPesable
                           ? '${MonedaFormatter.formatear(producto.precioEfectivo)}/${producto.unidad.abreviatura}'
                           : MonedaFormatter.formatear(producto.precioEfectivo),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: PosColors.accent),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: PosColors.stockOk),
                     ),
                   ],
                 )
@@ -80,7 +80,7 @@ class ProductoResultadoTile extends StatelessWidget {
                   padding: EdgeInsets.only(top: 2),
                   child: Text(
                     'Oferta',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: PosColors.accent),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: PosColors.stockOk),
                   ),
                 )
               else if (producto.cantidadMinimaDescuentoVolumen != null)

@@ -52,14 +52,14 @@ void main() {
   testWidgets('Sin el permiso de autorizar descuentos, no muestra la tarjeta ni la burbuja', (tester) async {
     await pumpHome(tester, permisos: []);
 
-    expect(find.text('Descuentos pendientes'), findsNothing);
+    expect(find.text('Autorización de Descuento'), findsNothing);
     expect(find.byKey(const Key('badgeDescuentosPendientes')), findsNothing);
   });
 
   testWidgets('Con el permiso pero sin pendientes, muestra la tarjeta sin burbuja', (tester) async {
     await pumpHome(tester, permisos: ['sales.descuentos.autorizar']);
 
-    expect(find.text('Descuentos pendientes'), findsOneWidget);
+    expect(find.text('Autorización de Descuento'), findsOneWidget);
     expect(find.byKey(const Key('badgeDescuentosPendientes')), findsNothing);
   });
 
@@ -110,6 +110,18 @@ void main() {
     await pumpHome(tester, permisos: ['purchasing.ordenescompra.gestionar']);
 
     expect(find.byKey(const Key('homeComprasCard')), findsOneWidget);
+  });
+
+  testWidgets('Sin sales.devoluciones.registrar, no muestra la tarjeta de Devolución de productos', (tester) async {
+    await pumpHome(tester, permisos: []);
+
+    expect(find.byKey(const Key('homeDevolucionVentaCard')), findsNothing);
+  });
+
+  testWidgets('Con sales.devoluciones.registrar, muestra la tarjeta de Devolución de productos', (tester) async {
+    await pumpHome(tester, permisos: ['sales.devoluciones.registrar']);
+
+    expect(find.byKey(const Key('homeDevolucionVentaCard')), findsOneWidget);
   });
 
   testWidgets('Sin el permiso de autorizar credito, no muestra la tarjeta ni la burbuja', (tester) async {

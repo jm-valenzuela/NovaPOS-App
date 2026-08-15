@@ -65,7 +65,7 @@ pw.Widget _paginaOferta(ItemOferta item) {
         ),
         pw.SizedBox(height: 10),
         pw.Text(item.sku, style: const pw.TextStyle(fontSize: 18, color: PdfColors.grey600)),
-        pw.SizedBox(height: 48),
+        pw.SizedBox(height: 28),
         if (item.precioOferta != null) ...[
           pw.Text(
             MonedaFormatter.formatear(item.precioVenta),
@@ -74,14 +74,14 @@ pw.Widget _paginaOferta(ItemOferta item) {
           pw.SizedBox(height: 8),
           pw.Text(
             MonedaFormatter.formatear(item.precioOferta!),
-            style: pw.TextStyle(fontSize: 100, fontWeight: pw.FontWeight.bold, color: PdfColors.red700),
+            style: pw.TextStyle(fontSize: 100, fontWeight: pw.FontWeight.bold, color: PdfColors.green700),
           ),
         ] else ...[
           pw.Text(
             MonedaFormatter.formatear(item.precioVenta),
-            style: pw.TextStyle(fontSize: 36, fontWeight: pw.FontWeight.bold),
+            style: pw.TextStyle(fontSize: _tamanoEtiqueta(item.etiquetaPromocion ?? ''), fontWeight: pw.FontWeight.bold),
           ),
-          pw.SizedBox(height: 32),
+          pw.SizedBox(height: 14),
           _bloquePromocion(item.etiquetaPromocion ?? ''),
         ],
       ],
@@ -89,18 +89,37 @@ pw.Widget _paginaOferta(ItemOferta item) {
   );
 }
 
-/// Tamaño de letra según el largo de la etiqueta — "2x1"/"4x3" pueden ser
-/// gigantes (110pt); "Desde 15 uds. -5%" o "2do al 20% dto." necesitan
-/// bajar un poco para no desbordar el ancho de la página, pero siguen
-/// siendo grandes. Antes era un tamaño fijo (44pt) que se veía chico al
-/// lado del precio de oferta (100pt) — a pedido explícito ("el de las
-/// promociones se ve pequeño").
+/// Tope de tamaño de letra para el precio y el badge de promoción (ver
+/// _paginaOferta) — a pedido explícito, el precio debe verse del mismo
+/// porte que la promoción, no chico al lado de esta. 64pt es el máximo que
+/// entra en el alto disponible de una página carta horizontal (~468pt,
+/// `PdfPageFormat.letter.landscape.availableHeight`) incluso en el peor
+/// caso: título de Producto largo (2 líneas a 52pt) + precio + badge
+/// apilados (ver test del presupuesto vertical).
+const _tamanoMaximoEtiqueta = 64.0;
+const _tamanoMinimoEtiqueta = 30.0;
+
+/// Ancho útil del badge: `maxWidth` de _bloquePromocion menos su padding horizontal.
+const _anchoDisponibleEtiqueta = 620.0 - 40.0 * 2;
+
+/// Tamaño de letra que reutilizan tanto el precio como el badge — mide el
+/// ancho REAL de la etiqueta con las métricas de Helvetica-Bold (en vez de
+/// adivinar por cantidad de caracteres, que fallaba tanto por exceso como
+/// por defecto — ver historial de este archivo) y solo angosta la letra lo
+/// mínimo necesario para que la etiqueta más larga entre en el badge sin
+/// saltar de línea. La mayoría de las etiquetas reales ("2x1", "2do al 20%
+/// dto.") caben directo al tope de 64pt; solo las más largas ("Desde 15
+/// uds. -5%") bajan un poco.
+double _tamanoEtiqueta(String etiqueta) {
+  final fuente = PdfFont.helveticaBold(PdfDocument());
+  var tamano = _tamanoMaximoEtiqueta;
+  while (tamano > _tamanoMinimoEtiqueta && fuente.stringMetrics(etiqueta).width * tamano > _anchoDisponibleEtiqueta) {
+    tamano -= 2;
+  }
+  return tamano;
+}
+
 pw.Widget _bloquePromocion(String etiqueta) {
-  final fontSize = switch (etiqueta.length) {
-    <= 6 => 110.0,
-    <= 14 => 72.0,
-    _ => 52.0,
-  };
   return pw.Container(
     constraints: const pw.BoxConstraints(maxWidth: 620),
     padding: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 28),
@@ -108,7 +127,7 @@ pw.Widget _bloquePromocion(String etiqueta) {
     child: pw.Text(
       etiqueta,
       textAlign: pw.TextAlign.center,
-      style: pw.TextStyle(fontSize: fontSize, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+      style: pw.TextStyle(fontSize: _tamanoEtiqueta(etiqueta), fontWeight: pw.FontWeight.bold, color: PdfColors.white),
     ),
   );
 }

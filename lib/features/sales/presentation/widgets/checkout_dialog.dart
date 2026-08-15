@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../../customers/domain/models/cliente_resumen.dart';
+import '../../../returns/domain/models/nota_credito_cliente_resumen.dart';
+import '../../../returns/presentation/providers/returns_providers.dart';
 import '../../domain/models/pago_input.dart';
 import '../../domain/models/venta_enums.dart';
 
 /// Resultado de CheckoutDialog — pagos viene vacío si la Venta es a Crédito.
+/// vuelto es 0 salvo que la Venta sea al Contado en Efectivo por sobre el
+/// Total (ver _vuelto) — se propaga para mostrarlo en el resumen final de
+/// PosScreen, ya que el pago enviado al backend nunca lo incluye.
 class ResultadoCheckout {
-  const ResultadoCheckout({required this.tipoDocumento, required this.pagos});
+  const ResultadoCheckout({required this.tipoDocumento, required this.pagos, this.vuelto = 0});
 
   final TipoDocumento tipoDocumento;
   final List<PagoInput> pagos;
+  final double vuelto;
 }
 
 /// Se muestra al tocar "Cobrar" en el POS — el Cajero elige Boleta o
@@ -20,7 +27,7 @@ class ResultadoCheckout {
 /// paga (soporta pago mixto: varias líneas que deben sumar exacto el
 /// Total). Si es a Crédito, no se pide medio de pago acá — el pago ocurre
 /// después, vía Abonos en Cuentas por Cobrar.
-class CheckoutDialog extends StatefulWidget {
+class CheckoutDialog extends ConsumerStatefulWidget {
   const CheckoutDialog({
     super.key,
     required this.total,
@@ -33,7 +40,7 @@ class CheckoutDialog extends StatefulWidget {
   final ClienteResumen? clienteSeleccionado;
 
   @override
-  State<CheckoutDialog> createState() => _CheckoutDialogState();
+  ConsumerState<CheckoutDialog> createState() => _CheckoutDialogState();
 }
 
 class _PagoEnEdicion {
@@ -42,15 +49,24 @@ class _PagoEnEdicion {
   MedioPago medioPago;
   final TextEditingController controller;
 
+  /// Solo cuando medioPago es notaCredito — qué NotaCreditoCliente Disponible se eligió.
+  String? notaCreditoId;
+
   double get monto => double.tryParse(controller.text.replaceAll(',', '.')) ?? 0;
 }
 
-class _CheckoutDialogState extends State<CheckoutDialog> {
+class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
   TipoDocumento _tipoDocumento = TipoDocumento.boleta;
   final List<_PagoEnEdicion> _pagos = [_PagoEnEdicion(medioPago: MedioPago.efectivo)];
   String? _error;
 
   bool get _esContado => widget.formaPago == FormaPago.contado;
+
+  /// La Nota de Crédito es nominativa — solo se ofrece como medio de pago
+  /// si hay un Cliente real elegido (no el Genérico, ver
+  /// Cliente.RutClienteGenerico en el backend; acá "Genérico" se
+  /// representa como clienteSeleccionado == null).
+  bool get _puedeUsarNotaCredito => widget.clienteSeleccionado != null;
 
   /// Mismo criterio que Cliente.TieneDatosCompletosParaFactura() en el
   /// backend — evita que el Cajero elija Factura para un Cliente que el
@@ -86,6 +102,11 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
 
   bool get _pagosCuadran => !_excedeSinEfectivo && _montoEfectivo >= _restanteParaEfectivo - _epsilon;
 
+  /// Todo pago con Nota de Crédito debe tener una Nota elegida — un
+  /// medioPago sin notaCreditoId no se puede enviar.
+  bool get _faltaElegirAlgunaNota =>
+      _pagos.any((p) => p.medioPago == MedioPago.notaCredito && p.notaCreditoId == null);
+
   /// Solo el Efectivo entregado de más se devuelve como vuelto — si el
   /// Cajero recibió $10.000 en efectivo y solo hacían falta $8.982, el
   /// vuelto son $1.018 (no se registra como parte del pago, ver
@@ -97,6 +118,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   }
 
   String get _mensajePagos {
+    if (_faltaElegirAlgunaNota) return 'Elige qué Nota de Crédito se usa en cada línea de pago con ese medio.';
     if (_excedeSinEfectivo) return 'El monto en medios distintos a Efectivo no puede superar el Total.';
     if (!_pagosCuadran) return 'Falta ${MonedaFormatter.formatear(_restanteParaEfectivo - _montoEfectivo)} por cubrir.';
     if (_vuelto > 0) return 'Vuelto: ${MonedaFormatter.formatear(_vuelto)}';
@@ -124,14 +146,17 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   }
 
   void _confirmar() {
-    if (_esContado && !_pagosCuadran) {
-      setState(() => _error = _excedeSinEfectivo
-          ? 'El monto en medios distintos a Efectivo no puede superar el Total.'
-          : 'Falta cubrir el Total.');
+    if (_esContado && (!_pagosCuadran || _faltaElegirAlgunaNota)) {
+      setState(() => _error = _faltaElegirAlgunaNota
+          ? 'Elige qué Nota de Crédito se usa en cada línea de pago con ese medio.'
+          : _excedeSinEfectivo
+              ? 'El monto en medios distintos a Efectivo no puede superar el Total.'
+              : 'Falta cubrir el Total.');
       return;
     }
 
-    Navigator.of(context).pop(ResultadoCheckout(tipoDocumento: _tipoDocumento, pagos: _pagosParaEnviar()));
+    Navigator.of(context)
+        .pop(ResultadoCheckout(tipoDocumento: _tipoDocumento, pagos: _pagosParaEnviar(), vuelto: _esContado ? _vuelto : 0));
   }
 
   /// El backend exige que la suma de los pagos coincida EXACTO con el
@@ -153,7 +178,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
         monto -= descuento;
         vueltoRestante -= descuento;
       }
-      resultado.insert(0, PagoInput(medioPago: pago.medioPago, monto: monto));
+      resultado.insert(0, PagoInput(medioPago: pago.medioPago, monto: monto, notaCreditoClienteId: pago.notaCreditoId));
     }
     return resultado.where((p) => p.monto > _epsilon).toList();
   }
@@ -168,6 +193,14 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Total a cobrar: ${MonedaFormatter.formatear(widget.total)}', style: Theme.of(context).textTheme.titleMedium),
+            if (_esContado && _vuelto > 0) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Vuelto: ${MonedaFormatter.formatear(_vuelto)}',
+                key: const Key('checkoutVueltoArriba'),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.green, fontWeight: FontWeight.bold),
+              ),
+            ],
             const SizedBox(height: 16),
             Text('Tipo de documento', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
@@ -205,7 +238,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
               const SizedBox(height: 4),
               Text(
                 _mensajePagos,
-                style: TextStyle(color: _pagosCuadran ? Colors.green : Theme.of(context).colorScheme.error),
+                style: TextStyle(color: (_pagosCuadran && !_faltaElegirAlgunaNota) ? Colors.green : Theme.of(context).colorScheme.error),
               ),
             ],
             if (_error != null) ...[
@@ -223,7 +256,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
         ),
         FilledButton(
           key: const Key('checkoutConfirmar'),
-          onPressed: (_esContado && !_pagosCuadran) ? null : _confirmar,
+          onPressed: (_esContado && (!_pagosCuadran || _faltaElegirAlgunaNota)) ? null : _confirmar,
           child: const Text('Confirmar'),
         ),
       ],
@@ -234,38 +267,84 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     final pago = _pagos[indice];
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 3,
-            child: DropdownButtonFormField<MedioPago>(
-              key: Key('checkoutMedioPago_$indice'),
-              value: pago.medioPago,
-              items: MedioPago.values
-                  .map((m) => DropdownMenuItem(value: m, child: Text(m.etiqueta)))
-                  .toList(),
-              onChanged: (valor) => setState(() => pago.medioPago = valor ?? pago.medioPago),
-            ),
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: DropdownButtonFormField<MedioPago>(
+                  key: Key('checkoutMedioPago_$indice'),
+                  value: pago.medioPago,
+                  items: MedioPago.values
+                      .where((m) => m != MedioPago.notaCredito || _puedeUsarNotaCredito)
+                      .map((m) => DropdownMenuItem(value: m, child: Text(m.etiqueta)))
+                      .toList(),
+                  onChanged: (valor) => setState(() {
+                    pago.medioPago = valor ?? pago.medioPago;
+                    pago.notaCreditoId = null;
+                    pago.controller.clear();
+                  }),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  key: Key('checkoutMonto_$indice'),
+                  controller: pago.controller,
+                  readOnly: pago.medioPago == MedioPago.notaCredito,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                  decoration: const InputDecoration(labelText: 'Monto'),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              if (_pagos.length > 1)
+                IconButton(
+                  key: Key('checkoutQuitarPago_$indice'),
+                  onPressed: () => _quitarPago(indice),
+                  icon: const Icon(Icons.close),
+                ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: TextField(
-              key: Key('checkoutMonto_$indice'),
-              controller: pago.controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-              decoration: const InputDecoration(labelText: 'Monto'),
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-          if (_pagos.length > 1)
-            IconButton(
-              key: Key('checkoutQuitarPago_$indice'),
-              onPressed: () => _quitarPago(indice),
-              icon: const Icon(Icons.close),
-            ),
+          if (pago.medioPago == MedioPago.notaCredito) _selectorNotaCredito(indice, pago),
         ],
+      ),
+    );
+  }
+
+  Widget _selectorNotaCredito(int indice, _PagoEnEdicion pago) {
+    final clienteId = widget.clienteSeleccionado!.id;
+    final notasAsync = ref.watch(notasDisponiblesProvider(clienteId));
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: notasAsync.when(
+        loading: () => const LinearProgressIndicator(),
+        error: (error, _) => Text('No se pudieron cargar las Notas de Crédito: $error',
+            style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        data: (notas) {
+          if (notas.isEmpty) {
+            return const Text('Este Cliente no tiene Notas de Crédito Disponibles.', style: TextStyle(color: Colors.grey));
+          }
+          return DropdownButtonFormField<NotaCreditoClienteResumen>(
+            key: Key('checkoutNotaCredito_$indice'),
+            value: notas.where((n) => n.id == pago.notaCreditoId).firstOrNull,
+            decoration: const InputDecoration(labelText: 'Nota de Crédito', isDense: true),
+            items: notas
+                .map((n) => DropdownMenuItem(
+                      value: n,
+                      child: Text('${n.folio} · ${MonedaFormatter.formatear(n.montoTotal)}'),
+                    ))
+                .toList(),
+            onChanged: (nota) => setState(() {
+              pago.notaCreditoId = nota?.id;
+              pago.controller.text = nota == null ? '' : nota.montoTotal.toStringAsFixed(0);
+            }),
+          );
+        },
       ),
     );
   }

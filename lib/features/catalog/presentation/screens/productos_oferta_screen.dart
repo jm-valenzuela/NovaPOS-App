@@ -223,10 +223,7 @@ class _ProductosOfertaScreenState extends ConsumerState<ProductosOfertaScreen> {
                                               ),
                                               Text(
                                                 MonedaFormatter.formatear(variante.precioOferta!),
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Theme.of(context).colorScheme.error,
-                                                ),
+                                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
                                               ),
                                             ]
                                           : [

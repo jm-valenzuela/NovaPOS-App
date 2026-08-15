@@ -5,10 +5,17 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../../catalog/domain/models/clasificacion.dart';
+import '../../../cash/presentation/providers/cash_providers.dart';
+import '../../../cash/presentation/widgets/abrir_caja_dialog.dart';
+import '../../../cash/presentation/widgets/arqueo_caja_dialog.dart';
+import '../../../cash/presentation/widgets/retirar_efectivo_dialog.dart';
 import '../../../customers/domain/models/cliente_resumen.dart';
+import '../../../returns/domain/models/nota_credito_disponible_resumen.dart';
+import '../../../returns/presentation/widgets/elegir_nota_credito_devolucion_dialog.dart';
 import '../../../tenancy/domain/models/caja_resumen.dart';
 import '../../../catalog/domain/models/producto_vendible.dart';
 import '../../domain/models/cotizacion.dart';
@@ -119,7 +126,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         );
       }
       if (actual.resumenCobrado != null && previo?.resumenCobrado == null) {
-        _mostrarVentaCobrada(actual.resumenCobrado!);
+        _mostrarVentaCobrada(actual.resumenCobrado!, actual.vueltoCobrado);
       }
       // Solo avisa si la resolución ocurrió en vivo (Pendiente → Autorizado/
       // Rechazado, ver verificarEstadoDescuento) — al rescatar una Cotización
@@ -172,6 +179,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 ),
               ),
             ),
+          if (cajaSeleccionada != null)
+            _AccionesCaja(
+              cajaId: cajaSeleccionada.cajaId,
+              nombreCaja: cajaSeleccionada.nombreCaja,
+            ),
           cajasAsync.when(
             data: (cajas) => cajas.length <= 1
                 ? const SizedBox.shrink()
@@ -191,6 +203,18 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           }
           if (cajaSeleccionada == null) {
             return const Center(child: Text('Elige con qué Caja vas a trabajar.'));
+          }
+
+          final sesionCaja = ref.watch(sesionCajaProvider(cajaSeleccionada.cajaId));
+          if (sesionCaja.cargando && sesionCaja.sesion == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (sesionCaja.sesion == null) {
+            // Mientras la Caja no tenga una Sesión Abierta, no se deja
+            // vender ni hacer ninguna otra interacción — a pedido explícito
+            // del usuario ("mientras la caja no esté abierta no permita
+            // realizar otra interacción").
+            return _CajaCerradaPlaceholder(cajaId: cajaSeleccionada.cajaId, nombreCaja: cajaSeleccionada.nombreCaja);
           }
 
           return Row(
@@ -378,6 +402,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           clienteId: ref.read(clienteSeleccionadoProvider)?.id,
           tipoDocumento: resultado.tipoDocumento,
           pagos: resultado.pagos,
+          vuelto: resultado.vuelto,
         );
   }
 
@@ -510,7 +535,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     ref.read(clienteSeleccionadoProvider.notifier).state = elegido;
   }
 
-  void _mostrarVentaCobrada(ResumenVenta resumen) {
+  void _mostrarVentaCobrada(ResumenVenta resumen, double vuelto) {
     ref.read(clienteSeleccionadoProvider.notifier).state = null;
     _busquedaController.clear();
     _buscar('');
@@ -526,6 +551,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             Text('Subtotal: ${MonedaFormatter.formatear(resumen.neto)}'),
             Text('IVA (19%): ${MonedaFormatter.formatear(resumen.iva)}'),
             Text('Total cobrado: ${MonedaFormatter.formatear(resumen.total)}'),
+            if (vuelto > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Vuelto: ${MonedaFormatter.formatear(vuelto)}',
+                key: const Key('ventaConfirmadaVuelto'),
+                style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+              ),
+            ],
           ],
         ),
         actions: [
@@ -625,6 +658,130 @@ class _SelectorCaja extends ConsumerWidget {
   }
 }
 
+/// Abre el diálogo de Apertura de Caja y, si se confirma, llama al
+/// controller — compartido entre el ícono del AppBar y el placeholder que
+/// bloquea el POS mientras no hay Sesión Abierta. Cancelar el diálogo no
+/// hace nada (el usuario queda igual bloqueado, puede reintentar cuando
+/// quiera desde cualquiera de los dos puntos de entrada).
+Future<void> _abrirCaja(BuildContext context, WidgetRef ref, String cajaId, String nombreCaja) async {
+  final monto = await showDialog<double>(
+    context: context,
+    builder: (_) => AbrirCajaDialog(nombreCaja: nombreCaja),
+  );
+  if (monto != null) await ref.read(sesionCajaProvider(cajaId).notifier).abrir(monto);
+}
+
+/// Reemplaza todo el cuerpo del POS mientras la Caja seleccionada no tiene
+/// una Sesión Abierta — a pedido explícito del usuario ("mientras la caja
+/// no esté abierta no permita realizar otra interacción"), ni buscar ni
+/// cobrar quedan alcanzables hasta declarar el efectivo inicial.
+class _CajaCerradaPlaceholder extends ConsumerWidget {
+  const _CajaCerradaPlaceholder({required this.cajaId, required this.nombreCaja});
+
+  final String cajaId;
+  final String nombreCaja;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.lock_outline, size: 48, color: PosColors.textMuted),
+          const SizedBox(height: 16),
+          Text('$nombreCaja está cerrada', style: const TextStyle(color: Colors.white, fontSize: 18)),
+          const SizedBox(height: 4),
+          const Text('Declara el efectivo inicial para empezar a vender.', style: TextStyle(color: PosColors.textMuted)),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            key: const Key('posCajaCerradaAbrir'),
+            icon: const Icon(Icons.lock_open),
+            label: const Text('Abrir Caja'),
+            onPressed: () => _abrirCaja(context, ref, cajaId, nombreCaja),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Acciones de Caja en el AppBar — si no hay Sesión Abierta, ofrece
+/// abrirla (ver AbrirCajaDialog, mismo diálogo que el placeholder que
+/// bloquea el cuerpo del POS); si la hay, ofrece Retirar efectivo o
+/// Cerrar Caja.
+class _AccionesCaja extends ConsumerWidget {
+  const _AccionesCaja({required this.cajaId, required this.nombreCaja});
+
+  final String cajaId;
+  final String nombreCaja;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final estado = ref.watch(sesionCajaProvider(cajaId));
+    final controller = ref.read(sesionCajaProvider(cajaId).notifier);
+
+    if (estado.cargando && estado.sesion == null) return const SizedBox.shrink();
+
+    if (estado.sesion == null) {
+      return IconButton(
+        key: const Key('posAbrirCaja'),
+        tooltip: 'Abrir Caja',
+        icon: const Icon(Icons.lock_outline, color: Colors.white),
+        onPressed: () => _abrirCaja(context, ref, cajaId, nombreCaja),
+      );
+    }
+
+    final sesion = estado.sesion!;
+    return PopupMenuButton<String>(
+      key: const Key('posMenuCaja'),
+      icon: const Icon(Icons.point_of_sale, color: Colors.white),
+      tooltip: 'Caja',
+      onSelected: (valor) async {
+        if (valor == 'retirar') {
+          final resultado = await showDialog<({double monto, String motivo})>(
+            context: context,
+            builder: (_) => const RetirarEfectivoDialog(),
+          );
+          if (resultado != null) {
+            final exito = await controller.solicitarRetiro(monto: resultado.monto, motivo: resultado.motivo);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(exito
+                    ? 'Retiro solicitado — queda pendiente de autorización.'
+                    : 'No se pudo solicitar el retiro.'),
+              ));
+            }
+          }
+        } else if (valor == 'arqueo') {
+          showDialog<void>(
+            context: context,
+            builder: (_) => ArqueoCajaDialog(sesionCajaId: sesion.id),
+          );
+        } else if (valor == 'devolucion') {
+          final notaReembolsada = await showDialog<NotaCreditoDisponibleResumen>(
+            context: context,
+            builder: (_) => ElegirNotaCreditoDevolucionDialog(sesionCajaId: sesion.id),
+          );
+          if (notaReembolsada != null && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(
+                  '${MonedaFormatter.formatear(notaReembolsada.montoTotal)} reembolsados en efectivo a ${notaReembolsada.clienteNombre}.'),
+            ));
+          }
+        } else if (valor == 'cerrar') {
+          context.push('/caja/cierre/${sesion.id}');
+        }
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem(value: 'retirar', child: Text('Retirar efectivo')),
+        PopupMenuItem(value: 'arqueo', child: Text('Ver Arqueo')),
+        PopupMenuItem(value: 'devolucion', child: Text('Registrar devolución por nota de crédito')),
+        PopupMenuItem(value: 'cerrar', child: Text('Cerrar Caja')),
+      ],
+    );
+  }
+}
+
 /// Panel fijo del carrito — Cliente, líneas, aviso de stock si corresponde,
 /// desglose Subtotal/IVA/Total, y las acciones de cobro.
 Future<void> _editarCantidad(BuildContext context, WidgetRef ref, LineaCarrito linea) async {
@@ -704,6 +861,23 @@ class _PanelCarrito extends ConsumerWidget {
                 ),
               ),
             ),
+            if (carrito.numeroCotizacion != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Row(
+                  key: const Key('posNumeroCotizacionRescatada'),
+                  children: [
+                    const Icon(Icons.description_outlined, color: PosColors.accent, size: 14),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Cotización rescatada: ${carrito.numeroCotizacion}',
+                        style: const TextStyle(color: PosColors.accent, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (sinStock.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),

@@ -1,10 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../data/purchasing_api.dart';
 import '../../data/purchasing_repository_impl.dart';
 import '../../domain/models/discrepancia.dart';
-import '../../domain/models/documento_recibido.dart';
+import '../../domain/models/documento_recibido_global.dart';
+import '../../domain/models/factura_interna.dart';
 import '../../domain/models/orden_compra.dart';
 import '../../domain/models/plazo_pago.dart';
 import '../../domain/models/proveedor.dart';
@@ -90,6 +93,57 @@ class ProveedoresController extends StateNotifier<ProveedoresState> {
 
 final proveedoresProvider = StateNotifierProvider.autoDispose<ProveedoresController, ProveedoresState>((ref) {
   return ProveedoresController(ref.watch(purchasingRepositoryProvider));
+});
+
+class BusquedaProveedoresState {
+  const BusquedaProveedoresState({this.resultados = const [], this.buscando = false});
+
+  final List<ProveedorResumen> resultados;
+  final bool buscando;
+
+  BusquedaProveedoresState copyWith({List<ProveedorResumen>? resultados, bool? buscando}) {
+    return BusquedaProveedoresState(resultados: resultados ?? this.resultados, buscando: buscando ?? this.buscando);
+  }
+}
+
+/// Búsqueda con debounce para SelectorProveedorDialog — mismo patrón que
+/// BusquedaClientesController (Sales), evita requerir pre-navegar a un
+/// Proveedor existente para registrar una Factura Interna.
+class BusquedaProveedoresController extends StateNotifier<BusquedaProveedoresState> {
+  BusquedaProveedoresController(this._repository) : super(const BusquedaProveedoresState());
+
+  final PurchasingRepository _repository;
+  Timer? _debounce;
+  int _peticionEnCurso = 0;
+
+  void buscar(String texto) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () => _ejecutarBusqueda(texto));
+  }
+
+  Future<void> _ejecutarBusqueda(String texto) async {
+    final idDeEstaPeticion = ++_peticionEnCurso;
+    state = state.copyWith(buscando: true);
+    try {
+      final resultados = await _repository.buscarProveedores(texto: texto.isEmpty ? null : texto);
+      if (idDeEstaPeticion != _peticionEnCurso) return;
+      state = state.copyWith(resultados: resultados, buscando: false);
+    } catch (_) {
+      if (idDeEstaPeticion != _peticionEnCurso) return;
+      state = state.copyWith(buscando: false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+}
+
+final busquedaProveedoresProvider =
+    StateNotifierProvider.autoDispose<BusquedaProveedoresController, BusquedaProveedoresState>((ref) {
+  return BusquedaProveedoresController(ref.watch(purchasingRepositoryProvider));
 });
 
 // ---------------------------------------------------------------------------
@@ -230,11 +284,11 @@ final ordenCompraDetalleProvider =
 class DocumentosRecibidosState {
   const DocumentosRecibidosState({this.documentos = const [], this.cargando = false, this.error});
 
-  final List<DocumentoRecibido> documentos;
+  final List<DocumentoRecibidoGlobal> documentos;
   final bool cargando;
   final String? error;
 
-  DocumentosRecibidosState copyWith({List<DocumentoRecibido>? documentos, bool? cargando, String? error, bool limpiarError = false}) {
+  DocumentosRecibidosState copyWith({List<DocumentoRecibidoGlobal>? documentos, bool? cargando, String? error, bool limpiarError = false}) {
     return DocumentosRecibidosState(
       documentos: documentos ?? this.documentos,
       cargando: cargando ?? this.cargando,
@@ -243,28 +297,32 @@ class DocumentosRecibidosState {
   }
 }
 
-/// Documentos Recibidos de un Proveedor puntual — GET /documentos-recibidos
-/// exige proveedorId (no hay listado global), así que este controller
-/// siempre está atado a un Proveedor.
+/// Documentos Recibidos globales — mercadería ligada a Orden de Compra y
+/// Facturas Internas mezcladas, a través de todos los Proveedores (a
+/// pedido explícito del usuario: entrar Proveedor por Proveedor "no es
+/// efectivo, se supone que tendremos muchos proveedores").
 class DocumentosRecibidosController extends StateNotifier<DocumentosRecibidosState> {
-  DocumentosRecibidosController(this._repository, this.proveedorId) : super(const DocumentosRecibidosState()) {
+  DocumentosRecibidosController(this._repository) : super(const DocumentosRecibidosState()) {
     cargar();
   }
 
   final PurchasingRepository _repository;
-  final String proveedorId;
 
   Future<void> cargar() async {
     state = state.copyWith(cargando: true, limpiarError: true);
     try {
-      final documentos = await _repository.listarDocumentosRecibidos(proveedorId);
+      final documentos = await _repository.listarTodosDocumentosRecibidos();
       state = state.copyWith(documentos: documentos, cargando: false);
     } catch (e) {
       state = state.copyWith(cargando: false, error: e.toString());
     }
   }
 
+  /// Registra el documento y, si viene un `respaldo`, lo adjunta a
+  /// continuación (segundo paso, mismo criterio que AgregarImagenVariante
+  /// en Catálogo — el documento ya queda registrado aunque el adjunto falle).
   Future<bool> registrar({
+    required String proveedorId,
     String? ordenCompraId,
     required TipoDocumentoRecibido tipoDocumento,
     required int folio,
@@ -272,9 +330,12 @@ class DocumentosRecibidosController extends StateNotifier<DocumentosRecibidosSta
     required double montoTotal,
     required FormaPago formaPago,
     required DateTime fechaEmision,
+    CategoriaDocumentoRecibido? categoria,
+    List<int>? respaldoBytes,
+    String? respaldoNombreArchivo,
   }) async {
     try {
-      await _repository.registrarDocumentoRecibido(
+      final documentoId = await _repository.registrarDocumentoRecibido(
         proveedorId: proveedorId,
         ordenCompraId: ordenCompraId,
         tipoDocumento: tipoDocumento,
@@ -283,7 +344,17 @@ class DocumentosRecibidosController extends StateNotifier<DocumentosRecibidosSta
         montoTotal: montoTotal,
         formaPago: formaPago,
         fechaEmision: fechaEmision,
+        categoria: categoria,
       );
+
+      if (respaldoBytes != null && respaldoNombreArchivo != null) {
+        await _repository.adjuntarRespaldoDocumentoRecibido(
+          documentoRecibidoId: documentoId,
+          bytes: respaldoBytes,
+          nombreArchivo: respaldoNombreArchivo,
+        );
+      }
+
       await cargar();
       return true;
     } catch (e) {
@@ -293,9 +364,8 @@ class DocumentosRecibidosController extends StateNotifier<DocumentosRecibidosSta
   }
 }
 
-final documentosRecibidosProvider =
-    StateNotifierProvider.autoDispose.family<DocumentosRecibidosController, DocumentosRecibidosState, String>((ref, proveedorId) {
-  return DocumentosRecibidosController(ref.watch(purchasingRepositoryProvider), proveedorId);
+final documentosRecibidosProvider = StateNotifierProvider.autoDispose<DocumentosRecibidosController, DocumentosRecibidosState>((ref) {
+  return DocumentosRecibidosController(ref.watch(purchasingRepositoryProvider));
 });
 
 // ---------------------------------------------------------------------------
@@ -425,4 +495,92 @@ class PlazosPagoProveedorController extends StateNotifier<PlazosPagoProveedorSta
 
 final plazosPagoProveedorProvider = StateNotifierProvider.autoDispose<PlazosPagoProveedorController, PlazosPagoProveedorState>((ref) {
   return PlazosPagoProveedorController(ref.watch(purchasingRepositoryProvider));
+});
+
+// ---------------------------------------------------------------------------
+// Facturas Internas — DocumentosRecibidos sin Orden de Compra, listados a
+// través de todos los Proveedores (pantalla propia e independiente de la
+// mantención por Proveedor, a pedido explícito del usuario).
+// ---------------------------------------------------------------------------
+
+class FacturasInternasState {
+  const FacturasInternasState({this.facturas = const [], this.cargando = false, this.error});
+
+  final List<FacturaInterna> facturas;
+  final bool cargando;
+  final String? error;
+
+  FacturasInternasState copyWith({List<FacturaInterna>? facturas, bool? cargando, String? error, bool limpiarError = false}) {
+    return FacturasInternasState(
+      facturas: facturas ?? this.facturas,
+      cargando: cargando ?? this.cargando,
+      error: limpiarError ? null : (error ?? this.error),
+    );
+  }
+}
+
+class FacturasInternasController extends StateNotifier<FacturasInternasState> {
+  FacturasInternasController(this._repository) : super(const FacturasInternasState()) {
+    cargar();
+  }
+
+  final PurchasingRepository _repository;
+
+  Future<void> cargar() async {
+    state = state.copyWith(cargando: true, limpiarError: true);
+    try {
+      final facturas = await _repository.listarFacturasInternas();
+      state = state.copyWith(facturas: facturas, cargando: false);
+    } catch (e) {
+      state = state.copyWith(cargando: false, error: e.toString());
+    }
+  }
+
+  /// Registra la Factura Interna y, si viene un `respaldo`, lo adjunta a
+  /// continuación (segundo paso, mismo criterio que AgregarImagenVariante en
+  /// Catálogo — la Factura ya queda registrada aunque el adjunto falle).
+  Future<bool> registrar({
+    required String proveedorId,
+    required TipoDocumentoRecibido tipoDocumento,
+    required int folio,
+    required String rutEmisor,
+    required double montoTotal,
+    required FormaPago formaPago,
+    required DateTime fechaEmision,
+    required CategoriaDocumentoRecibido categoria,
+    List<int>? respaldoBytes,
+    String? respaldoNombreArchivo,
+  }) async {
+    try {
+      final documentoId = await _repository.registrarDocumentoRecibido(
+        proveedorId: proveedorId,
+        ordenCompraId: null,
+        tipoDocumento: tipoDocumento,
+        folio: folio,
+        rutEmisor: rutEmisor,
+        montoTotal: montoTotal,
+        formaPago: formaPago,
+        fechaEmision: fechaEmision,
+        categoria: categoria,
+      );
+
+      if (respaldoBytes != null && respaldoNombreArchivo != null) {
+        await _repository.adjuntarRespaldoDocumentoRecibido(
+          documentoRecibidoId: documentoId,
+          bytes: respaldoBytes,
+          nombreArchivo: respaldoNombreArchivo,
+        );
+      }
+
+      await cargar();
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+}
+
+final facturasInternasProvider = StateNotifierProvider.autoDispose<FacturasInternasController, FacturasInternasState>((ref) {
+  return FacturasInternasController(ref.watch(purchasingRepositoryProvider));
 });

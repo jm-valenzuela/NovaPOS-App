@@ -8,8 +8,13 @@ import 'nuevo_cliente_pos_dialog.dart';
 /// Devuelve el ClienteResumen elegido, o null (= "Cliente Genérico",
 /// mismo criterio que usa el backend cuando CrearVentaCommand no recibe
 /// ClienteId) — ver PosScreen._elegirCliente para el resto del contrato.
+/// permitirClienteGenerico=false oculta esa opción — usar donde el Cliente
+/// Genérico no es válido (ej. Nota de Crédito: siempre nominativa, ver
+/// RegistrarDevolucionScreen).
 class SelectorClienteDialog extends ConsumerStatefulWidget {
-  const SelectorClienteDialog({super.key});
+  const SelectorClienteDialog({super.key, this.permitirClienteGenerico = true});
+
+  final bool permitirClienteGenerico;
 
   @override
   ConsumerState<SelectorClienteDialog> createState() => _SelectorClienteDialogState();
@@ -104,11 +109,12 @@ class _SelectorClienteDialogState extends ConsumerState<SelectorClienteDialog> {
           onPressed: () => _crearCliente(context),
           child: const Text('Nuevo Cliente'),
         ),
-        TextButton(
-          key: const Key('selectorClienteGenerico'),
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Usar Cliente Genérico'),
-        ),
+        if (widget.permitirClienteGenerico)
+          TextButton(
+            key: const Key('selectorClienteGenerico'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Usar Cliente Genérico'),
+          ),
       ],
     );
   }

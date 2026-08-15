@@ -2,7 +2,8 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
 import '../domain/models/discrepancia.dart';
-import '../domain/models/documento_recibido.dart';
+import '../domain/models/documento_recibido_global.dart';
+import '../domain/models/factura_interna.dart';
 import '../domain/models/orden_compra.dart';
 import '../domain/models/plazo_pago.dart';
 import '../domain/models/proveedor.dart';
@@ -140,6 +141,7 @@ class PurchasingApi {
     required double montoTotal,
     required FormaPago formaPago,
     required DateTime fechaEmision,
+    CategoriaDocumentoRecibido? categoria,
   }) async {
     try {
       final respuesta = await _client.dio.post('/documentos-recibidos', data: {
@@ -151,6 +153,7 @@ class PurchasingApi {
         'montoTotal': montoTotal,
         'formaPago': formaPago.valorApi,
         'fechaEmision': fechaEmision.toIso8601String(),
+        'categoria': categoria?.valorApi,
       });
       return respuesta.data['id'] as String;
     } on DioException catch (e) {
@@ -158,10 +161,35 @@ class PurchasingApi {
     }
   }
 
-  Future<List<DocumentoRecibido>> listarDocumentosRecibidos(String proveedorId) async {
+  Future<List<DocumentoRecibidoGlobal>> listarTodosDocumentosRecibidos() async {
     try {
-      final respuesta = await _client.dio.get('/documentos-recibidos', queryParameters: {'proveedorId': proveedorId});
-      return (respuesta.data as List<dynamic>).map((json) => DocumentoRecibido.fromJson(json as Map<String, dynamic>)).toList();
+      final respuesta = await _client.dio.get('/documentos-recibidos/todos');
+      return (respuesta.data as List<dynamic>).map((json) => DocumentoRecibidoGlobal.fromJson(json as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<List<FacturaInterna>> listarFacturasInternas() async {
+    try {
+      final respuesta = await _client.dio.get('/documentos-recibidos/facturas-internas');
+      return (respuesta.data as List<dynamic>).map((json) => FacturaInterna.fromJson(json as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<String> adjuntarRespaldoDocumentoRecibido({
+    required String documentoRecibidoId,
+    required List<int> bytes,
+    required String nombreArchivo,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'Archivo': MultipartFile.fromBytes(bytes, filename: nombreArchivo),
+      });
+      final respuesta = await _client.dio.post('/documentos-recibidos/$documentoRecibidoId/respaldo', data: formData);
+      return respuesta.data['rutaArchivoRespaldo'] as String;
     } on DioException catch (e) {
       ApiClient.lanzarError(e);
     }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../domain/models/proveedor.dart';
 import '../providers/purchasing_providers.dart';
@@ -67,21 +66,7 @@ class _ProveedoresScreenState extends ConsumerState<ProveedoresScreen> {
                             key: Key('proveedor_${proveedor.id}'),
                             title: Text(proveedor.nombre),
                             subtitle: Text('${proveedor.rut}${proveedor.telefono != null ? ' · ${proveedor.telefono}' : ''}'),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  key: Key('proveedorDocumentos_${proveedor.id}'),
-                                  icon: const Icon(Icons.receipt_long_outlined),
-                                  tooltip: 'Documentos Recibidos',
-                                  onPressed: () => context.push(
-                                    '/compras/proveedores/${proveedor.id}/documentos',
-                                    extra: {'nombre': proveedor.nombre, 'rut': proveedor.rut},
-                                  ),
-                                ),
-                                const Icon(Icons.edit_outlined),
-                              ],
-                            ),
+                            trailing: const Icon(Icons.edit_outlined),
                             onTap: () => _abrirFormulario(context, existente: proveedor),
                           );
                         },

@@ -65,7 +65,31 @@ void main() {
     await pumpClientes(tester);
 
     expect(find.text('Juan Pérez'), findsOneWidget);
-    expect(find.text('12.345.678-5'), findsOneWidget);
+    expect(find.textContaining('12.345.678-5'), findsOneWidget);
+  });
+
+  testWidgets('Un Cliente con cupo de crédito vigente lo muestra junto con su Plazo en la lista', (tester) async {
+    fakeCustomer = FakeCustomerRepository()
+      ..resultadosARetornar = [
+        const ClienteResumen(
+          id: 'cliente-1',
+          rut: '12.345.678-5',
+          nombre: 'Juan Pérez',
+          email: null,
+          telefono: null,
+          cupoCredito: 100000,
+          plazoPagoId: 'plazo-30',
+        ),
+      ]
+      ..plazosPagoARetornar = [plazo30Dias];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [customerRepositoryProvider.overrideWithValue(fakeCustomer)],
+      child: const MaterialApp(home: ClientesAdminScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.textContaining('Cupo: \$100.000 · 30 días'), findsOneWidget);
   });
 
   testWidgets('Tocar un Cliente abre el formulario de edición con el RUT deshabilitado y los datos precargados', (tester) async {
@@ -131,22 +155,16 @@ void main() {
     expect(fakeCustomer.ultimoPlazoPagoIdCreado, isNull);
   });
 
-  testWidgets('Alta seleccionando un Plazo de Pago del catálogo lo envía junto con el Cliente', (tester) async {
+  testWidgets('Editar un Cliente con Plazo de Pago ya asignado lo reenvía sin cambios (el campo no es editable acá)', (tester) async {
     await pumpClientes(tester);
 
-    await tester.tap(find.byKey(const Key('nuevoClienteBoton')));
+    await tester.tap(find.text('Juan Pérez'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('clienteRut')), '76.543.210-3');
-    await tester.enterText(find.byKey(const Key('clienteNombre')), 'Empresa Nueva SpA');
-    await tester.tap(find.byKey(const Key('clientePlazoPago')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('30 días').last);
-    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('clientePlazoPago')), findsNothing);
     await tester.tap(find.byKey(const Key('clienteGuardar')));
     await tester.pumpAndSettle();
 
-    expect(fakeCustomer.crearLlamado, isTrue);
-    expect(fakeCustomer.ultimoPlazoPagoIdCreado, 'plazo-30');
+    expect(fakeCustomer.ultimoPlazoPagoIdActualizado, 'plazo-1');
   });
 
   testWidgets('Alta con datos de Factura los envía junto con el Cliente', (tester) async {
@@ -264,6 +282,32 @@ void main() {
     expect(fakeCustomer.ultimoPlazoPagoIdSolicitado, isNull);
   });
 
+  testWidgets('Solicitar Cupo de Crédito con Observación la envía junto con la solicitud', (tester) async {
+    await pumpClientes(tester);
+
+    await tester.tap(find.byKey(const Key('clienteSolicitarCredito_cliente-1')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('solicitarCreditoCupo')), '500000');
+    await tester.enterText(
+      find.byKey(const Key('solicitarCreditoObservacion')),
+      'Ya tiene \$100.000 vigentes, pide ampliar por proyecto nuevo.',
+    );
+    await tester.tap(find.byKey(const Key('solicitarCreditoConfirmar')));
+    await tester.pumpAndSettle();
+
+    expect(fakeCustomer.ultimaObservacionSolicitudCredito, 'Ya tiene \$100.000 vigentes, pide ampliar por proyecto nuevo.');
+  });
+
+  testWidgets('Solicitar Cupo de Crédito para un Cliente con cupo ya vigente lo muestra en el diálogo', (tester) async {
+    await pumpClientes(tester);
+
+    await tester.tap(find.byKey(const Key('clienteSolicitarCredito_cliente-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('solicitarCreditoCupoVigente')), findsOneWidget);
+    expect(find.textContaining('Ya tiene cupo vigente: \$100.000'), findsOneWidget);
+  });
+
   testWidgets('Solicitar Cupo de Crédito con cupo inválido muestra error y no llama al repositorio', (tester) async {
     await pumpClientes(tester);
 
@@ -304,5 +348,43 @@ void main() {
     expect(find.textContaining('Crédito pendiente de autorización'), findsOneWidget);
     final boton = tester.widget<IconButton>(find.byKey(const Key('clienteSolicitarCredito_cliente-4')));
     expect(boton.onPressed, isNull);
+  });
+
+  testWidgets(
+      'Si la solicitud de crédito se autoriza desde otra pantalla, "pull to refresh" deja de mostrar "pendiente"',
+      (tester) async {
+    fakeCustomer = FakeCustomerRepository()..resultadosARetornar = [_clienteConCreditoPendiente];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [customerRepositoryProvider.overrideWithValue(fakeCustomer)],
+      child: const MaterialApp(home: ClientesAdminScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.textContaining('Crédito pendiente de autorización'), findsOneWidget);
+
+    // La solicitud se autoriza en otra pantalla (ej. "Autorización de Crédito"
+    // desde Home) — esta pantalla no se entera sola, necesita refrescarse.
+    fakeCustomer.resultadosARetornar = [
+      const ClienteResumen(
+        id: 'cliente-4',
+        rut: '76.123.456-0',
+        nombre: 'Empresa Credito Pendiente',
+        email: null,
+        telefono: null,
+        cupoCredito: 500000,
+        estadoSolicitudCredito: 2,
+      ),
+    ];
+
+    await tester.fling(find.byType(ListView), const Offset(0, 300), 1000);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Crédito pendiente de autorización'), findsNothing);
+    expect(find.textContaining('Cupo: \$500.000 · Inmediato'), findsOneWidget);
+    final boton = tester.widget<IconButton>(find.byKey(const Key('clienteSolicitarCredito_cliente-4')));
+    expect(boton.onPressed, isNotNull);
   });
 }

@@ -47,8 +47,36 @@ void main() {
     await pumpScreen(tester);
 
     expect(find.textContaining('Empresa Test · 12.345.678-5'), findsOneWidget);
-    expect(find.textContaining('Cupo actual: \$0'), findsOneWidget);
+    expect(find.text('Sin cupo vigente'), findsOneWidget);
     expect(find.textContaining('Cupo solicitado: \$500.000 · 30 días'), findsOneWidget);
+  });
+
+  testWidgets('Un Cliente con cupo ya vigente lo muestra junto con su Plazo y la Observación', (tester) async {
+    fakeCustomer = FakeCustomerRepository()
+      ..solicitudesCreditoPendientesARetornar = [
+        SolicitudCreditoPendiente(
+          clienteId: 'cliente-2',
+          clienteNombre: 'Empresa Con Cupo',
+          clienteRut: '76.123.456-0',
+          cupoCreditoActual: 50000,
+          plazoPagoIdActual: 'plazo-1',
+          cupoCreditoSolicitado: 200000,
+          plazoPagoIdSolicitado: 'plazo-1',
+          observacion: 'Ya tiene \$50.000 vigentes, pide ampliar por proyecto nuevo.',
+          solicitadoPorUsuarioId: 'usuario-1',
+          fechaSolicitud: DateTime(2026, 8, 14),
+        ),
+      ]
+      ..plazosPagoARetornar = [plazo30Dias];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [customerRepositoryProvider.overrideWithValue(fakeCustomer)],
+      child: const MaterialApp(home: SolicitudesCreditoPendientesScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.textContaining('Ya tiene cupo vigente: \$50.000 · 30 días'), findsOneWidget);
+    expect(find.textContaining('Observación: Ya tiene \$50.000 vigentes, pide ampliar por proyecto nuevo.'), findsOneWidget);
   });
 
   testWidgets('Autorizar llama al repositorio y recarga la lista', (tester) async {

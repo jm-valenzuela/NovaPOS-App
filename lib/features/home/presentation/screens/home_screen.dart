@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/menu_card.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../cash/presentation/providers/cash_providers.dart';
 import '../../../customers/presentation/providers/solicitudes_credito_pendientes_providers.dart';
 import '../../../sales/presentation/providers/descuentos_pendientes_providers.dart';
 
@@ -32,6 +33,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// el llamado innecesario igual.
   Timer? _pollDescuentosPendientes;
   Timer? _pollSolicitudesCredito;
+  Timer? _pollRetirosPendientes;
 
   @override
   void initState() {
@@ -46,12 +48,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.read(solicitudesCreditoPendientesProvider.notifier).cargar();
       }
     });
+    _pollRetirosPendientes = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (ref.read(authControllerProvider).sesion?.tienePermiso('cash.retiros.autorizar') ?? false) {
+        ref.read(retirosPendientesProvider.notifier).cargar();
+      }
+    });
   }
 
   @override
   void dispose() {
     _pollDescuentosPendientes?.cancel();
     _pollSolicitudesCredito?.cancel();
+    _pollRetirosPendientes?.cancel();
     super.dispose();
   }
 
@@ -60,6 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final sesion = ref.watch(authControllerProvider).sesion;
     final tieneAutorizarDescuentos = sesion?.tienePermiso('sales.descuentos.autorizar') ?? false;
     final tieneClientes = sesion?.tienePermiso('customers.clientes.gestionar') ?? false;
+    final tieneDevoluciones = sesion?.tienePermiso('sales.devoluciones.registrar') ?? false;
     final tieneCompras = (sesion?.tienePermiso('purchasing.ordenescompra.gestionar') ?? false) ||
         (sesion?.tienePermiso('purchasing.proveedores.gestionar') ?? false);
     final tieneInventario = sesion?.tienePermiso('inventory.stock.ver') ?? false;
@@ -72,6 +81,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final tieneAutorizarCredito = sesion?.tienePermiso('customers.clientes.autorizarcredito') ?? false;
     final cantidadSolicitudesCreditoPendientes =
         tieneAutorizarCredito ? ref.watch(solicitudesCreditoPendientesProvider).pendientes.length : 0;
+    final tieneAutorizarRetiros = sesion?.tienePermiso('cash.retiros.autorizar') ?? false;
+    final cantidadRetirosPendientes = tieneAutorizarRetiros ? ref.watch(retirosPendientesProvider).pendientes.length : 0;
 
     return MenuScaffold(
       appBar: AppBar(
@@ -123,10 +134,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           subtitulo: 'Buscar productos, armar el carrito y cobrar.',
           onTap: () => context.push('/pos'),
         ),
+        MenuCard(
+          key: const Key('homeCotizacionesCard'),
+          categoria: 'Ventas',
+          titulo: 'Cotizaciones',
+          subtitulo: 'Revisar, buscar y reimprimir las Cotizaciones guardadas.',
+          onTap: () => context.push('/cotizaciones'),
+        ),
         if (tieneAutorizarDescuentos)
           MenuCard(
             categoria: 'Ventas',
-            titulo: 'Descuentos pendientes',
+            titulo: 'Autorización de Descuento',
             subtitulo: 'Autorizar o rechazar descuentos solicitados en el POS.',
             badge: cantidadDescuentosPendientes > 0 ? cantidadDescuentosPendientes : null,
             badgeKey: const Key('badgeDescuentosPendientes'),
@@ -146,22 +164,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             subtitulo: 'Mantención, Cuentas x Cobrar y Plazos de Pago.',
             onTap: () => context.push('/clientes'),
           ),
+        if (tieneDevoluciones)
+          MenuCard(
+            key: const Key('homeDevolucionVentaCard'),
+            categoria: 'Atención de Clientes',
+            titulo: 'Devolución de productos',
+            subtitulo: 'Devolver productos de una Venta (Boleta o Factura).',
+            onTap: () => context.push('/devolucion-venta'),
+          ),
         if (tieneAutorizarCredito)
           MenuCard(
             key: const Key('homeCreditoPendienteCard'),
             categoria: 'Clientes',
-            titulo: 'Cupo de Crédito',
+            titulo: 'Autorización de Crédito',
             subtitulo: 'Autorizar o rechazar solicitudes de crédito de Clientes.',
             badge: cantidadSolicitudesCreditoPendientes > 0 ? cantidadSolicitudesCreditoPendientes : null,
             badgeKey: const Key('badgeCreditoPendiente'),
             onTap: () => context.push('/clientes/credito-pendientes'),
+          ),
+        if (tieneAutorizarRetiros)
+          MenuCard(
+            key: const Key('homeRetirosCajaCard'),
+            categoria: 'Ventas',
+            titulo: 'Autorización de Retiros de Caja',
+            subtitulo: 'Autorizar o rechazar retiros de efectivo solicitados en el POS.',
+            badge: cantidadRetirosPendientes > 0 ? cantidadRetirosPendientes : null,
+            badgeKey: const Key('badgeRetirosCaja'),
+            onTap: () => context.push('/caja/retiros-pendientes'),
           ),
         if (tieneCompras)
           MenuCard(
             key: const Key('homeComprasCard'),
             categoria: 'Proveedores, Cuentas x Pagar',
             titulo: 'Proveedores y Órdenes',
-            subtitulo: 'Proveedores, Órdenes de Compra, Discrepancias, Cuentas por Pagar y Plazos de Pago.',
+            subtitulo: 'Proveedores, Documentos Recibidos, Órdenes de Compra, Discrepancias, Cuentas por Pagar y Plazos de Pago.',
             onTap: () => context.push('/compras'),
           ),
         if (tieneInventario)

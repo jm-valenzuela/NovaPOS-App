@@ -129,11 +129,13 @@ class ClientesAdminController extends StateNotifier<ClientesAdminState> {
     required String clienteId,
     required double cupoSolicitado,
     String? plazoPagoIdSolicitado,
+    String? observacion,
   }) async {
     await _repository.solicitarCreditoCliente(
       clienteId: clienteId,
       cupoSolicitado: cupoSolicitado,
       plazoPagoIdSolicitado: plazoPagoIdSolicitado,
+      observacion: observacion,
     );
     await cargar();
   }

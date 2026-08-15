@@ -52,6 +52,36 @@ enum TipoDocumentoRecibido {
   String get etiqueta => this == TipoDocumentoRecibido.boleta ? 'Boleta' : 'Factura';
 }
 
+/// Espejo de CategoriaDocumentoRecibido — clasificación obligatoria de una
+/// Factura Interna (DocumentoRecibido sin OrdenCompraId): "estas son las
+/// Facturas de proveedor que no constituyen compra de productos o materia
+/// prima [...] pueden ser gastos, insumos, servicios, compra de activo
+/// fijo, entre otras, que deberán ser clasificadas según su tipo" (pedido
+/// explícito del usuario). No aplica cuando el documento sí referencia una
+/// Orden de Compra — ver DocumentoRecibido en el backend.
+enum CategoriaDocumentoRecibido {
+  gasto(0),
+  insumo(1),
+  servicio(2),
+  activoFijo(3),
+  otro(4);
+
+  const CategoriaDocumentoRecibido(this.valorApi);
+
+  final int valorApi;
+
+  static CategoriaDocumentoRecibido desdeValor(int valor) =>
+      CategoriaDocumentoRecibido.values.firstWhere((e) => e.valorApi == valor, orElse: () => CategoriaDocumentoRecibido.otro);
+
+  String get etiqueta => switch (this) {
+        CategoriaDocumentoRecibido.gasto => 'Gasto',
+        CategoriaDocumentoRecibido.insumo => 'Insumo',
+        CategoriaDocumentoRecibido.servicio => 'Servicio',
+        CategoriaDocumentoRecibido.activoFijo => 'Activo Fijo',
+        CategoriaDocumentoRecibido.otro => 'Otro',
+      };
+}
+
 enum EstadoDiscrepancia {
   pendiente(0),
   resuelta(1);

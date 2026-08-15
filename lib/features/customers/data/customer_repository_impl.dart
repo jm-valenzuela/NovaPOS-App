@@ -69,8 +69,18 @@ class CustomerRepositoryImpl implements CustomerRepository {
       _api.asignarRutCliente(clienteId: clienteId, rut: rut);
 
   @override
-  Future<void> solicitarCreditoCliente({required String clienteId, required double cupoSolicitado, String? plazoPagoIdSolicitado}) =>
-      _api.solicitarCreditoCliente(clienteId: clienteId, cupoSolicitado: cupoSolicitado, plazoPagoIdSolicitado: plazoPagoIdSolicitado);
+  Future<void> solicitarCreditoCliente({
+    required String clienteId,
+    required double cupoSolicitado,
+    String? plazoPagoIdSolicitado,
+    String? observacion,
+  }) =>
+      _api.solicitarCreditoCliente(
+        clienteId: clienteId,
+        cupoSolicitado: cupoSolicitado,
+        plazoPagoIdSolicitado: plazoPagoIdSolicitado,
+        observacion: observacion,
+      );
 
   @override
   Future<void> autorizarCreditoCliente(String clienteId) => _api.autorizarCreditoCliente(clienteId);

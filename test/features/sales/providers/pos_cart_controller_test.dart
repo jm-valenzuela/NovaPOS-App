@@ -168,6 +168,29 @@ void main() {
     expect(controller.state.montoDescuentoAplicado, controller.state.total * 0.10);
   });
 
+  /// Regresión: con un porcentaje que deja centavos (2,33% de $3.000 =
+  /// $69,9), montoDescuentoAplicado debe redondear al peso — igual que
+  /// Venta.RecalcularTotal en el backend (Math.Round AwayFromZero). Sin
+  /// este redondeo, totalConDescuento queda con decimales y CheckoutDialog
+  /// nunca deja calzar el pago exacto con el Total (el backend rechaza
+  /// Confirmar con "la suma de los pagos no coincide con el Total").
+  test('montoDescuentoAplicado redondea al peso cuando el porcentaje deja centavos', () async {
+    await controller.solicitarDescuento(cajaId: 'caja-1', porcentaje: 2.33);
+
+    fakeSales.estadoDescuentoARetornar = EstadoDescuentoVenta(
+      ventaId: fakeSales.ventaIdARetornar,
+      estado: EstadoDescuentoGeneral.autorizado,
+      total: 0,
+      subtotalLineas: 0,
+      motivoRechazo: null,
+    );
+    await controller.verificarEstadoDescuento();
+
+    expect(controller.state.total, 3000);
+    expect(controller.state.montoDescuentoAplicado, 70);
+    expect(controller.state.totalConDescuento, 2930);
+  });
+
   test('guardarCotizacion con el carrito vacío no hace nada y devuelve null', () async {
     final controllerVacio = PosCartController(fakeSales);
 
