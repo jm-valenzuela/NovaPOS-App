@@ -1,3 +1,4 @@
+import 'package:barcode/barcode.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -12,9 +13,11 @@ import '../../domain/models/resumen_venta.dart';
 /// patrón que imprimirTicketCotizacion (Printing.layoutPdf, sin guardar
 /// ningún archivo). Solo se debe llamar con un [resumen] que tenga
 /// [ResumenVenta.tieneDte] en true (el llamador ya lo valida antes de
-/// ofrecer el botón). No es un facsímil oficial del SII: el TED se
-/// imprime como texto plano, no como código PDF417, así que este ticket
-/// no reemplaza la representación normada — ver aviso al pie.
+/// ofrecer el botón). El Timbre Electrónico se imprime como código de
+/// barras PDF417 real (paquete `barcode`, ya usado transitivamente por
+/// `pdf`/`printing`) codificando el TED firmado tal cual — no es un
+/// facsímil oficial del SII (el resto del layout es informativo, no
+/// sigue el formato exacto normado), pero el timbre en sí es escaneable.
 Future<void> imprimirBoletaFactura(ResumenVenta resumen, List<LineaCarrito> lineas) {
   final formatoFecha = DateFormat('dd-MM-yyyy HH:mm');
   final esFactura = resumen.tipoDocumentoEmitido == 33;
@@ -71,13 +74,23 @@ Future<void> imprimirBoletaFactura(ResumenVenta resumen, List<LineaCarrito> line
               if (resumen.ted != null) ...[
                 pw.SizedBox(height: 8),
                 pw.Divider(),
-                pw.Text('Timbre Electrónico SII (TED)', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 2),
-                pw.Text(resumen.ted!, style: const pw.TextStyle(fontSize: 5, color: PdfColors.grey700)),
+                pw.Center(
+                  child: pw.Text('Timbre Electrónico SII', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Center(
+                  child: pw.BarcodeWidget(
+                    barcode: Barcode.pdf417(),
+                    data: resumen.ted!,
+                    drawText: false,
+                    width: 6.5 * PdfPageFormat.cm,
+                    height: 2.6 * PdfPageFormat.cm,
+                  ),
+                ),
               ],
               pw.SizedBox(height: 8),
               pw.Text(
-                'Timbre verificable ante el SII. Esta representación es informativa: no incluye el código PDF417 normado.',
+                'Timbre Electrónico verificable ante el SII (código PDF417).',
                 textAlign: pw.TextAlign.center,
                 style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey600),
               ),
