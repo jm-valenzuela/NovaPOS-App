@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../../../core/utils/pdf_fonts.dart';
 
 /// EAN-13 (13 dígitos numéricos con dígito verificador válido, mismo
 /// algoritmo que GeneradorCodigoBarras en el backend) para los códigos
@@ -98,7 +99,7 @@ Future<void> imprimirEtiquetaCodigoBarras({
     name: 'Etiqueta-$sku',
     format: formato,
     onLayout: (pageFormat) async {
-      final documento = pw.Document();
+      final documento = pw.Document(theme: await PdfFonts.tema());
       documento.addPage(
         pw.Page(
           pageFormat: pageFormat,

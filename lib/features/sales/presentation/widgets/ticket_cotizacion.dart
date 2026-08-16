@@ -3,6 +3,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../../../core/utils/pdf_fonts.dart';
 import '../../../catalog/domain/models/promocion_grupo.dart';
 import '../../domain/models/cotizacion.dart';
 import '../../domain/models/resumen_venta.dart';
@@ -29,7 +30,7 @@ Future<void> imprimirTicketCotizacion(CotizacionDetalle cotizacion) {
     name: cotizacion.numeroCotizacion ?? 'Cotizacion-${cotizacion.ventaId.substring(0, 8)}',
     format: const PdfPageFormat(8 * PdfPageFormat.cm, double.infinity, marginAll: 4 * PdfPageFormat.mm),
     onLayout: (pageFormat) async {
-      final documento = pw.Document();
+      final documento = pw.Document(theme: await PdfFonts.tema());
       documento.addPage(
         pw.Page(
           pageFormat: pageFormat,

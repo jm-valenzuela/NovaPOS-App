@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../../../core/utils/pdf_fonts.dart';
 import '../../domain/models/linea_carrito.dart';
 import '../../domain/models/resumen_venta.dart';
 
@@ -27,7 +28,7 @@ Future<void> imprimirBoletaFactura(ResumenVenta resumen, List<LineaCarrito> line
     name: '$etiquetaDocumento-${resumen.folio}',
     format: const PdfPageFormat(8 * PdfPageFormat.cm, double.infinity, marginAll: 4 * PdfPageFormat.mm),
     onLayout: (pageFormat) async {
-      final documento = pw.Document();
+      final documento = pw.Document(theme: await PdfFonts.tema());
       documento.addPage(
         pw.Page(
           pageFormat: pageFormat,

@@ -3,6 +3,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../../../core/utils/pdf_fonts.dart';
 
 class ItemOferta {
   const ItemOferta({
@@ -38,7 +39,7 @@ Future<void> imprimirAficheOfertas(List<ItemOferta> items) {
     name: 'Ofertas',
     format: PdfPageFormat.letter.landscape,
     onLayout: (pageFormat) async {
-      final documento = pw.Document();
+      final documento = pw.Document(theme: await PdfFonts.tema());
       for (final item in items) {
         documento.addPage(
           pw.Page(pageFormat: pageFormat, build: (pwContext) => _paginaOferta(item)),
