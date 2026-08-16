@@ -13,6 +13,7 @@ import 'package:novapos_app/features/returns/domain/models/nota_credito_disponib
 import 'package:novapos_app/features/returns/presentation/providers/returns_providers.dart';
 import 'package:novapos_app/features/sales/domain/models/cotizacion.dart';
 import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
+import 'package:novapos_app/features/sales/domain/models/resumen_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart';
 import 'package:novapos_app/features/sales/presentation/screens/pos_screen.dart';
@@ -181,6 +182,39 @@ void main() {
     expect(find.text(r'Total cobrado: $2.300'), findsOneWidget);
     expect(find.text(r'Subtotal: $1.933'), findsOneWidget);
     expect(find.text(r'IVA (19%): $367'), findsOneWidget);
+    // El fake no devuelve datos de DTE por defecto — se avisa en vez de
+    // ofrecer un botón "Imprimir" que fallaría sin Folio/TED.
+    expect(find.byKey(const Key('ventaConfirmadaSinDte')), findsOneWidget);
+    expect(find.byKey(const Key('ventaConfirmadaImprimir')), findsNothing);
+  });
+
+  testWidgets('Cuando el backend emitió el DTE, "Venta confirmada" ofrece Imprimir con el Folio', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    fakeSales.resumenConfirmarARetornar = const ResumenVenta(
+      neto: 1261,
+      iva: 239,
+      total: 1500,
+      dteEmitidoId: 'dte-1',
+      tipoDocumentoEmitido: 39,
+      folio: 8,
+      rutEmisor: '81814677-9',
+      razonSocialEmisor: 'NovaPOS Demo SpA',
+      rutReceptor: '66666666-6',
+      razonSocialReceptor: 'Cliente Genérico',
+      ted: '<TED>...</TED>',
+    );
+
+    await buscarYEsperar(tester, 'a');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await cobrarConfirmando(tester, 1500);
+
+    expect(find.text('Venta confirmada'), findsOneWidget);
+    expect(find.text('Folio 8'), findsOneWidget);
+    expect(find.byKey(const Key('ventaConfirmadaImprimir')), findsOneWidget);
+    expect(find.byKey(const Key('ventaConfirmadaSinDte')), findsNothing);
   });
 
   testWidgets('Cobrar en Efectivo por sobre el Total muestra el Vuelto en "Venta confirmada"', (tester) async {

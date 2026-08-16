@@ -236,6 +236,7 @@ class PosCartState {
     this.error,
     this.resumenCobrado,
     this.vueltoCobrado = 0,
+    this.lineasCobradas = const [],
     this.ventaId,
     this.estadoDescuento = EstadoDescuentoGeneral.sinSolicitar,
     this.descuentoPorcentaje,
@@ -259,6 +260,12 @@ class PosCartState {
   /// backend: el pago que se confirma ya viene recortado al Total exacto,
   /// ver PosCartController.cobrar). 0 si no hubo Efectivo de más.
   final double vueltoCobrado;
+
+  /// Snapshot de las líneas justo antes de vaciar el carrito al cobrar —
+  /// necesario porque el estado se reemplaza por completo al confirmar
+  /// (ver PosCartController.cobrar), así que sin esto no quedaría nada de
+  /// donde sacar el detalle para imprimir la Boleta/Factura real.
+  final List<LineaCarrito> lineasCobradas;
 
   /// Null hasta que se solicita un descuento, se guarda como Cotización o
   /// se rescata una — recién ahí hay una Venta real en el servidor (ver
@@ -345,6 +352,7 @@ class PosCartState {
       error: limpiarError ? null : (error ?? this.error),
       resumenCobrado: limpiarResumenCobrado ? null : resumenCobrado,
       vueltoCobrado: limpiarResumenCobrado ? 0 : vueltoCobrado,
+      lineasCobradas: limpiarResumenCobrado ? const [] : lineasCobradas,
       ventaId: ventaId,
       estadoDescuento: estadoDescuento,
       descuentoPorcentaje: descuentoPorcentaje,
@@ -514,9 +522,10 @@ class PosCartController extends StateNotifier<PosCartState> {
         }
       }
 
+      final lineasCobradas = state.lineas;
       final resumen = await _salesRepository.confirmarVenta(ventaId: ventaId, tipoDocumento: tipoDocumento, pagos: pagos);
 
-      state = PosCartState(resumenCobrado: resumen, vueltoCobrado: vuelto);
+      state = PosCartState(resumenCobrado: resumen, vueltoCobrado: vuelto, lineasCobradas: lineasCobradas);
     } catch (e) {
       state = state.copyWith(cobrando: false, error: e.toString());
     }

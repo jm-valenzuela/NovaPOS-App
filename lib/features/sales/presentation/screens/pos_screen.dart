@@ -28,6 +28,7 @@ import '../widgets/cantidad_pesable_dialog.dart';
 import '../widgets/carrito_linea_tile.dart';
 import '../widgets/checkout_dialog.dart';
 import '../widgets/producto_resultado_tile.dart';
+import '../widgets/representacion_impresa_venta.dart';
 import '../widgets/rescatar_cotizacion_dialog.dart';
 import '../widgets/selector_cliente_dialog.dart';
 import '../widgets/solicitar_descuento_dialog.dart';
@@ -126,7 +127,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         );
       }
       if (actual.resumenCobrado != null && previo?.resumenCobrado == null) {
-        _mostrarVentaCobrada(actual.resumenCobrado!, actual.vueltoCobrado);
+        _mostrarVentaCobrada(actual.resumenCobrado!, actual.vueltoCobrado, actual.lineasCobradas);
       }
       // Solo avisa si la resolución ocurrió en vivo (Pendiente → Autorizado/
       // Rechazado, ver verificarEstadoDescuento) — al rescatar una Cotización
@@ -535,7 +536,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     ref.read(clienteSeleccionadoProvider.notifier).state = elegido;
   }
 
-  void _mostrarVentaCobrada(ResumenVenta resumen, double vuelto) {
+  void _mostrarVentaCobrada(ResumenVenta resumen, double vuelto, List<LineaCarrito> lineas) {
     ref.read(clienteSeleccionadoProvider.notifier).state = null;
     _busquedaController.clear();
     _buscar('');
@@ -559,9 +560,26 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
               ),
             ],
+            if (resumen.tieneDte) ...[
+              const SizedBox(height: 4),
+              Text('Folio ${resumen.folio}', style: const TextStyle(color: Colors.black54)),
+            ] else ...[
+              const SizedBox(height: 8),
+              const Text(
+                'No se pudo emitir el documento tributario de esta Venta.',
+                key: Key('ventaConfirmadaSinDte'),
+                style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600),
+              ),
+            ],
           ],
         ),
         actions: [
+          if (resumen.tieneDte)
+            TextButton(
+              key: const Key('ventaConfirmadaImprimir'),
+              onPressed: () => imprimirBoletaFactura(resumen, lineas),
+              child: const Text('Imprimir'),
+            ),
           TextButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();

@@ -168,6 +168,11 @@ class FakeSalesRepository implements SalesRepository {
   TipoDocumento? ultimoTipoDocumento;
   List<PagoInput>? ultimosPagos;
 
+  /// Si se setea, se devuelve tal cual en vez de ResumenVenta.calcular —
+  /// permite simular una respuesta con datos de DTE (folio/RUT/TED) para
+  /// probar el botón "Imprimir" en el diálogo de Venta confirmada.
+  ResumenVenta? resumenConfirmarARetornar;
+
   @override
   Future<ResumenVenta> confirmarVenta({
     required String ventaId,
@@ -177,7 +182,7 @@ class FakeSalesRepository implements SalesRepository {
     ultimoTipoDocumento = tipoDocumento;
     ultimosPagos = pagos;
     if (errorAforzar != null) throw Exception(errorAforzar);
-    return ResumenVenta.calcular(totalARetornar);
+    return resumenConfirmarARetornar ?? ResumenVenta.calcular(totalARetornar);
   }
 
   String? ultimaVentaIdDescuento;
