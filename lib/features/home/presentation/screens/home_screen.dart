@@ -86,14 +86,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return MenuScaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SvgPicture.asset('assets/branding/novapos_icon.svg', width: 28, height: 28),
-            const SizedBox(width: 10),
-            const Text('NovaPOS'),
-          ],
-        ),
+        toolbarHeight: 96,
+        title: SvgPicture.asset('assets/branding/novapos_wordmark.svg', height: 68, alignment: Alignment.centerLeft),
         bottom: sesion == null
             ? null
             : PreferredSize(
