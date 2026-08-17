@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/formateador_miles.dart';
 import '../../../../core/utils/moneda_formatter.dart';
 import '../providers/cash_providers.dart';
 import '../widgets/resumen_caja_widgets.dart';
@@ -29,8 +29,8 @@ class _CierreCajaScreenState extends ConsumerState<CierreCajaScreen> {
   }
 
   Future<void> _cerrar() async {
-    final montoContado = double.tryParse(_montoContadoController.text.replaceAll(',', '.'));
-    if (montoContado == null || montoContado < 0) {
+    final montoContado = FormateadorMiles.desformatear(_montoContadoController.text);
+    if (_montoContadoController.text.isEmpty) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Ingresa el monto contado en efectivo')));
       return;
@@ -79,8 +79,8 @@ class _CierreCajaScreenState extends ConsumerState<CierreCajaScreen> {
                                 TextField(
                                   key: const Key('cierreCajaMontoContado'),
                                   controller: _montoContadoController,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [FormateadorMiles()],
                                   decoration: const InputDecoration(labelText: 'Monto contado en efectivo', prefixText: '\$ '),
                                   onChanged: (_) => setState(() {}),
                                 ),

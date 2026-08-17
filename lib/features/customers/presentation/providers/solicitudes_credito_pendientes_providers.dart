@@ -78,6 +78,16 @@ class SolicitudesCreditoPendientesController extends StateNotifier<SolicitudesCr
   }
 }
 
+/// La pantalla de Clientes (ClientesAdminScreen) se refresca sola al volver
+/// a quedar visible después de autorizar/rechazar acá — ver su RouteAware/
+/// didPopNext — en vez de invalidar clientesAdminProvider desde este
+/// controller: ese enfoque se probó primero pero es incorrecto cuando la
+/// pantalla de Clientes NO está montada (el caso real: se llega acá desde
+/// Home, no desde Clientes), porque invalidate() crea el
+/// StateNotifierProvider.autoDispose de golpe y lo destruye de inmediato al
+/// no tener watchers, y el cargar() async en curso revienta con "Tried to
+/// use ClientesAdminController after dispose was called" al intentar
+/// escribir estado después.
 final solicitudesCreditoPendientesProvider =
     StateNotifierProvider.autoDispose<SolicitudesCreditoPendientesController, SolicitudesCreditoPendientesState>((ref) {
   return SolicitudesCreditoPendientesController(ref.watch(customerRepositoryProvider));

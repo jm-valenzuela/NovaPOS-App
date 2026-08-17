@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
+import '../../../../core/utils/formateador_miles.dart';
 
 /// Solicitar un Retiro de efectivo de la Caja — queda Pendiente hasta que
 /// un Supervisor lo autorice (ver "cash.retiros.autorizar", quien pide no
@@ -24,9 +25,9 @@ class _RetirarEfectivoDialogState extends State<RetirarEfectivoDialog> {
   }
 
   void _confirmar() {
-    final monto = double.tryParse(_montoController.text.replaceAll(',', '.'));
+    final monto = FormateadorMiles.desformatear(_montoController.text);
     final motivo = _motivoController.text.trim();
-    if (monto == null || monto <= 0) {
+    if (monto <= 0) {
       setState(() => _error = 'Ingresa un monto válido');
       return;
     }
@@ -53,8 +54,8 @@ class _RetirarEfectivoDialogState extends State<RetirarEfectivoDialog> {
             key: const Key('retirarEfectivoMonto'),
             controller: _montoController,
             autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+            keyboardType: TextInputType.number,
+            inputFormatters: [FormateadorMiles()],
             decoration: const InputDecoration(labelText: 'Monto a retirar', prefixText: '\$ '),
           ),
           const SizedBox(height: 12),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../../../../core/utils/formateador_miles.dart';
 import '../../../sales/domain/models/venta_enums.dart';
 
 class AbonoSolicitado {
@@ -37,8 +37,8 @@ class _RegistrarAbonoDialogState extends State<RegistrarAbonoDialog> {
   }
 
   void _confirmar() {
-    final monto = double.tryParse(_montoController.text.replaceAll(',', '.'));
-    if (monto == null || monto <= 0) {
+    final monto = FormateadorMiles.desformatear(_montoController.text);
+    if (monto <= 0) {
       setState(() => _error = 'Ingresa un monto mayor a cero.');
       return;
     }
@@ -70,8 +70,8 @@ class _RegistrarAbonoDialogState extends State<RegistrarAbonoDialog> {
             key: const Key('abonoMonto'),
             controller: _montoController,
             autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+            keyboardType: TextInputType.number,
+            inputFormatters: [FormateadorMiles()],
             decoration: const InputDecoration(labelText: 'Monto'),
           ),
           const SizedBox(height: 12),

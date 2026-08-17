@@ -156,6 +156,43 @@ void main() {
     expect(resultado.pagos.single.monto, 8982);
   });
 
+  testWidgets('Un Total con resto de coma flotante (ej. de un % de descuento) no genera Vuelto falso en Efectivo',
+      (tester) async {
+    // 257823.6 redondea a "$257.824" al mostrarse (MonedaFormatter) — el
+    // Cajero solo puede tipear pesos enteros, así que tipea exactamente lo
+    // que ve. Antes de este fix, comparar contra el total SIN redondear
+    // hacía que sobraran 0.4 y se mostrara "Vuelto: $1" al pagar el monto
+    // justo mostrado en pantalla.
+    await abrirDialogo(tester, total: 257823.6, formaPago: FormaPago.contado, cliente: null);
+
+    await tester.enterText(find.byKey(const Key('checkoutMonto_0')), '257824');
+    await tester.pump();
+
+    expect(find.textContaining('Vuelto'), findsNothing);
+    expect(find.text('Los pagos cuadran con el Total.'), findsOneWidget);
+    final boton = tester.widget<FilledButton>(find.byKey(const Key('checkoutConfirmar')));
+    expect(boton.onPressed, isNotNull);
+  });
+
+  testWidgets('Un Total con resto de coma flotante no rechaza el monto exacto mostrado en Tarjeta', (tester) async {
+    // Mismo caso que el de Efectivo, pero con Tarjeta: antes de este fix,
+    // el mismo resto de 0.4 hacía que 257824 se viera como "por sobre el
+    // Total" y mostrara "no puede superar el Total" pagando el monto justo.
+    await abrirDialogo(tester, total: 257823.6, formaPago: FormaPago.contado, cliente: null);
+
+    await tester.tap(find.byKey(const Key('checkoutMedioPago_0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tarjeta Débito').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('checkoutMonto_0')), '257824');
+    await tester.pump();
+
+    expect(find.textContaining('no puede superar el Total'), findsNothing);
+    expect(find.text('Los pagos cuadran con el Total.'), findsOneWidget);
+    final boton = tester.widget<FilledButton>(find.byKey(const Key('checkoutConfirmar')));
+    expect(boton.onPressed, isNotNull);
+  });
+
   testWidgets('Tarjeta por sobre el Total NO da vuelto — Confirmar sigue deshabilitado', (tester) async {
     await abrirDialogo(tester, total: 1000, formaPago: FormaPago.contado, cliente: null);
 

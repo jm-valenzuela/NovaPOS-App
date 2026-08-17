@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/formateador_miles.dart';
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../domain/models/cliente_resumen.dart';
 import '../../domain/models/plazo_pago.dart';
@@ -86,8 +86,8 @@ class _SolicitarCreditoDialogState extends ConsumerState<SolicitarCreditoDialog>
               controller: _cupoController,
               autofocus: true,
               decoration: const InputDecoration(labelText: 'Cupo de crédito solicitado'),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+              keyboardType: TextInputType.number,
+              inputFormatters: [FormateadorMiles()],
             ),
             const SizedBox(height: 12),
             _SelectorPlazoPagoSolicitud(
@@ -123,8 +123,8 @@ class _SolicitarCreditoDialogState extends ConsumerState<SolicitarCreditoDialog>
   }
 
   Future<void> _solicitar() async {
-    final cupo = double.tryParse(_cupoController.text.replaceAll(',', '.'));
-    if (cupo == null || cupo <= 0) {
+    final cupo = FormateadorMiles.desformatear(_cupoController.text);
+    if (cupo <= 0) {
       setState(() => _error = 'Ingresa un cupo válido, mayor a 0.');
       return;
     }

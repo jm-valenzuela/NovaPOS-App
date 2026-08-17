@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/router/route_observer.dart';
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../domain/models/cliente_resumen.dart';
 import '../../domain/models/plazo_pago.dart';
@@ -15,14 +18,49 @@ class ClientesAdminScreen extends ConsumerStatefulWidget {
   ConsumerState<ClientesAdminScreen> createState() => _ClientesAdminScreenState();
 }
 
-class _ClientesAdminScreenState extends ConsumerState<ClientesAdminScreen> {
+class _ClientesAdminScreenState extends ConsumerState<ClientesAdminScreen> with RouteAware {
   final _busquedaController = TextEditingController();
+
+  /// Refresca en silencio cada 20s (mismo intervalo que HomeScreen para sus
+  /// contadores pendientes) — cubre el caso de dos pestañas/dispositivos
+  /// distintos abiertos a la vez (ej. alguien autoriza un Cupo de Crédito
+  /// desde otra pestaña duplicada): sin esto, esta pantalla nunca se entera
+  /// porque no comparte memoria con la otra pestaña y aquí nunca ocurre
+  /// ninguna navegación que dispare didPopNext. No usa `cargando` para no
+  /// mostrar el spinner de carga completa (ver estado.clientes.isEmpty en
+  /// build) — solo reemplaza la lista calladamente si algo cambió.
+  Timer? _pollSilencioso;
+
+  @override
+  void initState() {
+    super.initState();
+    _pollSilencioso = Timer.periodic(const Duration(seconds: 20), (_) {
+      ref.read(clientesAdminProvider.notifier).cargar();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) routeObserver.subscribe(this, route);
+  }
 
   @override
   void dispose() {
+    _pollSilencioso?.cancel();
+    routeObserver.unsubscribe(this);
     _busquedaController.dispose();
     super.dispose();
   }
+
+  /// Se llama cuando esta pantalla vuelve a quedar visible porque la ruta
+  /// empujada encima (ej. SolicitudesCreditoPendientesScreen, alcanzada
+  /// desde Home) se cerró — el permiso "customers.clientes.autorizarcredito"
+  /// pudo haber autorizado un Cupo de Crédito mientras tanto y esta lista
+  /// debe reflejarlo sin que el Usuario tenga que recargar la página.
+  @override
+  void didPopNext() => ref.read(clientesAdminProvider.notifier).cargar();
 
   @override
   Widget build(BuildContext context) {

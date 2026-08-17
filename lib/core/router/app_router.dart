@@ -41,6 +41,7 @@ import '../../features/returns/presentation/screens/registrar_devolucion_screen.
 import '../../features/sales/presentation/screens/cotizaciones_screen.dart';
 import '../../features/sales/presentation/screens/descuentos_pendientes_screen.dart';
 import '../../features/sales/presentation/screens/pos_screen.dart';
+import 'route_observer.dart';
 
 /// GoRouter reconstruido cada vez que cambia AuthState (watch, no read) —
 /// simple y suficiente para el tamaño actual de la app (4 rutas); si el
@@ -51,6 +52,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/',
+    observers: [routeObserver],
     redirect: (context, state) {
       final ubicacion = state.matchedLocation;
 

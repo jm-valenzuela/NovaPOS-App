@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/utils/formateador_miles.dart';
+
 enum _TipoDescuento { porcentaje, monto }
 
 /// Resultado de SolicitarDescuentoDialog — mutuamente excluyentes, exactamente
@@ -33,8 +35,12 @@ class _SolicitarDescuentoDialogState extends State<SolicitarDescuentoDialog> {
     super.dispose();
   }
 
+  double? get _valorIngresado => _tipo == _TipoDescuento.monto
+      ? FormateadorMiles.desformatear(_controller.text)
+      : double.tryParse(_controller.text.replaceAll(',', '.'));
+
   void _confirmar() {
-    final valor = double.tryParse(_controller.text.replaceAll(',', '.'));
+    final valor = _valorIngresado;
     if (valor == null || valor <= 0) {
       setState(() => _error = 'Ingresa un valor mayor a cero');
       return;
@@ -71,6 +77,7 @@ class _SolicitarDescuentoDialogState extends State<SolicitarDescuentoDialog> {
             onSelectionChanged: (seleccion) => setState(() {
               _tipo = seleccion.first;
               _error = null;
+              _controller.clear();
             }),
           ),
           const SizedBox(height: 16),
@@ -82,8 +89,10 @@ class _SolicitarDescuentoDialogState extends State<SolicitarDescuentoDialog> {
             key: const Key('solicitarDescuentoValor'),
             controller: _controller,
             autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+            keyboardType: _tipo == _TipoDescuento.monto ? TextInputType.number : const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: _tipo == _TipoDescuento.monto
+                ? [FormateadorMiles()]
+                : [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
             decoration: InputDecoration(
               labelText: _tipo == _TipoDescuento.porcentaje ? 'Porcentaje de descuento' : 'Monto de descuento',
               suffixText: _tipo == _TipoDescuento.porcentaje ? '%' : r'$',

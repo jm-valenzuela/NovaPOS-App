@@ -85,6 +85,19 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
 
   static const _epsilon = 0.005;
 
+  /// El peso chileno no tiene decimales — pero `widget.total` puede llegar
+  /// con restos de coma flotante (ej. de un % de descuento aplicado a un
+  /// precio impar: 5% de $19.990 = $18.990,5). `MonedaFormatter` redondea
+  /// eso al mostrarlo ("Total a cobrar: $18.991"), pero el Cajero solo
+  /// puede tipear pesos enteros (`FormateadorMiles`) — comparar contra el
+  /// total SIN redondear hacía que tipear exactamente el monto mostrado se
+  /// viera como "sobra" o "falta" un peso (Vuelto: $1 pagando el Total
+  /// justo en Efectivo, o "no puede superar el Total" con Tarjeta pagando
+  /// el monto exacto mostrado). Se redondea acá, una sola vez, para que
+  /// toda la lógica de abajo compare contra el mismo número que el Cajero
+  /// ve y tipea.
+  double get _total => widget.total.roundToDouble();
+
   double get _montoNoEfectivo =>
       _pagos.where((p) => p.medioPago != MedioPago.efectivo).fold(0, (suma, p) => suma + p.monto);
 
@@ -94,11 +107,11 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
   /// Lo que el Efectivo todavía debe cubrir después de restar Tarjeta/otros
   /// medios — puede ser negativo si esos medios ya superan el Total (ver
   /// _excedeSinEfectivo).
-  double get _restanteParaEfectivo => widget.total - _montoNoEfectivo;
+  double get _restanteParaEfectivo => _total - _montoNoEfectivo;
 
   /// Tarjeta (u otro medio sin vuelto) no puede superar el Total por sí
   /// sola — a diferencia del Efectivo, no hay "vuelto" en una tarjeta.
-  bool get _excedeSinEfectivo => _montoNoEfectivo > widget.total + _epsilon;
+  bool get _excedeSinEfectivo => _montoNoEfectivo > _total + _epsilon;
 
   bool get _pagosCuadran => !_excedeSinEfectivo && _montoEfectivo >= _restanteParaEfectivo - _epsilon;
 
@@ -192,7 +205,7 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Total a cobrar: ${MonedaFormatter.formatear(widget.total)}', style: Theme.of(context).textTheme.titleMedium),
+            Text('Total a cobrar: ${MonedaFormatter.formatear(_total)}', style: Theme.of(context).textTheme.titleMedium),
             if (_esContado && _vuelto > 0) ...[
               const SizedBox(height: 4),
               Text(

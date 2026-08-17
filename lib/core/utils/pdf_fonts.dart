@@ -14,6 +14,7 @@ class PdfFonts {
   PdfFonts._();
 
   static pw.ThemeData? _tema;
+  static pw.Font? _bold;
 
   static Future<pw.ThemeData> tema() async {
     final cache = _tema;
@@ -23,6 +24,14 @@ class PdfFonts {
     final bold = pw.Font.ttf(await rootBundle.load('assets/fonts/FiraSans-Bold.ttf'));
     final tema = pw.ThemeData.withFont(base: regular, bold: bold);
     _tema = tema;
+    _bold = bold;
     return tema;
   }
+
+  /// Fira Sans Bold ya cargada — para medir texto (`stringMetrics`) con la
+  /// misma fuente que se renderiza, en vez de instanciar la Helvetica-Bold
+  /// base del PDF solo para medir (dispara el aviso "has no Unicode
+  /// support" en consola aunque nunca se use para dibujar). Solo llamar
+  /// después de haber esperado [tema] al menos una vez.
+  static pw.Font get bold => _bold!;
 }

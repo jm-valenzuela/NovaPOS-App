@@ -42,7 +42,7 @@ Future<void> imprimirAficheOfertas(List<ItemOferta> items) {
       final documento = pw.Document(theme: await PdfFonts.tema());
       for (final item in items) {
         documento.addPage(
-          pw.Page(pageFormat: pageFormat, build: (pwContext) => _paginaOferta(item)),
+          pw.Page(pageFormat: pageFormat, build: (pwContext) => _paginaOferta(item, pwContext)),
         );
       }
       return documento.save();
@@ -50,7 +50,7 @@ Future<void> imprimirAficheOfertas(List<ItemOferta> items) {
   );
 }
 
-pw.Widget _paginaOferta(ItemOferta item) {
+pw.Widget _paginaOferta(ItemOferta item, pw.Context context) {
   return pw.Center(
     child: pw.Column(
       mainAxisAlignment: pw.MainAxisAlignment.center,
@@ -80,10 +80,10 @@ pw.Widget _paginaOferta(ItemOferta item) {
         ] else ...[
           pw.Text(
             MonedaFormatter.formatear(item.precioVenta),
-            style: pw.TextStyle(fontSize: _tamanoEtiqueta(item.etiquetaPromocion ?? ''), fontWeight: pw.FontWeight.bold),
+            style: pw.TextStyle(fontSize: _tamanoEtiqueta(item.etiquetaPromocion ?? '', context), fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 14),
-          _bloquePromocion(item.etiquetaPromocion ?? ''),
+          _bloquePromocion(item.etiquetaPromocion ?? '', context),
         ],
       ],
     ),
@@ -104,15 +104,19 @@ const _tamanoMinimoEtiqueta = 30.0;
 const _anchoDisponibleEtiqueta = 620.0 - 40.0 * 2;
 
 /// Tamaño de letra que reutilizan tanto el precio como el badge — mide el
-/// ancho REAL de la etiqueta con las métricas de Helvetica-Bold (en vez de
-/// adivinar por cantidad de caracteres, que fallaba tanto por exceso como
-/// por defecto — ver historial de este archivo) y solo angosta la letra lo
-/// mínimo necesario para que la etiqueta más larga entre en el badge sin
-/// saltar de línea. La mayoría de las etiquetas reales ("2x1", "2do al 20%
+/// ancho REAL de la etiqueta con las métricas de Fira Sans Bold (la misma
+/// fuente con la que se dibuja, ver [PdfFonts] — usar la Helvetica-Bold
+/// base del PDF solo para medir disparaba el aviso "has no Unicode
+/// support" en consola en cada afiche, y sus métricas ni siquiera
+/// coinciden con la fuente real) en vez de adivinar por cantidad de
+/// caracteres, que fallaba tanto por exceso como por defecto — ver
+/// historial de este archivo — y solo angosta la letra lo mínimo
+/// necesario para que la etiqueta más larga entre en el badge sin saltar
+/// de línea. La mayoría de las etiquetas reales ("2x1", "2do al 20%
 /// dto.") caben directo al tope de 64pt; solo las más largas ("Desde 15
 /// uds. -5%") bajan un poco.
-double _tamanoEtiqueta(String etiqueta) {
-  final fuente = PdfFont.helveticaBold(PdfDocument());
+double _tamanoEtiqueta(String etiqueta, pw.Context context) {
+  final fuente = PdfFonts.bold.getFont(context);
   var tamano = _tamanoMaximoEtiqueta;
   while (tamano > _tamanoMinimoEtiqueta && fuente.stringMetrics(etiqueta).width * tamano > _anchoDisponibleEtiqueta) {
     tamano -= 2;
@@ -120,7 +124,7 @@ double _tamanoEtiqueta(String etiqueta) {
   return tamano;
 }
 
-pw.Widget _bloquePromocion(String etiqueta) {
+pw.Widget _bloquePromocion(String etiqueta, pw.Context context) {
   return pw.Container(
     constraints: const pw.BoxConstraints(maxWidth: 620),
     padding: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 28),
@@ -128,7 +132,7 @@ pw.Widget _bloquePromocion(String etiqueta) {
     child: pw.Text(
       etiqueta,
       textAlign: pw.TextAlign.center,
-      style: pw.TextStyle(fontSize: _tamanoEtiqueta(etiqueta), fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+      style: pw.TextStyle(fontSize: _tamanoEtiqueta(etiqueta, context), fontWeight: pw.FontWeight.bold, color: PdfColors.white),
     ),
   );
 }

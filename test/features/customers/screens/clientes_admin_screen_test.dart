@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:novapos_app/core/router/route_observer.dart';
 import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dart';
 import 'package:novapos_app/features/customers/domain/models/plazo_pago.dart';
 import 'package:novapos_app/features/customers/presentation/screens/clientes_admin_screen.dart';
@@ -386,5 +387,56 @@ void main() {
     expect(find.textContaining('Cupo: \$500.000 · Inmediato'), findsOneWidget);
     final boton = tester.widget<IconButton>(find.byKey(const Key('clienteSolicitarCredito_cliente-4')));
     expect(boton.onPressed, isNotNull);
+  });
+
+  testWidgets(
+      'Si la solicitud de crédito se autoriza desde otra pantalla, volver con la flecha atrás refresca sola la lista '
+      '(sin pull to refresh)', (tester) async {
+    fakeCustomer = FakeCustomerRepository()..resultadosARetornar = [_clienteConCreditoPendiente];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [customerRepositoryProvider.overrideWithValue(fakeCustomer)],
+      child: MaterialApp(
+        navigatorObservers: [routeObserver],
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                key: const Key('irAOtraPantalla'),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ClientesAdminScreen())),
+                child: const Text('Ver Clientes'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.byKey(const Key('irAOtraPantalla')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Crédito pendiente de autorización'), findsOneWidget);
+
+    // La solicitud se autoriza en otra pantalla (ej. "Autorización de Crédito"
+    // desde Home, empujada encima de esta) — simulado empujando y cerrando
+    // otra ruta mientras el estado del fake ya refleja la autorización.
+    fakeCustomer.resultadosARetornar = [
+      const ClienteResumen(
+        id: 'cliente-4',
+        rut: '76.123.456-0',
+        nombre: 'Empresa Credito Pendiente',
+        email: null,
+        telefono: null,
+        cupoCredito: 500000,
+        estadoSolicitudCredito: 2,
+      ),
+    ];
+    final contextClientes = tester.element(find.byType(ClientesAdminScreen));
+    Navigator.of(contextClientes)
+        .push(MaterialPageRoute(builder: (_) => const Scaffold(body: Text('Solicitudes de Cupo de Crédito'))));
+    await tester.pumpAndSettle();
+    Navigator.of(contextClientes).pop();
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Crédito pendiente de autorización'), findsNothing);
+    expect(find.textContaining('Cupo: \$500.000 · Inmediato'), findsOneWidget);
   });
 }
