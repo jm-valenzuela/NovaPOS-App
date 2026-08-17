@@ -1,11 +1,14 @@
 /// Espejo de ClienteCobranzaResumen en el backend (ListarCobranzaQuery) —
-/// una fila del listado global de Cobranzas, ya viene ordenado del
-/// servidor (más atrasado primero).
+/// una fila del listado global de Cobranzas: TODOS los Clientes con Cupo
+/// de Crédito asignado (tengan o no saldo pendiente ahora mismo), ya
+/// viene ordenado del servidor (más atrasado primero).
 class ClienteCobranza {
   const ClienteCobranza({
     required this.clienteId,
     required this.nombre,
     required this.rut,
+    required this.cupoCredito,
+    required this.plazoPagoId,
     required this.saldoTotal,
     required this.saldoVencido,
     required this.saldoPorVencer,
@@ -16,6 +19,8 @@ class ClienteCobranza {
         clienteId: json['clienteId'] as String,
         nombre: json['nombre'] as String,
         rut: json['rut'] as String?,
+        cupoCredito: (json['cupoCredito'] as num).toDouble(),
+        plazoPagoId: json['plazoPagoId'] as String?,
         saldoTotal: (json['saldoTotal'] as num).toDouble(),
         saldoVencido: (json['saldoVencido'] as num).toDouble(),
         saldoPorVencer: (json['saldoPorVencer'] as num).toDouble(),
@@ -25,13 +30,16 @@ class ClienteCobranza {
   final String clienteId;
   final String nombre;
   final String? rut;
+  final double cupoCredito;
+  final String? plazoPagoId;
   final double saldoTotal;
   final double saldoVencido;
   final double saldoPorVencer;
   final int diasAtraso;
 
-  /// "Al día" no es un estado alcanzable acá — este listado solo trae
-  /// Clientes con SaldoTotal > 0 (ver ListarCobranzaQuery), así que
-  /// siempre es Vencido o Por vencer.
+  double get cupoDisponible => cupoCredito - saldoTotal;
+
+  bool get sinDeudaVigente => saldoTotal <= 0;
+
   bool get estaVencido => saldoVencido > 0;
 }
