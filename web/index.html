@@ -36,8 +36,16 @@
     // The value below is injected by flutter build, do not touch.
     const serviceWorkerVersion = null;
   </script>
-  <!-- Requerido por mobile_scanner en Web (decodifica códigos de barras vía ZXing.js) -->
-  <script src="https://unpkg.com/@zxing/library@0.19.1" type="application/javascript"></script>
+  <!--
+    Requerido por mobile_scanner en Web (decodifica códigos de barras vía
+    ZXing.js). Vendorizado localmente (no cargado desde un CDN externo):
+    NovaPOS es Offline First, y un <script src> a unpkg.com fallaba
+    silenciosamente sin internet, con un firewall corporativo, o con
+    cualquier bloqueador de scripts de terceros — el escáner quedaba
+    inutilizable sin ningún error visible. web/zxing.min.js es el bundle
+    UMD oficial de @zxing/library@0.19.1 (Apache-2.0), sin modificar.
+  -->
+  <script src="zxing.min.js" type="application/javascript"></script>
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
 </head>
