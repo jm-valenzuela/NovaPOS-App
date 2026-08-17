@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/formateador_miles.dart';
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../../customers/domain/models/cliente_resumen.dart';
 import '../../../returns/domain/models/nota_credito_cliente_resumen.dart';
@@ -52,7 +52,7 @@ class _PagoEnEdicion {
   /// Solo cuando medioPago es notaCredito — qué NotaCreditoCliente Disponible se eligió.
   String? notaCreditoId;
 
-  double get monto => double.tryParse(controller.text.replaceAll(',', '.')) ?? 0;
+  double get monto => FormateadorMiles.desformatear(controller.text);
 }
 
 class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
@@ -295,8 +295,8 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
                   key: Key('checkoutMonto_$indice'),
                   controller: pago.controller,
                   readOnly: pago.medioPago == MedioPago.notaCredito,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FormateadorMiles()],
                   decoration: const InputDecoration(labelText: 'Monto'),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -341,7 +341,7 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
                 .toList(),
             onChanged: (nota) => setState(() {
               pago.notaCreditoId = nota?.id;
-              pago.controller.text = nota == null ? '' : nota.montoTotal.toStringAsFixed(0);
+              pago.controller.text = nota == null ? '' : FormateadorMiles.formatear(nota.montoTotal);
             }),
           );
         },

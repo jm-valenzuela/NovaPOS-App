@@ -98,6 +98,16 @@ void main() {
     expect(boton.onPressed, isNotNull);
   });
 
+  testWidgets('El campo Monto agrupa los miles en vivo mientras se tipea', (tester) async {
+    await abrirDialogo(tester, total: 199980, formaPago: FormaPago.contado, cliente: null);
+
+    await tester.enterText(find.byKey(const Key('checkoutMonto_0')), '199980');
+    await tester.pump();
+
+    final montoField = tester.widget<TextField>(find.byKey(const Key('checkoutMonto_0')));
+    expect(montoField.controller!.text, '199.980');
+  });
+
   testWidgets('A Crédito, no se muestra la sección de medio de pago y Confirmar queda habilitado', (tester) async {
     await abrirDialogo(tester, total: 1000, formaPago: FormaPago.credito, cliente: null);
 
@@ -255,7 +265,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final montoField = tester.widget<TextField>(find.byKey(const Key('checkoutMonto_0')));
-      expect(montoField.controller!.text, '1000');
+      expect(montoField.controller!.text, '1.000');
       expect(montoField.readOnly, isTrue);
 
       await tester.tap(find.byKey(const Key('checkoutConfirmar')));
