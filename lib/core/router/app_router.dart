@@ -41,6 +41,11 @@ import '../../features/returns/presentation/screens/registrar_devolucion_screen.
 import '../../features/sales/presentation/screens/cotizaciones_screen.dart';
 import '../../features/sales/presentation/screens/descuentos_pendientes_screen.dart';
 import '../../features/sales/presentation/screens/pos_screen.dart';
+import '../../features/workorders/presentation/screens/historial_cliente_screen.dart';
+import '../../features/workorders/presentation/screens/operarios_screen.dart';
+import '../../features/workorders/presentation/screens/orden_trabajo_detalle_screen.dart';
+import '../../features/workorders/presentation/screens/ordenes_trabajo_hub_screen.dart';
+import '../../features/workorders/presentation/screens/ordenes_trabajo_screen.dart';
 import 'route_observer.dart';
 
 /// GoRouter reconstruido cada vez que cambia AuthState (watch, no read) —
@@ -119,6 +124,20 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/compras/documentos-recibidos', builder: (context, state) => const DocumentosRecibidosScreen()),
       GoRoute(path: '/compras/discrepancias', builder: (context, state) => const DiscrepanciasScreen()),
+      GoRoute(path: '/ordenes-trabajo', builder: (context, state) => const OrdenesTrabajoHubScreen()),
+      GoRoute(path: '/ordenes-trabajo/listado', builder: (context, state) => const OrdenesTrabajoScreen()),
+      GoRoute(path: '/ordenes-trabajo/operarios', builder: (context, state) => const OperariosScreen()),
+      GoRoute(
+        path: '/ordenes-trabajo/historial/:clienteId',
+        builder: (context, state) => HistorialClienteScreen(
+          clienteId: state.pathParameters['clienteId']!,
+          clienteNombre: (state.extra as String?) ?? 'Cliente',
+        ),
+      ),
+      GoRoute(
+        path: '/ordenes-trabajo/:id',
+        builder: (context, state) => OrdenTrabajoDetalleScreen(ordenTrabajoId: state.pathParameters['id']!),
+      ),
       GoRoute(path: '/reportes/flujo-caja', builder: (context, state) => const FlujoCajaScreen()),
       GoRoute(path: '/inventario', builder: (context, state) => const InventarioHubScreen()),
       GoRoute(path: '/inventario/ajustes', builder: (context, state) => const AjustesInventarioScreen()),

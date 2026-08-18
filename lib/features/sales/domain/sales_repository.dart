@@ -23,6 +23,13 @@ abstract class SalesRepository {
   /// Mismo bloqueo que actualizarLinea.
   Future<void> quitarLinea({required String ventaId, required String lineaVentaId});
 
+  /// Línea sin Catálogo, precio a mano — mano de obra u otro cargo que no
+  /// es un Producto vendible (ej. Orden de Trabajo, ver workorders).
+  /// Devuelve el Id de la línea creada.
+  Future<String> agregarLineaLibre({required String ventaId, required String descripcion, required double monto});
+
+  Future<void> quitarLineaLibre({required String ventaId, required String lineaLibreId});
+
   /// tipoDocumento: Boleta o Factura, elegido por el Cajero (ver
   /// CheckoutDialog). pagos: obligatorio y no vacío si la Venta es al
   /// Contado (soporta pago mixto); vacío si es a Crédito.

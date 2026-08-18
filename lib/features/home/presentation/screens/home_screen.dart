@@ -71,6 +71,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final tieneDevoluciones = sesion?.tienePermiso('sales.devoluciones.registrar') ?? false;
     final tieneCompras = (sesion?.tienePermiso('purchasing.ordenescompra.gestionar') ?? false) ||
         (sesion?.tienePermiso('purchasing.proveedores.gestionar') ?? false);
+    final tieneOrdenesTrabajo = sesion?.tienePermiso('sales.ordenestrabajo.gestionar') ?? false;
     final tieneInventario = sesion?.tienePermiso('inventory.stock.ver') ?? false;
     final tieneReportes = sesion?.tienePermiso('reporting.reportes.ver') ?? false;
     // Solo se observa el provider si hay permiso — evita el llamado inicial
@@ -143,6 +144,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             badge: cantidadDescuentosPendientes > 0 ? cantidadDescuentosPendientes : null,
             badgeKey: const Key('badgeDescuentosPendientes'),
             onTap: () => context.push('/descuentos-pendientes'),
+          ),
+        if (tieneOrdenesTrabajo)
+          MenuCard(
+            key: const Key('homeOrdenesTrabajoCard'),
+            categoria: 'Ventas',
+            titulo: 'Órdenes de Trabajo',
+            subtitulo: 'Reparaciones y servicios cobrables a un Cliente.',
+            onTap: () => context.push('/ordenes-trabajo'),
           ),
         MenuCard(
           categoria: 'Catálogo',

@@ -69,6 +69,27 @@ class VentaApi {
     }
   }
 
+  /// Línea sin Catálogo, precio a mano (ver LineaLibreVenta en el backend) — mano de obra u otro cargo que no es un Producto vendible.
+  Future<String> agregarLineaLibre({required String ventaId, required String descripcion, required double monto}) async {
+    try {
+      final respuesta = await _client.dio.post('/ventas/$ventaId/lineas-libres', data: {
+        'descripcion': descripcion,
+        'monto': monto,
+      });
+      return respuesta.data['id'] as String;
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<void> quitarLineaLibre({required String ventaId, required String lineaLibreId}) async {
+    try {
+      await _client.dio.delete('/ventas/$ventaId/lineas-libres/$lineaLibreId');
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
   Future<ResumenVenta> confirmar({
     required String ventaId,
     required TipoDocumento tipoDocumento,

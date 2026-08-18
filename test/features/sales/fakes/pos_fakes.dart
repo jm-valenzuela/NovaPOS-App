@@ -165,6 +165,22 @@ class FakeSalesRepository implements SalesRepository {
     if (errorAforzar != null) throw Exception(errorAforzar);
   }
 
+  final List<({String ventaId, String descripcion, double monto})> lineasLibresAgregadas = [];
+  final List<({String ventaId, String lineaLibreId})> lineasLibresQuitadas = [];
+
+  @override
+  Future<String> agregarLineaLibre({required String ventaId, required String descripcion, required double monto}) async {
+    lineasLibresAgregadas.add((ventaId: ventaId, descripcion: descripcion, monto: monto));
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return 'linea-libre-fake-${lineasLibresAgregadas.length}';
+  }
+
+  @override
+  Future<void> quitarLineaLibre({required String ventaId, required String lineaLibreId}) async {
+    lineasLibresQuitadas.add((ventaId: ventaId, lineaLibreId: lineaLibreId));
+    if (errorAforzar != null) throw Exception(errorAforzar);
+  }
+
   TipoDocumento? ultimoTipoDocumento;
   List<PagoInput>? ultimosPagos;
 
