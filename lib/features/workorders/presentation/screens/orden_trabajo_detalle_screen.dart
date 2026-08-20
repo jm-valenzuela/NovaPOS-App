@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../../sales/presentation/providers/pos_providers.dart' show tenancyRepositoryProvider;
+import '../../../sales/presentation/widgets/representacion_impresa_venta.dart';
 import '../../domain/models/orden_trabajo.dart';
 import '../providers/workorders_providers.dart';
 import '../widgets/asignar_operador_dialog.dart';
@@ -54,8 +55,8 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Chip(label: Text(orden.estado.etiqueta)),
-                          if (orden.montoCotizado != null)
-                            Text(MonedaFormatter.formatear(orden.montoCotizado!), style: Theme.of(context).textTheme.headlineSmall),
+                          if (orden.montoAprobado != null)
+                            Text(MonedaFormatter.formatear(orden.montoAprobado!), style: Theme.of(context).textTheme.headlineSmall),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -80,7 +81,8 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
                       const SizedBox(height: 20),
                       if (orden.ventaId != null) ...[
                         Text('Venta vinculada', style: Theme.of(context).textTheme.labelLarge),
-                        Text(orden.ventaId!),
+                        const SizedBox(height: 4),
+                        _ventaVinculada(context, ref, orden.ventaId!),
                         const SizedBox(height: 20),
                       ],
                       if (orden.estado == EstadoOrdenTrabajo.lista)
@@ -99,6 +101,31 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
   }
 
   String _formatearFecha(DateTime fecha) => fecha.toLocal().toString().split(' ').first;
+
+  Widget _ventaVinculada(BuildContext context, WidgetRef ref, String ventaId) {
+    final estado = ref.watch(ventaVinculadaProvider(ventaId));
+    return estado.when(
+      loading: () => const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+      error: (_, __) => Text(ventaId, style: Theme.of(context).textTheme.bodySmall),
+      data: (venta) => Row(
+        children: [
+          Expanded(
+            child: Text(
+              venta.tieneDte ? '${venta.etiquetaDocumento} N° ${venta.folio}' : 'Sin documento tributario emitido',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          if (venta.tieneDte)
+            TextButton.icon(
+              key: const Key('imprimirVentaVinculadaBoton'),
+              onPressed: () => imprimirBoletaFactura(venta.resumen, venta.lineasImpresion),
+              icon: const Icon(Icons.print_outlined, size: 18),
+              label: const Text('Imprimir'),
+            ),
+        ],
+      ),
+    );
+  }
 
   Widget _tarjetaItem(BuildContext context, WidgetRef ref, String ordenTrabajoId, ItemOrdenTrabajoDetalle item) {
     return Card(

@@ -17,6 +17,7 @@ final _ordenEnEvaluacion = OrdenTrabajoResumen(
   estado: EstadoOrdenTrabajo.enEvaluacion,
   fechaRecepcion: DateTime.utc(2026, 8, 17),
   montoCotizado: 45000,
+  montoAprobado: null,
 );
 
 void main() {

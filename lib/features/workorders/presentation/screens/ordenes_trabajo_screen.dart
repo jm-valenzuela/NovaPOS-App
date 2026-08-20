@@ -69,9 +69,9 @@ class OrdenesTrabajoScreen extends ConsumerWidget {
                               '${orden.estado.etiqueta} · ${orden.fechaRecepcion.toLocal().toString().split(' ').first}\n${orden.descripcion}',
                             ),
                             isThreeLine: true,
-                            trailing: orden.montoCotizado == null
+                            trailing: orden.montoAprobado == null
                                 ? null
-                                : Text(MonedaFormatter.formatear(orden.montoCotizado!),
+                                : Text(MonedaFormatter.formatear(orden.montoAprobado!),
                                     style: const TextStyle(fontWeight: FontWeight.bold)),
                             onTap: () => context.push('/ordenes-trabajo/${orden.id}'),
                           );

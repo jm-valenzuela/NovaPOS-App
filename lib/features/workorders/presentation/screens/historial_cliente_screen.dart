@@ -56,10 +56,10 @@ class _HistorialClienteScreenState extends ConsumerState<HistorialClienteScreen>
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (orden.montoCotizado != null)
+                          if (orden.montoAprobado != null)
                             Padding(
                               padding: const EdgeInsets.only(right: 12),
-                              child: Text(MonedaFormatter.formatear(orden.montoCotizado!)),
+                              child: Text(MonedaFormatter.formatear(orden.montoAprobado!)),
                             ),
                           duplicando
                               ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))

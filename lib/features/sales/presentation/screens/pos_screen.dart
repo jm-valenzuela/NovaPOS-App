@@ -20,6 +20,7 @@ import '../../../tenancy/domain/models/caja_resumen.dart';
 import '../../../catalog/domain/models/producto_vendible.dart';
 import '../../domain/models/cotizacion.dart';
 import '../../domain/models/linea_carrito.dart';
+import '../../domain/models/linea_impresion.dart';
 import '../../domain/models/resumen_venta.dart';
 import '../../domain/models/venta_enums.dart';
 import '../providers/pos_providers.dart';
@@ -578,7 +579,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           if (resumen.tieneDte)
             TextButton(
               key: const Key('ventaConfirmadaImprimir'),
-              onPressed: () => imprimirBoletaFactura(resumen, lineas),
+              onPressed: () => imprimirBoletaFactura(resumen, lineas.map(LineaImpresion.desdeCarrito).toList()),
               child: const Text('Imprimir'),
             ),
           TextButton(

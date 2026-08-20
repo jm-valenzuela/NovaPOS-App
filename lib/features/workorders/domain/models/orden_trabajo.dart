@@ -203,6 +203,7 @@ class OrdenTrabajoResumen {
     required this.estado,
     required this.fechaRecepcion,
     required this.montoCotizado,
+    required this.montoAprobado,
   });
 
   factory OrdenTrabajoResumen.fromJson(Map<String, dynamic> json) => OrdenTrabajoResumen(
@@ -213,6 +214,7 @@ class OrdenTrabajoResumen {
         estado: EstadoOrdenTrabajo.desdeValor(json['estado'] as int),
         fechaRecepcion: DateTime.parse(json['fechaRecepcion'] as String),
         montoCotizado: json['montoCotizado'] == null ? null : (json['montoCotizado'] as num).toDouble(),
+        montoAprobado: json['montoAprobado'] == null ? null : (json['montoAprobado'] as num).toDouble(),
       );
 
   final String id;
@@ -222,6 +224,7 @@ class OrdenTrabajoResumen {
   final EstadoOrdenTrabajo estado;
   final DateTime fechaRecepcion;
   final double? montoCotizado;
+  final double? montoAprobado;
 }
 
 /// Espejo de OrdenTrabajoDetalle — detalle completo con sus Ítems.

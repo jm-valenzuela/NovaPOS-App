@@ -16,6 +16,7 @@ import 'package:novapos_app/features/sales/domain/models/detalle_descuento_pendi
 import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/pago_input.dart';
 import 'package:novapos_app/features/sales/domain/models/resumen_venta.dart';
+import 'package:novapos_app/features/sales/domain/models/venta_detalle.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/domain/sales_repository.dart';
 import 'package:novapos_app/features/tenancy/domain/models/bodega_resumen.dart';
@@ -305,6 +306,17 @@ class FakeSalesRepository implements SalesRepository {
           descuentoGeneralMonto: null,
           lineas: const [],
         );
+  }
+
+  VentaDetalle? ventaDetalleARetornar;
+  String? ultimaVentaIdConsultada;
+
+  @override
+  Future<VentaDetalle> obtenerVenta(String ventaId) async {
+    ultimaVentaIdConsultada = ventaId;
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return ventaDetalleARetornar ??
+        VentaDetalle(id: ventaId, neto: totalARetornar, iva: 0, total: totalARetornar, lineas: const []);
   }
 }
 

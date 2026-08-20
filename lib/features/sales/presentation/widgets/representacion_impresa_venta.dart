@@ -6,7 +6,7 @@ import 'package:printing/printing.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
 import '../../../../core/utils/pdf_fonts.dart';
-import '../../domain/models/linea_carrito.dart';
+import '../../domain/models/linea_impresion.dart';
 import '../../domain/models/resumen_venta.dart';
 
 /// Abre el diálogo de impresión del sistema operativo con la
@@ -19,7 +19,7 @@ import '../../domain/models/resumen_venta.dart';
 /// `pdf`/`printing`) codificando el TED firmado tal cual — no es un
 /// facsímil oficial del SII (el resto del layout es informativo, no
 /// sigue el formato exacto normado), pero el timbre en sí es escaneable.
-Future<void> imprimirBoletaFactura(ResumenVenta resumen, List<LineaCarrito> lineas) {
+Future<void> imprimirBoletaFactura(ResumenVenta resumen, List<LineaImpresion> lineas) {
   final formatoFecha = DateFormat('dd-MM-yyyy HH:mm');
   final esFactura = resumen.tipoDocumentoEmitido == 33;
   final etiquetaDocumento = esFactura ? 'FACTURA ELECTRÓNICA' : 'BOLETA ELECTRÓNICA';
@@ -53,15 +53,26 @@ Future<void> imprimirBoletaFactura(ResumenVenta resumen, List<LineaCarrito> line
               pw.SizedBox(height: 6),
               pw.Divider(),
               for (final linea in lineas) ...[
-                pw.Text(linea.producto.nombreProducto, style: const pw.TextStyle(fontSize: 9)),
+                pw.Text(linea.descripcion, style: const pw.TextStyle(fontSize: 9)),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('${_formatearCantidad(linea.cantidad)} x ${MonedaFormatter.formatear(linea.subtotal / linea.cantidad)}',
+                    pw.Text(
+                        linea.cantidad != null && linea.precioUnitario != null
+                            ? '${_formatearCantidad(linea.cantidad!)} x ${MonedaFormatter.formatear(linea.precioUnitario!)}'
+                            : '',
                         style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                     pw.Text(MonedaFormatter.formatear(linea.subtotal), style: const pw.TextStyle(fontSize: 9)),
                   ],
                 ),
+                if (_descuentoLinea(linea) > 0.5)
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.end,
+                    children: [
+                      pw.Text('Descuento -${MonedaFormatter.formatear(_descuentoLinea(linea))}',
+                          style: const pw.TextStyle(fontSize: 8, color: PdfColors.green700)),
+                    ],
+                  ),
                 pw.SizedBox(height: 4),
               ],
               pw.Divider(),
@@ -113,3 +124,12 @@ pw.Widget _filaResumen(String etiqueta, double monto, {bool negrita = false}) {
 }
 
 String _formatearCantidad(double cantidad) => cantidad.truncateToDouble() == cantidad ? cantidad.toInt().toString() : cantidad.toString();
+
+/// Cantidad x PrecioUnitario (precio real de lista, sin descuento) — si no hay ambos datos (ej. una línea de
+/// Trabajo sin Producto), no hay bruto que calcular, se usa el Subtotal tal cual.
+double _montoBruto(LineaImpresion linea) =>
+    linea.cantidad != null && linea.precioUnitario != null ? linea.cantidad! * linea.precioUnitario! : linea.subtotal;
+
+/// Diferencia entre el bruto y lo efectivamente cobrado (Subtotal) — el descuento por volumen/promoción por
+/// grupo ya aplicado a esta línea (ver LineaVenta en el backend). Cero si no hubo descuento.
+double _descuentoLinea(LineaImpresion linea) => _montoBruto(linea) - linea.subtotal;

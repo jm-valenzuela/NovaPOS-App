@@ -7,6 +7,7 @@ import '../domain/models/detalle_descuento_pendiente.dart';
 import '../domain/models/estado_descuento_venta.dart';
 import '../domain/models/pago_input.dart';
 import '../domain/models/resumen_venta.dart';
+import '../domain/models/venta_detalle.dart';
 import '../domain/models/venta_enums.dart';
 
 class VentaApi {
@@ -189,6 +190,15 @@ class VentaApi {
     try {
       final respuesta = await _client.dio.get('/ventas/cotizaciones/$ventaId');
       return CotizacionDetalle.fromJson(respuesta.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
+  Future<VentaDetalle> obtenerVenta(String ventaId) async {
+    try {
+      final respuesta = await _client.dio.get('/ventas/$ventaId');
+      return VentaDetalle.fromJson(respuesta.data as Map<String, dynamic>);
     } on DioException catch (e) {
       ApiClient.lanzarError(e);
     }

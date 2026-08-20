@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/core_providers.dart';
+import '../../../sales/domain/models/venta_detalle.dart';
+import '../../../sales/presentation/providers/pos_providers.dart' show salesRepositoryProvider;
 import '../../data/workorders_api.dart';
 import '../../data/workorders_repository_impl.dart';
 import '../../domain/models/orden_trabajo.dart';
@@ -328,4 +330,9 @@ class OrdenTrabajoDetalleController extends StateNotifier<OrdenTrabajoDetalleSta
 final ordenTrabajoDetalleProvider =
     StateNotifierProvider.autoDispose.family<OrdenTrabajoDetalleController, OrdenTrabajoDetalleState, String>((ref, ordenTrabajoId) {
   return OrdenTrabajoDetalleController(ref.watch(workOrdersRepositoryProvider), ordenTrabajoId);
+});
+
+/// Detalle de la Venta vinculada a la Orden (ver OrdenTrabajoDetalle.ventaId) — con los datos del DTE (Boleta/Factura) emitido, para mostrarlos y ofrecer reimprimir.
+final ventaVinculadaProvider = FutureProvider.autoDispose.family<VentaDetalle, String>((ref, ventaId) {
+  return ref.watch(salesRepositoryProvider).obtenerVenta(ventaId);
 });

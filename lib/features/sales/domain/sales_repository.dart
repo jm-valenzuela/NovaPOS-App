@@ -4,6 +4,7 @@ import 'models/detalle_descuento_pendiente.dart';
 import 'models/estado_descuento_venta.dart';
 import 'models/pago_input.dart';
 import 'models/resumen_venta.dart';
+import 'models/venta_detalle.dart';
 import 'models/venta_enums.dart';
 
 /// Contrato para el flujo de cobro del POS — Crear Venta, agregar cada
@@ -65,4 +66,7 @@ abstract class SalesRepository {
 
   /// Detalle completo para rehidratar el carrito al rescatar una Cotización.
   Future<CotizacionDetalle> obtenerCotizacion(String ventaId);
+
+  /// Detalle de una Venta ya confirmada, con los datos del DTE emitido (si lo hay) — para mostrar/reimprimir la Boleta o Factura más adelante (ej. desde la Orden de Trabajo que la generó).
+  Future<VentaDetalle> obtenerVenta(String ventaId);
 }

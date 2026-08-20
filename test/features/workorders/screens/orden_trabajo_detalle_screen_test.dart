@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:novapos_app/core/utils/moneda_formatter.dart';
+import 'package:novapos_app/features/sales/domain/models/venta_detalle.dart';
+import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart' show salesRepositoryProvider;
 import 'package:novapos_app/features/workorders/domain/models/orden_trabajo.dart';
 import 'package:novapos_app/features/workorders/presentation/providers/workorders_providers.dart';
 import 'package:novapos_app/features/workorders/presentation/screens/orden_trabajo_detalle_screen.dart';
 
+import '../../sales/fakes/pos_fakes.dart';
 import '../fakes/workorders_fakes.dart';
 
 const _lineaTrabajo = LineaItemOrdenTrabajo(
@@ -131,11 +134,19 @@ OrdenTrabajoDetalle _orden({
   );
 }
 
-Future<void> _pumpDetalle(WidgetTester tester, FakeWorkOrdersRepository fake, OrdenTrabajoDetalle orden) async {
+Future<void> _pumpDetalle(
+  WidgetTester tester,
+  FakeWorkOrdersRepository fake,
+  OrdenTrabajoDetalle orden, {
+  FakeSalesRepository? fakeSales,
+}) async {
   fake.detalleARetornar = orden;
 
   await tester.pumpWidget(ProviderScope(
-    overrides: [workOrdersRepositoryProvider.overrideWithValue(fake)],
+    overrides: [
+      workOrdersRepositoryProvider.overrideWithValue(fake),
+      salesRepositoryProvider.overrideWithValue(fakeSales ?? FakeSalesRepository()),
+    ],
     child: const MaterialApp(home: OrdenTrabajoDetalleScreen(ordenTrabajoId: 'ot-1')),
   ));
   await tester.pump();
@@ -216,15 +227,40 @@ void main() {
     expect(find.textContaining('no hay nada que cobrar'), findsOneWidget);
   });
 
-  testWidgets('Entregada muestra la Venta vinculada y no ofrece agregar Ítems', (tester) async {
+  testWidgets('Entregada con documento emitido muestra el N° de documento y el botón Imprimir', (tester) async {
+    final fakeSales = FakeSalesRepository()
+      ..ventaDetalleARetornar = const VentaDetalle(
+        id: 'venta-1',
+        neto: 21008,
+        iva: 3992,
+        total: 25000,
+        lineas: [],
+        dteEmitidoId: 'dte-1',
+        tipoDocumentoEmitido: 39,
+        folio: 1234,
+      );
+
+    await _pumpDetalle(
+      tester,
+      fake,
+      _orden(estado: EstadoOrdenTrabajo.entregada, items: const [_itemTerminado], ventaId: 'venta-1'),
+      fakeSales: fakeSales,
+    );
+
+    expect(find.text('Boleta N° 1234'), findsOneWidget);
+    expect(find.byKey(const Key('imprimirVentaVinculadaBoton')), findsOneWidget);
+    expect(find.byKey(const Key('agregarItemBoton')), findsNothing);
+  });
+
+  testWidgets('Entregada sin documento tributario no ofrece Imprimir', (tester) async {
     await _pumpDetalle(
       tester,
       fake,
       _orden(estado: EstadoOrdenTrabajo.entregada, items: const [_itemTerminado], ventaId: 'venta-1'),
     );
 
-    expect(find.text('venta-1'), findsOneWidget);
-    expect(find.byKey(const Key('agregarItemBoton')), findsNothing);
+    expect(find.text('Sin documento tributario emitido'), findsOneWidget);
+    expect(find.byKey(const Key('imprimirVentaVinculadaBoton')), findsNothing);
   });
 
   testWidgets('El historial del Ítem se puede expandir y muestra sus eventos', (tester) async {
