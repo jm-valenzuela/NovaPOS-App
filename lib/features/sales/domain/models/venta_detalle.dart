@@ -1,5 +1,6 @@
 import 'linea_impresion.dart';
 import 'resumen_venta.dart';
+import 'venta_enums.dart';
 
 /// Espejo de LineaVentaDetalle en el backend (ver ObtenerVentaQuery) — Cantidad/PrecioUnitario null en una línea libre (ej. mano de obra de una Orden de Trabajo), que no tiene Variante ni precio unitario, solo un Monto ya fijo.
 class LineaVentaDetalle {
@@ -18,6 +19,19 @@ class LineaVentaDetalle {
   final double subtotal;
 }
 
+/// Espejo de PagoVentaDetalle en el backend — una línea de pago (soporta pago mixto, ver Venta.Confirmar).
+class PagoVentaDetalle {
+  const PagoVentaDetalle({required this.medioPago, required this.monto});
+
+  factory PagoVentaDetalle.fromJson(Map<String, dynamic> json) => PagoVentaDetalle(
+        medioPago: MedioPago.desdeValor(json['medioPago'] as int),
+        monto: (json['monto'] as num).toDouble(),
+      );
+
+  final MedioPago medioPago;
+  final double monto;
+}
+
 /// Espejo de VentaDetalle en el backend — detalle de una Venta ya
 /// confirmada, con los datos del DTE emitido (si lo hay), para
 /// mostrar/reimprimir la Boleta o Factura más adelante sin depender de
@@ -30,6 +44,7 @@ class VentaDetalle {
     required this.iva,
     required this.total,
     required this.lineas,
+    required this.pagos,
     this.dteEmitidoId,
     this.tipoDocumentoEmitido,
     this.folio,
@@ -51,6 +66,7 @@ class VentaDetalle {
         iva: (json['iva'] as num).toDouble(),
         total: (json['total'] as num).toDouble(),
         lineas: (json['lineas'] as List<dynamic>).map((l) => LineaVentaDetalle.fromJson(l as Map<String, dynamic>)).toList(),
+        pagos: (json['pagos'] as List<dynamic>).map((p) => PagoVentaDetalle.fromJson(p as Map<String, dynamic>)).toList(),
         dteEmitidoId: json['dteEmitidoId'] as String?,
         tipoDocumentoEmitido: json['tipoDocumentoEmitido'] as int?,
         folio: json['folio'] as int?,
@@ -71,6 +87,7 @@ class VentaDetalle {
   final double iva;
   final double total;
   final List<LineaVentaDetalle> lineas;
+  final List<PagoVentaDetalle> pagos;
 
   final String? dteEmitidoId;
 

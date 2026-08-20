@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../../sales/domain/models/venta_detalle.dart';
 import '../../../sales/presentation/providers/pos_providers.dart' show tenancyRepositoryProvider;
 import '../../../sales/presentation/widgets/representacion_impresa_venta.dart';
 import '../../domain/models/orden_trabajo.dart';
@@ -102,6 +103,12 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
 
   String _formatearFecha(DateTime fecha) => fecha.toLocal().toString().split(' ').first;
 
+  /// "Efectivo" si fue un solo medio de pago; "Efectivo \$6.000 + Tarjeta Débito \$4.000" si fue mixto (ver Venta.Confirmar en el backend).
+  String _etiquetaPagos(List<PagoVentaDetalle> pagos) {
+    if (pagos.length == 1) return pagos.first.medioPago.etiqueta;
+    return pagos.map((p) => '${p.medioPago.etiqueta} ${MonedaFormatter.formatear(p.monto)}').join(' + ');
+  }
+
   Widget _ventaVinculada(BuildContext context, WidgetRef ref, String ventaId) {
     final estado = ref.watch(ventaVinculadaProvider(ventaId));
     return estado.when(
@@ -110,9 +117,16 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
       data: (venta) => Row(
         children: [
           Expanded(
-            child: Text(
-              venta.tieneDte ? '${venta.etiquetaDocumento} N° ${venta.folio}' : 'Sin documento tributario emitido',
-              style: Theme.of(context).textTheme.bodyMedium,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  venta.tieneDte ? '${venta.etiquetaDocumento} N° ${venta.folio}' : 'Sin documento tributario emitido',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                if (venta.pagos.isNotEmpty)
+                  Text(_etiquetaPagos(venta.pagos), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700])),
+              ],
             ),
           ),
           if (venta.tieneDte)

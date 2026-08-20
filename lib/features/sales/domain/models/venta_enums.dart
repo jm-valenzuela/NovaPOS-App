@@ -69,6 +69,8 @@ enum MedioPago {
 
   final int valorApi;
 
+  static MedioPago desdeValor(int valor) => MedioPago.values.firstWhere((m) => m.valorApi == valor, orElse: () => MedioPago.efectivo);
+
   String get etiqueta => switch (this) {
         MedioPago.efectivo => 'Efectivo',
         MedioPago.tarjetaDebito => 'Tarjeta Débito',

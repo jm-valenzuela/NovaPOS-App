@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:novapos_app/core/utils/moneda_formatter.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_detalle.dart';
+import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart' show salesRepositoryProvider;
 import 'package:novapos_app/features/workorders/domain/models/orden_trabajo.dart';
 import 'package:novapos_app/features/workorders/presentation/providers/workorders_providers.dart';
@@ -227,7 +228,7 @@ void main() {
     expect(find.textContaining('no hay nada que cobrar'), findsOneWidget);
   });
 
-  testWidgets('Entregada con documento emitido muestra el N° de documento y el botón Imprimir', (tester) async {
+  testWidgets('Entregada con documento emitido muestra el N° de documento, la forma de pago y el botón Imprimir', (tester) async {
     final fakeSales = FakeSalesRepository()
       ..ventaDetalleARetornar = const VentaDetalle(
         id: 'venta-1',
@@ -235,6 +236,7 @@ void main() {
         iva: 3992,
         total: 25000,
         lineas: [],
+        pagos: [PagoVentaDetalle(medioPago: MedioPago.efectivo, monto: 25000)],
         dteEmitidoId: 'dte-1',
         tipoDocumentoEmitido: 39,
         folio: 1234,
@@ -248,8 +250,37 @@ void main() {
     );
 
     expect(find.text('Boleta N° 1234'), findsOneWidget);
+    expect(find.text('Efectivo'), findsOneWidget);
     expect(find.byKey(const Key('imprimirVentaVinculadaBoton')), findsOneWidget);
     expect(find.byKey(const Key('agregarItemBoton')), findsNothing);
+  });
+
+  testWidgets('Entregada con pago mixto muestra cada medio de pago con su monto', (tester) async {
+    final fakeSales = FakeSalesRepository()
+      ..ventaDetalleARetornar = const VentaDetalle(
+        id: 'venta-1',
+        neto: 21008,
+        iva: 3992,
+        total: 25000,
+        lineas: [],
+        pagos: [
+          PagoVentaDetalle(medioPago: MedioPago.efectivo, monto: 15000),
+          PagoVentaDetalle(medioPago: MedioPago.tarjetaDebito, monto: 10000),
+        ],
+        dteEmitidoId: 'dte-1',
+        tipoDocumentoEmitido: 39,
+        folio: 1234,
+      );
+
+    await _pumpDetalle(
+      tester,
+      fake,
+      _orden(estado: EstadoOrdenTrabajo.entregada, items: const [_itemTerminado], ventaId: 'venta-1'),
+      fakeSales: fakeSales,
+    );
+
+    expect(find.textContaining('Efectivo'), findsOneWidget);
+    expect(find.textContaining('Tarjeta Débito'), findsOneWidget);
   });
 
   testWidgets('Entregada sin documento tributario no ofrece Imprimir', (tester) async {

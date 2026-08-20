@@ -316,7 +316,7 @@ class FakeSalesRepository implements SalesRepository {
     ultimaVentaIdConsultada = ventaId;
     if (errorAforzar != null) throw Exception(errorAforzar);
     return ventaDetalleARetornar ??
-        VentaDetalle(id: ventaId, neto: totalARetornar, iva: 0, total: totalARetornar, lineas: const []);
+        VentaDetalle(id: ventaId, neto: totalARetornar, iva: 0, total: totalARetornar, lineas: const [], pagos: const []);
   }
 }
 
