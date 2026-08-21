@@ -22,6 +22,7 @@ import '../../domain/models/cotizacion.dart';
 import '../../domain/models/linea_carrito.dart';
 import '../../domain/models/linea_impresion.dart';
 import '../../domain/models/resumen_venta.dart';
+import '../../domain/models/stock_insuficiente_exception.dart';
 import '../../domain/models/venta_enums.dart';
 import '../providers/pos_providers.dart';
 import '../theme/pos_colors.dart';
@@ -126,6 +127,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(actual.error!), backgroundColor: Theme.of(context).colorScheme.error),
         );
+      }
+      if (actual.stockInsuficiente != null && actual.stockInsuficiente != previo?.stockInsuficiente) {
+        _mostrarStockInsuficiente(context, actual.stockInsuficiente!);
       }
       if (actual.resumenCobrado != null && previo?.resumenCobrado == null) {
         _mostrarVentaCobrada(actual.resumenCobrado!, actual.vueltoCobrado, actual.lineasCobradas);
@@ -400,12 +404,62 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       ),
     );
     if (resultado == null || !mounted) return;
+    _ultimoCobro = (cajaId: cajaId, clienteId: ref.read(clienteSeleccionadoProvider)?.id, resultado: resultado);
     await ref.read(posCartProvider.notifier).cobrar(
           cajaId: cajaId,
           clienteId: ref.read(clienteSeleccionadoProvider)?.id,
           tipoDocumento: resultado.tipoDocumento,
           pagos: resultado.pagos,
           vuelto: resultado.vuelto,
+        );
+  }
+
+  /// Guardado justo antes de llamar a cobrar() — si rebota por stock
+  /// insuficiente (ver _mostrarStockInsuficiente), "Continuar de todas
+  /// formas" reintenta con los mismos datos, sin que el Cajero tenga que
+  /// volver a pasar por CheckoutDialog.
+  ({String cajaId, String? clienteId, ResultadoCheckout resultado})? _ultimoCobro;
+
+  Future<void> _mostrarStockInsuficiente(BuildContext context, StockInsuficienteException error) async {
+    final continuar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Stock insuficiente'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final linea in error.lineas)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('${linea.nombreProducto}: hay ${linea.cantidadDisponible.toStringAsFixed(0)}, pediste ${linea.cantidadPedida.toStringAsFixed(0)}'),
+              ),
+            const SizedBox(height: 8),
+            const Text('¿Quieres vender igual? El stock quedará negativo hasta que lo corrijas con una entrada de inventario.'),
+          ],
+        ),
+        actions: [
+          TextButton(key: const Key('stockInsuficienteCancelar'), onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
+          FilledButton(
+            key: const Key('stockInsuficienteContinuar'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Continuar de todas formas'),
+          ),
+        ],
+      ),
+    );
+
+    ref.read(posCartProvider.notifier).limpiarStockInsuficiente();
+
+    final ultimo = _ultimoCobro;
+    if (continuar != true || ultimo == null || !mounted) return;
+    await ref.read(posCartProvider.notifier).cobrar(
+          cajaId: ultimo.cajaId,
+          clienteId: ultimo.clienteId,
+          tipoDocumento: ultimo.resultado.tipoDocumento,
+          pagos: ultimo.resultado.pagos,
+          vuelto: ultimo.resultado.vuelto,
+          permitirVentaSinStock: true,
         );
   }
 

@@ -47,8 +47,9 @@ class SalesRepositoryImpl implements SalesRepository {
     required String ventaId,
     required TipoDocumento tipoDocumento,
     required List<PagoInput> pagos,
+    bool permitirVentaSinStock = false,
   }) =>
-      _api.confirmar(ventaId: ventaId, tipoDocumento: tipoDocumento, pagos: pagos);
+      _api.confirmar(ventaId: ventaId, tipoDocumento: tipoDocumento, pagos: pagos, permitirVentaSinStock: permitirVentaSinStock);
 
   @override
   Future<void> solicitarDescuentoGeneral({required String ventaId, double? porcentaje, double? monto}) =>

@@ -14,6 +14,7 @@ import 'package:novapos_app/features/returns/presentation/providers/returns_prov
 import 'package:novapos_app/features/sales/domain/models/cotizacion.dart';
 import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/resumen_venta.dart';
+import 'package:novapos_app/features/sales/domain/models/stock_insuficiente_exception.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart';
 import 'package:novapos_app/features/sales/presentation/screens/pos_screen.dart';
@@ -186,6 +187,51 @@ void main() {
     // ofrecer un botón "Imprimir" que fallaría sin Folio/TED.
     expect(find.byKey(const Key('ventaConfirmadaSinDte')), findsOneWidget);
     expect(find.byKey(const Key('ventaConfirmadaImprimir')), findsNothing);
+  });
+
+  testWidgets('Con stock insuficiente muestra la advertencia y "Cancelar" no confirma la Venta', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    fakeSales.stockInsuficienteAForzar = const StockInsuficienteException(
+      'Stock insuficiente para: Coca-Cola (hay 0, pediste 1)',
+      [LineaSinStockSuficiente(nombreProducto: 'Coca-Cola', cantidadDisponible: 0, cantidadPedida: 1)],
+    );
+
+    await buscarYEsperar(tester, 'a');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await cobrarConfirmando(tester, 1500);
+
+    expect(find.text('Stock insuficiente'), findsOneWidget);
+    expect(find.textContaining('Coca-Cola: hay 0, pediste 1'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('stockInsuficienteCancelar')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Venta confirmada'), findsNothing);
+    expect(fakeSales.ultimoPermitirVentaSinStock, isFalse);
+  });
+
+  testWidgets('Con stock insuficiente, "Continuar de todas formas" reintenta con permitirVentaSinStock', (tester) async {
+    await pumpPos(tester);
+    fakeCatalog.resultadosARetornar = [productoCocaCola];
+    fakeSales.stockInsuficienteAForzar = const StockInsuficienteException(
+      'Stock insuficiente para: Coca-Cola (hay 0, pediste 1)',
+      [LineaSinStockSuficiente(nombreProducto: 'Coca-Cola', cantidadDisponible: 0, cantidadPedida: 1)],
+    );
+
+    await buscarYEsperar(tester, 'a');
+    await tester.tap(find.byKey(const Key('posResultado_variante-coca')));
+    await tester.pump();
+
+    await cobrarConfirmando(tester, 1500);
+
+    await tester.tap(find.byKey(const Key('stockInsuficienteContinuar')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Venta confirmada'), findsOneWidget);
+    expect(fakeSales.ultimoPermitirVentaSinStock, isTrue);
   });
 
   testWidgets('Cuando el backend emitió el DTE, "Venta confirmada" ofrece Imprimir con el Folio', (tester) async {

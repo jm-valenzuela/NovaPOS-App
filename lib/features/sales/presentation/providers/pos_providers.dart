@@ -27,6 +27,7 @@ import '../../domain/models/cotizacion.dart';
 import '../../domain/models/linea_carrito.dart';
 import '../../domain/models/pago_input.dart';
 import '../../domain/models/resumen_venta.dart';
+import '../../domain/models/stock_insuficiente_exception.dart';
 import '../../domain/models/venta_enums.dart';
 import '../../domain/sales_repository.dart';
 
@@ -245,11 +246,17 @@ class PosCartState {
     this.solicitandoDescuento = false,
     this.procesandoCotizacion = false,
     this.numeroCotizacion,
+    this.stockInsuficiente,
   });
 
   final List<LineaCarrito> lineas;
   final bool cobrando;
   final String? error;
+
+  /// Solo se llena cuando cobrar() rebota por stock insuficiente — PosScreen
+  /// reacciona mostrando "Cancelar"/"Continuar de todas formas" en vez de
+  /// solo el mensaje de error (ver PosCartController.cobrar).
+  final StockInsuficienteException? stockInsuficiente;
 
   /// Desglose real devuelto por el backend al confirmar — solo se llena
   /// tras un cobro exitoso, para el diálogo de venta cobrada.
@@ -345,6 +352,8 @@ class PosCartState {
     bool limpiarResumenCobrado = false,
     bool? solicitandoDescuento,
     bool? procesandoCotizacion,
+    StockInsuficienteException? stockInsuficiente,
+    bool limpiarStockInsuficiente = false,
   }) {
     return PosCartState(
       lineas: lineas ?? this.lineas,
@@ -361,6 +370,7 @@ class PosCartState {
       solicitandoDescuento: solicitandoDescuento ?? this.solicitandoDescuento,
       procesandoCotizacion: procesandoCotizacion ?? this.procesandoCotizacion,
       numeroCotizacion: numeroCotizacion,
+      stockInsuficiente: limpiarStockInsuficiente ? null : (stockInsuficiente ?? this.stockInsuficiente),
     );
   }
 }
@@ -503,11 +513,12 @@ class PosCartController extends StateNotifier<PosCartState> {
     required TipoDocumento tipoDocumento,
     required List<PagoInput> pagos,
     double vuelto = 0,
+    bool permitirVentaSinStock = false,
   }) async {
     if (state.lineas.isEmpty) return;
     if (state.estadoDescuento == EstadoDescuentoGeneral.pendiente) return;
 
-    state = state.copyWith(cobrando: true, limpiarError: true, limpiarResumenCobrado: true);
+    state = state.copyWith(cobrando: true, limpiarError: true, limpiarResumenCobrado: true, limpiarStockInsuficiente: true);
     try {
       var ventaId = state.ventaId;
       if (ventaId == null) {
@@ -523,12 +534,19 @@ class PosCartController extends StateNotifier<PosCartState> {
       }
 
       final lineasCobradas = state.lineas;
-      final resumen = await _salesRepository.confirmarVenta(ventaId: ventaId, tipoDocumento: tipoDocumento, pagos: pagos);
+      final resumen = await _salesRepository.confirmarVenta(
+        ventaId: ventaId, tipoDocumento: tipoDocumento, pagos: pagos, permitirVentaSinStock: permitirVentaSinStock);
 
       state = PosCartState(resumenCobrado: resumen, vueltoCobrado: vuelto, lineasCobradas: lineasCobradas);
+    } on StockInsuficienteException catch (e) {
+      state = state.copyWith(cobrando: false, stockInsuficiente: e);
     } catch (e) {
       state = state.copyWith(cobrando: false, error: e.toString());
     }
+  }
+
+  void limpiarStockInsuficiente() {
+    state = state.copyWith(limpiarStockInsuficiente: true);
   }
 
   void limpiarVentaCobrada() {

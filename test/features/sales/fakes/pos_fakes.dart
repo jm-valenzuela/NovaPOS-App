@@ -16,6 +16,7 @@ import 'package:novapos_app/features/sales/domain/models/detalle_descuento_pendi
 import 'package:novapos_app/features/sales/domain/models/estado_descuento_venta.dart';
 import 'package:novapos_app/features/sales/domain/models/pago_input.dart';
 import 'package:novapos_app/features/sales/domain/models/resumen_venta.dart';
+import 'package:novapos_app/features/sales/domain/models/stock_insuficiente_exception.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_detalle.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/domain/sales_repository.dart';
@@ -190,14 +191,22 @@ class FakeSalesRepository implements SalesRepository {
   /// probar el botón "Imprimir" en el diálogo de Venta confirmada.
   ResumenVenta? resumenConfirmarARetornar;
 
+  /// Si se setea, confirmarVenta la lanza — salvo que llamen con
+  /// permitirVentaSinStock=true, igual que el backend real.
+  StockInsuficienteException? stockInsuficienteAForzar;
+  bool? ultimoPermitirVentaSinStock;
+
   @override
   Future<ResumenVenta> confirmarVenta({
     required String ventaId,
     required TipoDocumento tipoDocumento,
     required List<PagoInput> pagos,
+    bool permitirVentaSinStock = false,
   }) async {
     ultimoTipoDocumento = tipoDocumento;
     ultimosPagos = pagos;
+    ultimoPermitirVentaSinStock = permitirVentaSinStock;
+    if (stockInsuficienteAForzar != null && !permitirVentaSinStock) throw stockInsuficienteAForzar!;
     if (errorAforzar != null) throw Exception(errorAforzar);
     return resumenConfirmarARetornar ?? ResumenVenta.calcular(totalARetornar);
   }

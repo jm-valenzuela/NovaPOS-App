@@ -34,10 +34,14 @@ abstract class SalesRepository {
   /// tipoDocumento: Boleta o Factura, elegido por el Cajero (ver
   /// CheckoutDialog). pagos: obligatorio y no vacío si la Venta es al
   /// Contado (soporta pago mixto); vacío si es a Crédito.
+  /// permitirVentaSinStock: por defecto false, la Venta se rechaza si algún
+  /// Producto no alcanza el stock disponible (ver StockInsuficienteException,
+  /// que el Cajero puede reintentar en true tras confirmar la advertencia).
   Future<ResumenVenta> confirmarVenta({
     required String ventaId,
     required TipoDocumento tipoDocumento,
     required List<PagoInput> pagos,
+    bool permitirVentaSinStock = false,
   });
 
   /// El Cajero pide el descuento — porcentaje y monto son mutuamente

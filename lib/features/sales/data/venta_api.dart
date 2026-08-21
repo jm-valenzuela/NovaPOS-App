@@ -7,6 +7,7 @@ import '../domain/models/detalle_descuento_pendiente.dart';
 import '../domain/models/estado_descuento_venta.dart';
 import '../domain/models/pago_input.dart';
 import '../domain/models/resumen_venta.dart';
+import '../domain/models/stock_insuficiente_exception.dart';
 import '../domain/models/venta_detalle.dart';
 import '../domain/models/venta_enums.dart';
 
@@ -95,14 +96,21 @@ class VentaApi {
     required String ventaId,
     required TipoDocumento tipoDocumento,
     required List<PagoInput> pagos,
+    bool permitirVentaSinStock = false,
   }) async {
     try {
       final respuesta = await _client.dio.post('/ventas/$ventaId/confirmar', data: {
         'tipoDocumentoSolicitado': tipoDocumento.valorApi,
         'pagos': pagos.map((p) => p.toJson()).toList(),
+        'permitirVentaSinStock': permitirVentaSinStock,
       });
       return ResumenVenta.fromJson(respuesta.data as Map<String, dynamic>);
     } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['codigo'] == 'stock_insuficiente') {
+        final lineas = (data['lineas'] as List<dynamic>).map((l) => LineaSinStockSuficiente.fromJson(l as Map<String, dynamic>)).toList();
+        throw StockInsuficienteException(data['error'] as String, lineas);
+      }
       ApiClient.lanzarError(e);
     }
   }

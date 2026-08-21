@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../sales/domain/models/anticipo_disponible_para_pago.dart';
+import '../../../sales/domain/models/stock_insuficiente_exception.dart';
 import '../../../sales/domain/models/venta_enums.dart';
 import '../../../sales/presentation/providers/pos_providers.dart' show salesRepositoryProvider;
 import '../../../sales/presentation/widgets/checkout_dialog.dart';
@@ -80,11 +81,29 @@ class _CobrarOrdenTrabajoDialogState extends ConsumerState<CobrarOrdenTrabajoDia
         return;
       }
 
-      await salesRepository.confirmarVenta(
-        ventaId: ventaId,
-        tipoDocumento: resultadoCheckout.tipoDocumento,
-        pagos: resultadoCheckout.pagos,
-      );
+      var permitirVentaSinStock = false;
+      try {
+        await salesRepository.confirmarVenta(
+          ventaId: ventaId,
+          tipoDocumento: resultadoCheckout.tipoDocumento,
+          pagos: resultadoCheckout.pagos,
+        );
+      } on StockInsuficienteException catch (e) {
+        if (!mounted) return;
+        final continuar = await _mostrarStockInsuficiente(e);
+        if (!mounted) return;
+        if (continuar != true) {
+          Navigator.of(context).pop(false);
+          return;
+        }
+        permitirVentaSinStock = true;
+        await salesRepository.confirmarVenta(
+          ventaId: ventaId,
+          tipoDocumento: resultadoCheckout.tipoDocumento,
+          pagos: resultadoCheckout.pagos,
+          permitirVentaSinStock: permitirVentaSinStock,
+        );
+      }
 
       final ok = await ref.read(ordenTrabajoDetalleProvider(widget.orden.id).notifier).entregar(ventaId);
 
@@ -94,6 +113,36 @@ class _CobrarOrdenTrabajoDialogState extends ConsumerState<CobrarOrdenTrabajoDia
       if (!mounted) return;
       setState(() => _error = e.toString());
     }
+  }
+
+  Future<bool?> _mostrarStockInsuficiente(StockInsuficienteException error) {
+    return showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Stock insuficiente'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final linea in error.lineas)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('${linea.nombreProducto}: hay ${linea.cantidadDisponible.toStringAsFixed(0)}, pediste ${linea.cantidadPedida.toStringAsFixed(0)}'),
+              ),
+            const SizedBox(height: 8),
+            const Text('¿Quieres vender igual? El stock quedará negativo hasta que lo corrijas con una entrada de inventario.'),
+          ],
+        ),
+        actions: [
+          TextButton(key: const Key('cobrarOtStockCancelar'), onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
+          FilledButton(
+            key: const Key('cobrarOtStockContinuar'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Continuar de todas formas'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
