@@ -325,6 +325,17 @@ class OrdenTrabajoDetalleController extends StateNotifier<OrdenTrabajoDetalleSta
       return false;
     }
   }
+
+  Future<bool> registrarAnticipo({required String sesionCajaId, required double monto, required MedioPagoAnticipo medioPago}) async {
+    try {
+      await _repository.registrarAnticipo(ordenTrabajoId: ordenTrabajoId, sesionCajaId: sesionCajaId, monto: monto, medioPago: medioPago);
+      await cargar();
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
 }
 
 final ordenTrabajoDetalleProvider =

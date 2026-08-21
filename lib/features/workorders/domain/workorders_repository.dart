@@ -29,6 +29,14 @@ abstract class WorkOrdersRepository {
 
   Future<void> entregar({required String ordenTrabajoId, required String ventaId});
 
+  /// Dinero recibido por adelantado (ej. para comprarle a un Proveedor) — exige una Sesión de Caja Abierta.
+  Future<String> registrarAnticipo({
+    required String ordenTrabajoId,
+    required String sesionCajaId,
+    required double monto,
+    required MedioPagoAnticipo medioPago,
+  });
+
   Future<List<UsuarioResumen>> listarUsuarios({bool incluirInactivos = false});
 
   Future<String> crearUsuario({required String nombreCompleto, required String email, required String password, required String rolId});

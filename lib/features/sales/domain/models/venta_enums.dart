@@ -63,7 +63,8 @@ enum MedioPago {
   efectivo(0),
   tarjetaDebito(1),
   tarjetaCredito(2),
-  notaCredito(3);
+  notaCredito(3),
+  anticipo(4);
 
   const MedioPago(this.valorApi);
 
@@ -76,5 +77,6 @@ enum MedioPago {
         MedioPago.tarjetaDebito => 'Tarjeta Débito',
         MedioPago.tarjetaCredito => 'Tarjeta Crédito',
         MedioPago.notaCredito => 'Nota de Crédito',
+        MedioPago.anticipo => 'Anticipo',
       };
 }

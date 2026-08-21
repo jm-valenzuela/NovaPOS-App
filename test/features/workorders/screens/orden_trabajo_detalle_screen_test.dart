@@ -115,6 +115,9 @@ OrdenTrabajoDetalle _orden({
   List<ItemOrdenTrabajoDetalle> items = const [_itemCotizado],
   double? montoCotizado,
   double? montoAprobado,
+  List<AnticipoOrdenTrabajoDetalle> anticipos = const [],
+  double? montoAnticipado,
+  double? saldoPendiente,
   String? ventaId,
 }) {
   return OrdenTrabajoDetalle(
@@ -130,6 +133,9 @@ OrdenTrabajoDetalle _orden({
     items: items,
     montoCotizado: montoCotizado,
     montoAprobado: montoAprobado,
+    anticipos: anticipos,
+    montoAnticipado: montoAnticipado,
+    saldoPendiente: saldoPendiente,
     fechaEntrega: null,
     ventaId: ventaId,
   );
@@ -159,6 +165,12 @@ void main() {
 
   setUp(() {
     fake = FakeWorkOrdersRepository();
+  });
+
+  testWidgets('Muestra el botón de Imprimir Orden de Trabajo', (tester) async {
+    await _pumpDetalle(tester, fake, _orden(estado: EstadoOrdenTrabajo.enEvaluacion, items: const [_itemPendiente]));
+
+    expect(find.byKey(const Key('imprimirOrdenTrabajoBoton')), findsOneWidget);
   });
 
   testWidgets('Un Ítem Pendiente de evaluación muestra el botón Cotizar', (tester) async {
@@ -207,6 +219,64 @@ void main() {
     expect(find.byKey(const Key('itemRechazarBoton_item-5')), findsNothing);
   });
 
+  testWidgets('Con un Ítem Aprobado ofrece Registrar Anticipo', (tester) async {
+    await _pumpDetalle(
+      tester,
+      fake,
+      _orden(estado: EstadoOrdenTrabajo.enEjecucion, items: const [_itemAprobado], montoAprobado: 80000),
+    );
+
+    expect(find.byKey(const Key('registrarAnticipoBoton')), findsOneWidget);
+  });
+
+  testWidgets('Sin ningún Ítem Aprobado no ofrece Registrar Anticipo', (tester) async {
+    await _pumpDetalle(
+      tester,
+      fake,
+      _orden(estado: EstadoOrdenTrabajo.enEvaluacion, items: const [_itemCotizado]),
+    );
+
+    expect(find.byKey(const Key('registrarAnticipoBoton')), findsNothing);
+  });
+
+  testWidgets('Entregada no ofrece Registrar Anticipo aunque tenga montoAprobado', (tester) async {
+    await _pumpDetalle(
+      tester,
+      fake,
+      _orden(estado: EstadoOrdenTrabajo.entregada, items: const [_itemTerminado], montoAprobado: 80000, ventaId: 'venta-1'),
+    );
+
+    expect(find.byKey(const Key('registrarAnticipoBoton')), findsNothing);
+  });
+
+  testWidgets('Con Anticipos ya recibidos muestra el listado y el saldo pendiente', (tester) async {
+    await _pumpDetalle(
+      tester,
+      fake,
+      _orden(
+        estado: EstadoOrdenTrabajo.enEjecucion,
+        items: const [_itemAprobado],
+        montoAprobado: 80000,
+        montoAnticipado: 30000,
+        saldoPendiente: 50000,
+        anticipos: [
+          AnticipoOrdenTrabajoDetalle(
+            id: 'anticipo-1',
+            monto: 30000,
+            medioPago: MedioPagoAnticipo.efectivo,
+            registradoPorNombre: 'Admin Demo',
+            fechaRegistro: DateTime.utc(2026, 8, 20, 10),
+            estado: EstadoAnticipoOrdenTrabajo.disponible,
+          ),
+        ],
+      ),
+    );
+
+    expect(find.textContaining('Efectivo'), findsOneWidget);
+    expect(find.textContaining('Admin Demo'), findsOneWidget);
+    expect(find.text('Saldo pendiente: ${MonedaFormatter.formatear(50000)}'), findsOneWidget);
+  });
+
   testWidgets('En Lista con montoAprobado muestra el botón Cobrar', (tester) async {
     await _pumpDetalle(
       tester,
@@ -250,7 +320,7 @@ void main() {
     );
 
     expect(find.text('Boleta N° 1234'), findsOneWidget);
-    expect(find.text('Efectivo'), findsOneWidget);
+    expect(find.text('Efectivo \$25.000'), findsOneWidget);
     expect(find.byKey(const Key('imprimirVentaVinculadaBoton')), findsOneWidget);
     expect(find.byKey(const Key('agregarItemBoton')), findsNothing);
   });

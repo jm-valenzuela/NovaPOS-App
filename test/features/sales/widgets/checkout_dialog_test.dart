@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novapos_app/features/customers/domain/models/cliente_resumen.dart';
 import 'package:novapos_app/features/returns/domain/models/nota_credito_cliente_resumen.dart';
 import 'package:novapos_app/features/returns/presentation/providers/returns_providers.dart';
+import 'package:novapos_app/features/sales/domain/models/anticipo_disponible_para_pago.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/presentation/widgets/checkout_dialog.dart';
 
@@ -330,6 +331,93 @@ void main() {
       await tester.tap(find.byKey(const Key('checkoutMedioPago_0')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Nota de Crédito').last);
+      await tester.pumpAndSettle();
+
+      final boton = tester.widget<FilledButton>(find.byKey(const Key('checkoutConfirmar')));
+      expect(boton.onPressed, isNull);
+    });
+  });
+
+  group('Anticipo como medio de pago', () {
+    Future<void> abrirDialogoConAnticipos(
+      WidgetTester tester, {
+      required double total,
+      List<AnticipoDisponibleParaPago> anticipos = const [],
+    }) async {
+      resultadoObtenido[0] = null;
+      await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () async {
+                resultadoObtenido[0] = await showDialog<ResultadoCheckout>(
+                  context: context,
+                  builder: (_) => CheckoutDialog(
+                    total: total,
+                    formaPago: FormaPago.contado,
+                    clienteSeleccionado: null,
+                    anticiposDisponibles: anticipos,
+                  ),
+                );
+              },
+              child: const Text('Abrir'),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('Abrir'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('sin Anticipos disponibles, Anticipo no aparece como opción', (tester) async {
+      await abrirDialogoConAnticipos(tester, total: 1000);
+
+      await tester.tap(find.byKey(const Key('checkoutMedioPago_0')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Anticipo'), findsNothing);
+    });
+
+    testWidgets('con Anticipos disponibles, elegir uno fija el Monto a su valor íntegro', (tester) async {
+      await abrirDialogoConAnticipos(
+        tester,
+        total: 1000,
+        anticipos: const [AnticipoDisponibleParaPago(id: 'anticipo-1', monto: 1000, etiquetaMedioPagoOriginal: 'Efectivo')],
+      );
+
+      await tester.tap(find.byKey(const Key('checkoutMedioPago_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Anticipo').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('checkoutAnticipo_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Efectivo · \$1.000').last);
+      await tester.pumpAndSettle();
+
+      final montoField = tester.widget<TextField>(find.byKey(const Key('checkoutMonto_0')));
+      expect(montoField.controller!.text, '1.000');
+      expect(montoField.readOnly, isTrue);
+
+      await tester.tap(find.byKey(const Key('checkoutConfirmar')));
+      await tester.pumpAndSettle();
+
+      final resultado = resultadoObtenido[0]!;
+      expect(resultado.pagos.single.medioPago, MedioPago.anticipo);
+      expect(resultado.pagos.single.anticipoOrdenTrabajoId, 'anticipo-1');
+      expect(resultado.pagos.single.monto, 1000);
+    });
+
+    testWidgets('elegir Anticipo sin elegir uno puntual deja Confirmar deshabilitado', (tester) async {
+      await abrirDialogoConAnticipos(
+        tester,
+        total: 1000,
+        anticipos: const [AnticipoDisponibleParaPago(id: 'anticipo-1', monto: 1000, etiquetaMedioPagoOriginal: 'Efectivo')],
+      );
+
+      await tester.tap(find.byKey(const Key('checkoutMedioPago_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Anticipo').last);
       await tester.pumpAndSettle();
 
       final boton = tester.widget<FilledButton>(find.byKey(const Key('checkoutConfirmar')));

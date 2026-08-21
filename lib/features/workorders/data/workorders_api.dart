@@ -149,6 +149,24 @@ class WorkOrdersApi {
     }
   }
 
+  Future<String> registrarAnticipo({
+    required String ordenTrabajoId,
+    required String sesionCajaId,
+    required double monto,
+    required MedioPagoAnticipo medioPago,
+  }) async {
+    try {
+      final respuesta = await _client.dio.post('/ordenes-trabajo/$ordenTrabajoId/anticipos', data: {
+        'sesionCajaId': sesionCajaId,
+        'monto': monto,
+        'medioPago': medioPago.valorApi,
+      });
+      return respuesta.data['id'] as String;
+    } on DioException catch (e) {
+      ApiClient.lanzarError(e);
+    }
+  }
+
   /// Solo Usuarios cuyo Rol puede gestionar Órdenes de Trabajo (ver
   /// ListarOperariosQuery en el backend) — sin incluirInactivos, solo los
   /// activos (selector de "Asignar Operador"); con incluirInactivos=true

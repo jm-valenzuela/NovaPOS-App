@@ -193,6 +193,67 @@ class ItemOrdenTrabajoDetalle {
   bool get cerrado => estado == EstadoItemOrdenTrabajo.rechazado || estado == EstadoItemOrdenTrabajo.terminado;
 }
 
+/// Espejo de MedioPagoAnticipo — sin NotaCredito (no aplica a un Anticipo, que es plata real entregada por adelantado).
+enum MedioPagoAnticipo {
+  efectivo(0),
+  tarjetaDebito(1),
+  tarjetaCredito(2);
+
+  const MedioPagoAnticipo(this.valorApi);
+
+  final int valorApi;
+
+  static MedioPagoAnticipo desdeValor(int valor) =>
+      MedioPagoAnticipo.values.firstWhere((m) => m.valorApi == valor, orElse: () => MedioPagoAnticipo.efectivo);
+
+  String get etiqueta => switch (this) {
+        MedioPagoAnticipo.efectivo => 'Efectivo',
+        MedioPagoAnticipo.tarjetaDebito => 'Tarjeta Débito',
+        MedioPagoAnticipo.tarjetaCredito => 'Tarjeta Crédito',
+      };
+}
+
+/// Espejo de EstadoAnticipoOrdenTrabajo — Disponible hasta que se usa como medio de pago (MedioPago.anticipo) al confirmar la Venta final.
+enum EstadoAnticipoOrdenTrabajo {
+  disponible(0),
+  utilizado(1);
+
+  const EstadoAnticipoOrdenTrabajo(this.valorApi);
+
+  final int valorApi;
+
+  static EstadoAnticipoOrdenTrabajo desdeValor(int valor) =>
+      EstadoAnticipoOrdenTrabajo.values.firstWhere((e) => e.valorApi == valor, orElse: () => EstadoAnticipoOrdenTrabajo.disponible);
+}
+
+/// Espejo de AnticipoOrdenTrabajoDetalle — dinero ya recibido por adelantado contra la Orden.
+class AnticipoOrdenTrabajoDetalle {
+  const AnticipoOrdenTrabajoDetalle({
+    required this.id,
+    required this.monto,
+    required this.medioPago,
+    required this.registradoPorNombre,
+    required this.fechaRegistro,
+    required this.estado,
+  });
+
+  factory AnticipoOrdenTrabajoDetalle.fromJson(Map<String, dynamic> json) => AnticipoOrdenTrabajoDetalle(
+        id: json['id'] as String,
+        monto: (json['monto'] as num).toDouble(),
+        medioPago: MedioPagoAnticipo.desdeValor(json['medioPago'] as int),
+        registradoPorNombre: json['registradoPorNombre'] as String,
+        fechaRegistro: DateTime.parse(json['fechaRegistro'] as String).toLocal(),
+        estado: EstadoAnticipoOrdenTrabajo.desdeValor(json['estado'] as int),
+      );
+
+  final String id;
+  final double monto;
+  final MedioPagoAnticipo medioPago;
+  final String registradoPorNombre;
+  final DateTime fechaRegistro;
+  final EstadoAnticipoOrdenTrabajo estado;
+}
+
 /// Espejo de OrdenTrabajoResumen — fila liviana para el listado.
 class OrdenTrabajoResumen {
   const OrdenTrabajoResumen({
@@ -242,6 +303,9 @@ class OrdenTrabajoDetalle {
     required this.items,
     required this.montoCotizado,
     required this.montoAprobado,
+    this.anticipos = const [],
+    this.montoAnticipado,
+    this.saldoPendiente,
     required this.fechaEntrega,
     required this.ventaId,
   });
@@ -259,6 +323,11 @@ class OrdenTrabajoDetalle {
         items: (json['items'] as List<dynamic>).map((i) => ItemOrdenTrabajoDetalle.fromJson(i as Map<String, dynamic>)).toList(),
         montoCotizado: json['montoCotizado'] == null ? null : (json['montoCotizado'] as num).toDouble(),
         montoAprobado: json['montoAprobado'] == null ? null : (json['montoAprobado'] as num).toDouble(),
+        anticipos: json['anticipos'] == null
+            ? const []
+            : (json['anticipos'] as List<dynamic>).map((a) => AnticipoOrdenTrabajoDetalle.fromJson(a as Map<String, dynamic>)).toList(),
+        montoAnticipado: json['montoAnticipado'] == null ? null : (json['montoAnticipado'] as num).toDouble(),
+        saldoPendiente: json['saldoPendiente'] == null ? null : (json['saldoPendiente'] as num).toDouble(),
         fechaEntrega: json['fechaEntrega'] == null ? null : DateTime.parse(json['fechaEntrega'] as String),
         ventaId: json['ventaId'] as String?,
       );
@@ -275,8 +344,18 @@ class OrdenTrabajoDetalle {
   final List<ItemOrdenTrabajoDetalle> items;
   final double? montoCotizado;
   final double? montoAprobado;
+  final List<AnticipoOrdenTrabajoDetalle> anticipos;
+  final double? montoAnticipado;
+  final double? saldoPendiente;
   final DateTime? fechaEntrega;
   final String? ventaId;
+
+  /// true recién cuando algún Ítem está Aprobado/EnTrabajo/Terminado (ver OrdenTrabajo.MontoAprobado en el backend) — antes de eso no hay nada que anticipar.
+  bool get puedeRecibirAnticipo => montoAprobado != null && estado != EstadoOrdenTrabajo.entregada;
+
+  /// Los Anticipos que todavía se pueden usar como medio de pago al cobrar la Venta final — ver CheckoutDialog.anticiposDisponibles.
+  List<AnticipoOrdenTrabajoDetalle> get anticiposDisponiblesParaPago =>
+      anticipos.where((a) => a.estado == EstadoAnticipoOrdenTrabajo.disponible).toList();
 }
 
 /// Espejo de UsuarioResumen — para el selector de "Asignar Operador" (solo

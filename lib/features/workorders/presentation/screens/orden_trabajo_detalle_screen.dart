@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../../cash/presentation/providers/cash_providers.dart' show cashRepositoryProvider;
 import '../../../sales/domain/models/venta_detalle.dart';
 import '../../../sales/presentation/providers/pos_providers.dart' show tenancyRepositoryProvider;
 import '../../../sales/presentation/widgets/representacion_impresa_venta.dart';
@@ -12,6 +13,8 @@ import '../widgets/cobrar_orden_trabajo_dialog.dart';
 import '../widgets/editar_observacion_dialog.dart';
 import '../widgets/editor_item_orden_trabajo_dialog.dart';
 import '../widgets/rechazar_item_dialog.dart';
+import '../widgets/registrar_anticipo_dialog.dart';
+import '../widgets/representacion_impresa_orden_trabajo.dart';
 
 /// Un imprevisto detectado durante la ejecución (ej. se encuentra que la
 /// suspensión también está dañada) se agrega como un Ítem nuevo en
@@ -29,7 +32,18 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
     final orden = estado.orden;
 
     return Scaffold(
-      appBar: AppBar(title: Text(orden?.numero ?? 'Orden de Trabajo')),
+      appBar: AppBar(
+        title: Text(orden?.numero ?? 'Orden de Trabajo'),
+        actions: [
+          if (orden != null)
+            IconButton(
+              key: const Key('imprimirOrdenTrabajoBoton'),
+              onPressed: () => imprimirOrdenTrabajo(orden),
+              icon: const Icon(Icons.print_outlined),
+              tooltip: 'Imprimir Orden de Trabajo',
+            ),
+        ],
+      ),
       floatingActionButton: (orden == null || orden.estado == EstadoOrdenTrabajo.entregada)
           ? null
           : FloatingActionButton.extended(
@@ -80,6 +94,31 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
                         for (final item in orden.items) _tarjetaItem(context, ref, orden.id, item),
                       ],
                       const SizedBox(height: 20),
+                      if (orden.anticipos.isNotEmpty || orden.puedeRecibirAnticipo) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Anticipos', style: Theme.of(context).textTheme.labelLarge),
+                            if (orden.puedeRecibirAnticipo)
+                              TextButton.icon(
+                                key: const Key('registrarAnticipoBoton'),
+                                onPressed: () => _registrarAnticipo(context, ref, orden),
+                                icon: const Icon(Icons.add_card_outlined, size: 18),
+                                label: const Text('Registrar Anticipo'),
+                              ),
+                          ],
+                        ),
+                        for (final anticipo in orden.anticipos) _filaAnticipo(context, anticipo),
+                        if (orden.montoAnticipado != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Saldo pendiente: ${MonedaFormatter.formatear(orden.saldoPendiente ?? 0)}',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        const SizedBox(height: 20),
+                      ],
                       if (orden.ventaId != null) ...[
                         Text('Venta vinculada', style: Theme.of(context).textTheme.labelLarge),
                         const SizedBox(height: 4),
@@ -103,10 +142,25 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
 
   String _formatearFecha(DateTime fecha) => fecha.toLocal().toString().split(' ').first;
 
-  /// "Efectivo" si fue un solo medio de pago; "Efectivo \$6.000 + Tarjeta Débito \$4.000" si fue mixto (ver Venta.Confirmar en el backend).
-  String _etiquetaPagos(List<PagoVentaDetalle> pagos) {
-    if (pagos.length == 1) return pagos.first.medioPago.etiqueta;
-    return pagos.map((p) => '${p.medioPago.etiqueta} ${MonedaFormatter.formatear(p.monto)}').join(' + ');
+  /// "Efectivo \$199.970", o "Efectivo \$6.000 + Anticipo (Efectivo) \$4.000" si fue mixto (ver Venta.Confirmar en el backend) — siempre con el monto de cada línea, no solo el medio. Un pago Anticipo muestra además cómo se recibió ese Anticipo en su momento (ver PagoVentaDetalle.etiqueta).
+  String _etiquetaPagos(List<PagoVentaDetalle> pagos) => pagos.map((p) => '${p.etiqueta} ${MonedaFormatter.formatear(p.monto)}').join(' + ');
+
+  Widget _filaAnticipo(BuildContext context, AnticipoOrdenTrabajoDetalle anticipo) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              '${anticipo.medioPago.etiqueta} — ${anticipo.registradoPorNombre} (${_formatearFecha(anticipo.fechaRegistro)})',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          Text(MonedaFormatter.formatear(anticipo.monto), style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    );
   }
 
   Widget _ventaVinculada(BuildContext context, WidgetRef ref, String ventaId) {
@@ -359,6 +413,37 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
     await showDialog<bool>(
       context: context,
       builder: (_) => AsignarOperadorDialog(ordenTrabajoId: ordenTrabajoId, itemId: item.id, usuarioIdActual: item.asignadoAUsuarioId),
+    );
+  }
+
+  Future<void> _registrarAnticipo(BuildContext context, WidgetRef ref, OrdenTrabajoDetalle orden) async {
+    final cajas = await ref.read(tenancyRepositoryProvider).listarCajas();
+    if (cajas.isEmpty) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La Empresa no tiene ninguna Caja/Sucursal configurada.')),
+      );
+      return;
+    }
+
+    final sesion = await ref.read(cashRepositoryProvider).obtenerSesionAbierta(cajas.first.cajaId);
+    if (!context.mounted) return;
+    if (sesion == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay una Sesión de Caja abierta — ábrela antes de registrar un Anticipo.')),
+      );
+      return;
+    }
+
+    await showDialog<bool>(
+      context: context,
+      builder: (_) => RegistrarAnticipoDialog(
+        ordenTrabajoId: orden.id,
+        sesionCajaId: sesion.id,
+        numeroOrden: orden.numero,
+        clienteNombre: orden.clienteNombre,
+        saldoDisponible: orden.saldoPendiente ?? orden.montoAprobado!,
+      ),
     );
   }
 

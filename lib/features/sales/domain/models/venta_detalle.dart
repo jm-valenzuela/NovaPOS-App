@@ -19,17 +19,26 @@ class LineaVentaDetalle {
   final double subtotal;
 }
 
-/// Espejo de PagoVentaDetalle en el backend — una línea de pago (soporta pago mixto, ver Venta.Confirmar).
+/// Espejo de PagoVentaDetalle en el backend — una línea de pago (soporta
+/// pago mixto, ver Venta.Confirmar). medioPagoOriginalAnticipo solo viene
+/// no-nulo cuando medioPago es anticipo: cómo se recibió ESE Anticipo en
+/// su momento (Efectivo/Tarjeta), para mostrar "Anticipo (Efectivo)" en
+/// vez de solo "Anticipo".
 class PagoVentaDetalle {
-  const PagoVentaDetalle({required this.medioPago, required this.monto});
+  const PagoVentaDetalle({required this.medioPago, required this.monto, this.medioPagoOriginalAnticipo});
 
   factory PagoVentaDetalle.fromJson(Map<String, dynamic> json) => PagoVentaDetalle(
         medioPago: MedioPago.desdeValor(json['medioPago'] as int),
         monto: (json['monto'] as num).toDouble(),
+        medioPagoOriginalAnticipo:
+            json['medioPagoOriginalAnticipo'] == null ? null : MedioPago.desdeValor(json['medioPagoOriginalAnticipo'] as int),
       );
 
   final MedioPago medioPago;
   final double monto;
+  final MedioPago? medioPagoOriginalAnticipo;
+
+  String get etiqueta => medioPagoOriginalAnticipo == null ? medioPago.etiqueta : '${medioPago.etiqueta} (${medioPagoOriginalAnticipo!.etiqueta})';
 }
 
 /// Espejo de VentaDetalle en el backend — detalle de una Venta ya

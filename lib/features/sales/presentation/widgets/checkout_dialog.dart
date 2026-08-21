@@ -6,6 +6,7 @@ import '../../../../core/utils/moneda_formatter.dart';
 import '../../../customers/domain/models/cliente_resumen.dart';
 import '../../../returns/domain/models/nota_credito_cliente_resumen.dart';
 import '../../../returns/presentation/providers/returns_providers.dart';
+import '../../domain/models/anticipo_disponible_para_pago.dart';
 import '../../domain/models/pago_input.dart';
 import '../../domain/models/venta_enums.dart';
 
@@ -33,11 +34,17 @@ class CheckoutDialog extends ConsumerStatefulWidget {
     required this.total,
     required this.formaPago,
     required this.clienteSeleccionado,
+    this.anticiposDisponibles = const [],
   });
 
   final double total;
   final FormaPago formaPago;
   final ClienteResumen? clienteSeleccionado;
+
+  /// Anticipos de la Orden de Trabajo que se está cobrando, disponibles como
+  /// medio de pago — vacío en el POS normal (ver CobrarOrdenTrabajoDialog,
+  /// el único lugar que los provee).
+  final List<AnticipoDisponibleParaPago> anticiposDisponibles;
 
   @override
   ConsumerState<CheckoutDialog> createState() => _CheckoutDialogState();
@@ -51,6 +58,9 @@ class _PagoEnEdicion {
 
   /// Solo cuando medioPago es notaCredito — qué NotaCreditoCliente Disponible se eligió.
   String? notaCreditoId;
+
+  /// Solo cuando medioPago es anticipo — qué AnticipoOrdenTrabajo Disponible se eligió.
+  String? anticipoId;
 
   double get monto => FormateadorMiles.desformatear(controller.text);
 }
@@ -120,6 +130,12 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
   bool get _faltaElegirAlgunaNota =>
       _pagos.any((p) => p.medioPago == MedioPago.notaCredito && p.notaCreditoId == null);
 
+  /// Mismo criterio que _faltaElegirAlgunaNota, para Anticipo.
+  bool get _faltaElegirAlgunAnticipo =>
+      _pagos.any((p) => p.medioPago == MedioPago.anticipo && p.anticipoId == null);
+
+  bool get _faltaElegirAlgunMedioReferenciado => _faltaElegirAlgunaNota || _faltaElegirAlgunAnticipo;
+
   /// Solo el Efectivo entregado de más se devuelve como vuelto — si el
   /// Cajero recibió $10.000 en efectivo y solo hacían falta $8.982, el
   /// vuelto son $1.018 (no se registra como parte del pago, ver
@@ -132,6 +148,7 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
 
   String get _mensajePagos {
     if (_faltaElegirAlgunaNota) return 'Elige qué Nota de Crédito se usa en cada línea de pago con ese medio.';
+    if (_faltaElegirAlgunAnticipo) return 'Elige qué Anticipo se usa en cada línea de pago con ese medio.';
     if (_excedeSinEfectivo) return 'El monto en medios distintos a Efectivo no puede superar el Total.';
     if (!_pagosCuadran) return 'Falta ${MonedaFormatter.formatear(_restanteParaEfectivo - _montoEfectivo)} por cubrir.';
     if (_vuelto > 0) return 'Vuelto: ${MonedaFormatter.formatear(_vuelto)}';
@@ -159,12 +176,14 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
   }
 
   void _confirmar() {
-    if (_esContado && (!_pagosCuadran || _faltaElegirAlgunaNota)) {
+    if (_esContado && (!_pagosCuadran || _faltaElegirAlgunMedioReferenciado)) {
       setState(() => _error = _faltaElegirAlgunaNota
           ? 'Elige qué Nota de Crédito se usa en cada línea de pago con ese medio.'
-          : _excedeSinEfectivo
-              ? 'El monto en medios distintos a Efectivo no puede superar el Total.'
-              : 'Falta cubrir el Total.');
+          : _faltaElegirAlgunAnticipo
+              ? 'Elige qué Anticipo se usa en cada línea de pago con ese medio.'
+              : _excedeSinEfectivo
+                  ? 'El monto en medios distintos a Efectivo no puede superar el Total.'
+                  : 'Falta cubrir el Total.');
       return;
     }
 
@@ -191,7 +210,8 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
         monto -= descuento;
         vueltoRestante -= descuento;
       }
-      resultado.insert(0, PagoInput(medioPago: pago.medioPago, monto: monto, notaCreditoClienteId: pago.notaCreditoId));
+      resultado.insert(
+          0, PagoInput(medioPago: pago.medioPago, monto: monto, notaCreditoClienteId: pago.notaCreditoId, anticipoOrdenTrabajoId: pago.anticipoId));
     }
     return resultado.where((p) => p.monto > _epsilon).toList();
   }
@@ -251,7 +271,7 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
               const SizedBox(height: 4),
               Text(
                 _mensajePagos,
-                style: TextStyle(color: (_pagosCuadran && !_faltaElegirAlgunaNota) ? Colors.green : Theme.of(context).colorScheme.error),
+                style: TextStyle(color: (_pagosCuadran && !_faltaElegirAlgunMedioReferenciado) ? Colors.green : Theme.of(context).colorScheme.error),
               ),
             ],
             if (_error != null) ...[
@@ -269,7 +289,7 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
         ),
         FilledButton(
           key: const Key('checkoutConfirmar'),
-          onPressed: (_esContado && (!_pagosCuadran || _faltaElegirAlgunaNota)) ? null : _confirmar,
+          onPressed: (_esContado && (!_pagosCuadran || _faltaElegirAlgunMedioReferenciado)) ? null : _confirmar,
           child: const Text('Confirmar'),
         ),
       ],
@@ -292,11 +312,13 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
                   value: pago.medioPago,
                   items: MedioPago.values
                       .where((m) => m != MedioPago.notaCredito || _puedeUsarNotaCredito)
+                      .where((m) => m != MedioPago.anticipo || widget.anticiposDisponibles.isNotEmpty)
                       .map((m) => DropdownMenuItem(value: m, child: Text(m.etiqueta)))
                       .toList(),
                   onChanged: (valor) => setState(() {
                     pago.medioPago = valor ?? pago.medioPago;
                     pago.notaCreditoId = null;
+                    pago.anticipoId = null;
                     pago.controller.clear();
                   }),
                 ),
@@ -307,7 +329,7 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
                 child: TextField(
                   key: Key('checkoutMonto_$indice'),
                   controller: pago.controller,
-                  readOnly: pago.medioPago == MedioPago.notaCredito,
+                  readOnly: pago.medioPago == MedioPago.notaCredito || pago.medioPago == MedioPago.anticipo,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FormateadorMiles()],
                   decoration: const InputDecoration(labelText: 'Monto'),
@@ -323,6 +345,7 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
             ],
           ),
           if (pago.medioPago == MedioPago.notaCredito) _selectorNotaCredito(indice, pago),
+          if (pago.medioPago == MedioPago.anticipo) _selectorAnticipo(indice, pago),
         ],
       ),
     );
@@ -358,6 +381,37 @@ class _CheckoutDialogState extends ConsumerState<CheckoutDialog> {
             }),
           );
         },
+      ),
+    );
+  }
+
+  /// Igual que _selectorNotaCredito, pero sobre la lista ya provista por
+  /// widget.anticiposDisponibles — sin provider propio, no hay que
+  /// consultar nada de WorkOrders acá (Sales no lo conoce).
+  Widget _selectorAnticipo(int indice, _PagoEnEdicion pago) {
+    final anticipos = widget.anticiposDisponibles;
+    if (anticipos.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(bottom: 4),
+        child: Text('No hay Anticipos Disponibles para esta Orden de Trabajo.', style: TextStyle(color: Colors.grey)),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: DropdownButtonFormField<AnticipoDisponibleParaPago>(
+        key: Key('checkoutAnticipo_$indice'),
+        value: anticipos.where((a) => a.id == pago.anticipoId).firstOrNull,
+        decoration: const InputDecoration(labelText: 'Anticipo', isDense: true),
+        items: anticipos
+            .map((a) => DropdownMenuItem(
+                  value: a,
+                  child: Text('${a.etiquetaMedioPagoOriginal} · ${MonedaFormatter.formatear(a.monto)}'),
+                ))
+            .toList(),
+        onChanged: (anticipo) => setState(() {
+          pago.anticipoId = anticipo?.id;
+          pago.controller.text = anticipo == null ? '' : FormateadorMiles.formatear(anticipo.monto);
+        }),
       ),
     );
   }

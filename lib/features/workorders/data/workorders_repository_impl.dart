@@ -60,6 +60,15 @@ class WorkOrdersRepositoryImpl implements WorkOrdersRepository {
       _api.entregar(ordenTrabajoId: ordenTrabajoId, ventaId: ventaId);
 
   @override
+  Future<String> registrarAnticipo({
+    required String ordenTrabajoId,
+    required String sesionCajaId,
+    required double monto,
+    required MedioPagoAnticipo medioPago,
+  }) =>
+      _api.registrarAnticipo(ordenTrabajoId: ordenTrabajoId, sesionCajaId: sesionCajaId, monto: monto, medioPago: medioPago);
+
+  @override
   Future<List<UsuarioResumen>> listarUsuarios({bool incluirInactivos = false}) =>
       _api.listarUsuarios(incluirInactivos: incluirInactivos);
 

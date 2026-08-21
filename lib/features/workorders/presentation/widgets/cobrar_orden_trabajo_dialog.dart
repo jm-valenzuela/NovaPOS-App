@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../sales/domain/models/anticipo_disponible_para_pago.dart';
 import '../../../sales/domain/models/venta_enums.dart';
 import '../../../sales/presentation/providers/pos_providers.dart' show salesRepositoryProvider;
 import '../../../sales/presentation/widgets/checkout_dialog.dart';
@@ -63,7 +64,14 @@ class _CobrarOrdenTrabajoDialogState extends ConsumerState<CobrarOrdenTrabajoDia
       final resultadoCheckout = await showDialog<ResultadoCheckout>(
         context: context,
         barrierDismissible: false,
-        builder: (_) => CheckoutDialog(total: widget.orden.montoAprobado!, formaPago: FormaPago.contado, clienteSeleccionado: null),
+        builder: (_) => CheckoutDialog(
+          total: widget.orden.montoAprobado!,
+          formaPago: FormaPago.contado,
+          clienteSeleccionado: null,
+          anticiposDisponibles: widget.orden.anticiposDisponiblesParaPago
+              .map((a) => AnticipoDisponibleParaPago(id: a.id, monto: a.monto, etiquetaMedioPagoOriginal: a.medioPago.etiqueta))
+              .toList(),
+        ),
       );
 
       if (resultadoCheckout == null) {

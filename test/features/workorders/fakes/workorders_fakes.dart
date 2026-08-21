@@ -124,6 +124,25 @@ class FakeWorkOrdersRepository implements WorkOrdersRepository {
     if (errorAforzar != null) throw Exception(errorAforzar);
   }
 
+  String? ultimoSesionCajaIdAnticipo;
+  double? ultimoMontoAnticipo;
+  MedioPagoAnticipo? ultimoMedioPagoAnticipo;
+  String anticipoIdARetornar = 'anticipo-fake-id';
+
+  @override
+  Future<String> registrarAnticipo({
+    required String ordenTrabajoId,
+    required String sesionCajaId,
+    required double monto,
+    required MedioPagoAnticipo medioPago,
+  }) async {
+    ultimoSesionCajaIdAnticipo = sesionCajaId;
+    ultimoMontoAnticipo = monto;
+    ultimoMedioPagoAnticipo = medioPago;
+    if (errorAforzar != null) throw Exception(errorAforzar);
+    return anticipoIdARetornar;
+  }
+
   @override
   Future<List<UsuarioResumen>> listarUsuarios({bool incluirInactivos = false}) async {
     ultimoIncluirInactivos = incluirInactivos;
