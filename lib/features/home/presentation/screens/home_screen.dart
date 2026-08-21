@@ -71,7 +71,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final tieneDevoluciones = sesion?.tienePermiso('sales.devoluciones.registrar') ?? false;
     final tieneCompras = (sesion?.tienePermiso('purchasing.ordenescompra.gestionar') ?? false) ||
         (sesion?.tienePermiso('purchasing.proveedores.gestionar') ?? false);
-    final tieneOrdenesTrabajo = sesion?.tienePermiso('sales.ordenestrabajo.gestionar') ?? false;
+    // Cajero/Administrador (gestionar) o Rol Operador (trabajar, solo
+    // inicia/termina sus Ítems asignados) — ver OrdenesTrabajoController.
+    final tieneOrdenesTrabajo = (sesion?.tienePermiso('sales.ordenestrabajo.gestionar') ?? false) ||
+        (sesion?.tienePermiso('sales.ordenestrabajo.trabajar') ?? false);
     final tieneInventario = sesion?.tienePermiso('inventory.stock.ver') ?? false;
     final tieneReportes = sesion?.tienePermiso('reporting.reportes.ver') ?? false;
     // Solo se observa el provider si hay permiso — evita el llamado inicial

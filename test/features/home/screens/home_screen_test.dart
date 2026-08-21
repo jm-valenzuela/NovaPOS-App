@@ -112,6 +112,24 @@ void main() {
     expect(find.byKey(const Key('homeComprasCard')), findsOneWidget);
   });
 
+  testWidgets('Sin ninguno de los dos permisos de Órdenes de Trabajo, no muestra esa tarjeta', (tester) async {
+    await pumpHome(tester, permisos: []);
+
+    expect(find.byKey(const Key('homeOrdenesTrabajoCard')), findsNothing);
+  });
+
+  testWidgets('Con sales.ordenestrabajo.gestionar (Cajero/Administrador), muestra la tarjeta de Órdenes de Trabajo', (tester) async {
+    await pumpHome(tester, permisos: ['sales.ordenestrabajo.gestionar']);
+
+    expect(find.byKey(const Key('homeOrdenesTrabajoCard')), findsOneWidget);
+  });
+
+  testWidgets('Con sales.ordenestrabajo.trabajar (Rol Operador), también muestra la tarjeta de Órdenes de Trabajo', (tester) async {
+    await pumpHome(tester, permisos: ['sales.ordenestrabajo.trabajar']);
+
+    expect(find.byKey(const Key('homeOrdenesTrabajoCard')), findsOneWidget);
+  });
+
   testWidgets('Sin sales.devoluciones.registrar, no muestra la tarjeta de Devolución de productos', (tester) async {
     await pumpHome(tester, permisos: []);
 

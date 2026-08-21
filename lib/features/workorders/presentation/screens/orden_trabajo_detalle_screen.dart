@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/moneda_formatter.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../cash/presentation/providers/cash_providers.dart' show cashRepositoryProvider;
 import '../../../sales/domain/models/venta_detalle.dart';
 import '../../../sales/presentation/providers/pos_providers.dart' show tenancyRepositoryProvider;
@@ -30,6 +31,12 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final estado = ref.watch(ordenTrabajoDetalleProvider(ordenTrabajoId));
     final orden = estado.orden;
+    // Cajero/Administrador administran la Orden completa; el Rol Operador
+    // (solo "sales.ordenestrabajo.trabajar") solo ve/inicia/termina sus
+    // propios Ítems asignados — ver OrdenesTrabajoController en el backend.
+    // Acá es puramente cosmético (ocultar botones que igual rebotarían con
+    // 403), la autorización real vive en el backend.
+    final tieneGestion = ref.watch(authControllerProvider).sesion?.tienePermiso('sales.ordenestrabajo.gestionar') ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -44,7 +51,7 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
             ),
         ],
       ),
-      floatingActionButton: (orden == null || orden.estado == EstadoOrdenTrabajo.entregada)
+      floatingActionButton: (orden == null || orden.estado == EstadoOrdenTrabajo.entregada || !tieneGestion)
           ? null
           : FloatingActionButton.extended(
               key: const Key('agregarItemBoton'),
@@ -91,15 +98,15 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
                       else ...[
                         Text('Ítems', style: Theme.of(context).textTheme.labelLarge),
                         const SizedBox(height: 8),
-                        for (final item in orden.items) _tarjetaItem(context, ref, orden.id, item),
+                        for (final item in orden.items) _tarjetaItem(context, ref, orden.id, item, tieneGestion),
                       ],
                       const SizedBox(height: 20),
-                      if (orden.anticipos.isNotEmpty || orden.puedeRecibirAnticipo) ...[
+                      if (orden.anticipos.isNotEmpty || (orden.puedeRecibirAnticipo && tieneGestion)) ...[
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Anticipos', style: Theme.of(context).textTheme.labelLarge),
-                            if (orden.puedeRecibirAnticipo)
+                            if (orden.puedeRecibirAnticipo && tieneGestion)
                               TextButton.icon(
                                 key: const Key('registrarAnticipoBoton'),
                                 onPressed: () => _registrarAnticipo(context, ref, orden),
@@ -125,7 +132,7 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
                         _ventaVinculada(context, ref, orden.ventaId!),
                         const SizedBox(height: 20),
                       ],
-                      if (orden.estado == EstadoOrdenTrabajo.lista)
+                      if (orden.estado == EstadoOrdenTrabajo.lista && tieneGestion)
                         orden.montoAprobado == null
                             ? const Text('Todos los Ítems fueron rechazados — no hay nada que cobrar.')
                             : FilledButton.icon(
@@ -195,7 +202,7 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _tarjetaItem(BuildContext context, WidgetRef ref, String ordenTrabajoId, ItemOrdenTrabajoDetalle item) {
+  Widget _tarjetaItem(BuildContext context, WidgetRef ref, String ordenTrabajoId, ItemOrdenTrabajoDetalle item, bool tieneGestion) {
     return Card(
       key: Key('item_${item.id}'),
       margin: const EdgeInsets.only(bottom: 12),
@@ -237,43 +244,55 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
                 padding: const EdgeInsets.only(top: 6),
                 child: Text('Motivo: ${item.motivoRechazo}', style: Theme.of(context).textTheme.bodySmall),
               ),
-            if (!item.cerrado) ...[
+            if (!item.cerrado && (item.observacion != null || tieneGestion)) ...[
               const SizedBox(height: 6),
-              InkWell(
+              _filaObservacionOAsignacion(
+                icono: Icons.edit_note,
+                texto: item.observacion ?? 'Agregar observación',
+                italic: true,
+                onTap: tieneGestion ? () => _editarObservacion(context, ordenTrabajoId, item) : null,
+                context: context,
                 key: Key('itemObservacion_${item.id}'),
-                onTap: () => _editarObservacion(context, ordenTrabajoId, item),
-                child: Row(
-                  children: [
-                    const Icon(Icons.edit_note, size: 16),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        item.observacion ?? 'Agregar observación',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              InkWell(
-                key: Key('itemOperador_${item.id}'),
-                onTap: () => _asignarOperador(context, ordenTrabajoId, item),
-                child: Row(
-                  children: [
-                    const Icon(Icons.person_outline, size: 16),
-                    const SizedBox(width: 4),
-                    Text(item.asignadoANombre ?? 'Asignar Operador', style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
               ),
             ],
+            if (!item.cerrado && (item.asignadoANombre != null || tieneGestion))
+              _filaObservacionOAsignacion(
+                icono: Icons.person_outline,
+                texto: item.asignadoANombre ?? 'Asignar Operador',
+                italic: false,
+                onTap: tieneGestion ? () => _asignarOperador(context, ordenTrabajoId, item) : null,
+                context: context,
+                key: Key('itemOperador_${item.id}'),
+              ),
             const SizedBox(height: 8),
-            _accionesItem(context, ref, ordenTrabajoId, item),
+            _accionesItem(context, ref, ordenTrabajoId, item, tieneGestion),
             if (item.historial.isNotEmpty) _historialItem(context, item),
           ],
         ),
       ),
     );
+  }
+
+  /// Observación/Operador asignado — editable (InkWell) con "gestionar",
+  /// solo texto de lectura para el Rol Operador (onTap null).
+  Widget _filaObservacionOAsignacion({
+    required IconData icono,
+    required String texto,
+    required bool italic,
+    required VoidCallback? onTap,
+    required BuildContext context,
+    required Key key,
+  }) {
+    final fila = Row(
+      children: [
+        Icon(icono, size: 16),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(texto, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: italic ? FontStyle.italic : null)),
+        ),
+      ],
+    );
+    return onTap == null ? Padding(key: key, padding: const EdgeInsets.only(top: 2), child: fila) : InkWell(key: key, onTap: onTap, child: fila);
   }
 
   Widget _historialItem(BuildContext context, ItemOrdenTrabajoDetalle item) {
@@ -342,7 +361,13 @@ class OrdenTrabajoDetalleScreen extends ConsumerWidget {
     );
   }
 
-  Widget _accionesItem(BuildContext context, WidgetRef ref, String ordenTrabajoId, ItemOrdenTrabajoDetalle item) {
+  Widget _accionesItem(BuildContext context, WidgetRef ref, String ordenTrabajoId, ItemOrdenTrabajoDetalle item, bool tieneGestion) {
+    // Cotizar/Aprobar/Rechazar son trabajo de Cajero/Administrador — el Rol
+    // Operador recién entra en juego desde Aprobado (Iniciar Trabajo/Terminar).
+    if (!tieneGestion && (item.estado == EstadoItemOrdenTrabajo.pendienteEvaluacion || item.estado == EstadoItemOrdenTrabajo.cotizado)) {
+      return const SizedBox.shrink();
+    }
+
     switch (item.estado) {
       case EstadoItemOrdenTrabajo.pendienteEvaluacion:
         return FilledButton(

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:novapos_app/core/utils/moneda_formatter.dart';
+import 'package:novapos_app/features/auth/domain/models/sesion_usuario.dart';
+import 'package:novapos_app/features/auth/presentation/providers/auth_providers.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_detalle.dart';
 import 'package:novapos_app/features/sales/domain/models/venta_enums.dart';
 import 'package:novapos_app/features/sales/presentation/providers/pos_providers.dart' show salesRepositoryProvider;
@@ -10,6 +12,7 @@ import 'package:novapos_app/features/workorders/domain/models/orden_trabajo.dart
 import 'package:novapos_app/features/workorders/presentation/providers/workorders_providers.dart';
 import 'package:novapos_app/features/workorders/presentation/screens/orden_trabajo_detalle_screen.dart';
 
+import '../../auth/fakes/fake_auth_repository.dart';
 import '../../sales/fakes/pos_fakes.dart';
 import '../fakes/workorders_fakes.dart';
 
@@ -146,13 +149,23 @@ Future<void> _pumpDetalle(
   FakeWorkOrdersRepository fake,
   OrdenTrabajoDetalle orden, {
   FakeSalesRepository? fakeSales,
+  List<String> permisos = const ['sales.ordenestrabajo.gestionar'],
 }) async {
   fake.detalleARetornar = orden;
+  final fakeAuth = FakeAuthRepository()
+    ..sesionActiva = true
+    ..sesionARetornar = SesionUsuario(
+      nombreCompleto: 'Admin Demo',
+      email: 'admin@novapos-demo.cl',
+      empresaRazonSocial: 'NovaPOS Demo SpA',
+      permisos: permisos,
+    );
 
   await tester.pumpWidget(ProviderScope(
     overrides: [
       workOrdersRepositoryProvider.overrideWithValue(fake),
       salesRepositoryProvider.overrideWithValue(fakeSales ?? FakeSalesRepository()),
+      authRepositoryProvider.overrideWithValue(fakeAuth),
     ],
     child: const MaterialApp(home: OrdenTrabajoDetalleScreen(ordenTrabajoId: 'ot-1')),
   ));
@@ -375,5 +388,77 @@ void main() {
 
     expect(find.text('Creado — Admin Demo'), findsOneWidget);
     expect(find.text('Aprobado — Admin Demo'), findsOneWidget);
+  });
+
+  group('Rol Operador (solo sales.ordenestrabajo.trabajar)', () {
+    const permisosOperador = ['sales.ordenestrabajo.trabajar'];
+
+    testWidgets('No ofrece Agregar Ítem ni Registrar Anticipo ni Cobrar', (tester) async {
+      await _pumpDetalle(
+        tester,
+        fake,
+        _orden(estado: EstadoOrdenTrabajo.enEjecucion, items: const [_itemAprobado], montoAprobado: 80000),
+        permisos: permisosOperador,
+      );
+
+      expect(find.byKey(const Key('agregarItemBoton')), findsNothing);
+      expect(find.byKey(const Key('registrarAnticipoBoton')), findsNothing);
+    });
+
+    testWidgets('Un Ítem Pendiente de evaluación no muestra el botón Cotizar', (tester) async {
+      await _pumpDetalle(
+        tester,
+        fake,
+        _orden(estado: EstadoOrdenTrabajo.enEvaluacion, items: const [_itemPendiente]),
+        permisos: permisosOperador,
+      );
+
+      expect(find.byKey(const Key('itemCotizarBoton_item-1')), findsNothing);
+    });
+
+    testWidgets('Un Ítem Cotizado no muestra Aprobar ni Rechazar', (tester) async {
+      await _pumpDetalle(
+        tester,
+        fake,
+        _orden(estado: EstadoOrdenTrabajo.enEvaluacion, items: const [_itemCotizado]),
+        permisos: permisosOperador,
+      );
+
+      expect(find.byKey(const Key('itemAprobarBoton_item-2')), findsNothing);
+      expect(find.byKey(const Key('itemRechazarBoton_item-2')), findsNothing);
+    });
+
+    testWidgets('Un Ítem Aprobado sí muestra Iniciar Trabajo', (tester) async {
+      await _pumpDetalle(
+        tester,
+        fake,
+        _orden(estado: EstadoOrdenTrabajo.enEjecucion, items: const [_itemAprobado]),
+        permisos: permisosOperador,
+      );
+
+      expect(find.byKey(const Key('itemIniciarTrabajoBoton_item-3')), findsOneWidget);
+    });
+
+    testWidgets('Un Ítem EnTrabajo sí muestra Terminar', (tester) async {
+      await _pumpDetalle(
+        tester,
+        fake,
+        _orden(estado: EstadoOrdenTrabajo.enEjecucion, items: const [_itemEnTrabajo]),
+        permisos: permisosOperador,
+      );
+
+      expect(find.byKey(const Key('itemTerminarBoton_item-4')), findsOneWidget);
+    });
+
+    testWidgets('En Lista con montoAprobado no ofrece Cobrar', (tester) async {
+      await _pumpDetalle(
+        tester,
+        fake,
+        _orden(estado: EstadoOrdenTrabajo.lista, items: const [_itemTerminado], montoAprobado: 25000),
+        permisos: permisosOperador,
+      );
+
+      expect(find.byKey(const Key('cobrarOtBoton')), findsNothing);
+    });
   });
 }
